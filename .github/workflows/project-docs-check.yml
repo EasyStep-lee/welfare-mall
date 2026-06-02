@@ -1,0 +1,37 @@
+name: Project docs check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required project docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f docs/01-项目总体方案_2026-06-02.md
+          test -f docs/02-GitHub协作与项目治理方案_2026-06-02.md
+          test -f docs/03-实施路线图_2026-06-02.md
+          test -f docs/04-领域模型与验收基线_2026-06-02.md
+          test -f docs/adr/0001-技术栈与重构边界.md
+          test -f .github/PULL_REQUEST_TEMPLATE.md
+
+      - name: Check unresolved placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE 'TBD|TODO' README.md docs .github; then
+            echo "Unresolved placeholder found"
+            exit 1
+          fi
+
