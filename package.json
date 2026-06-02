@@ -4,10 +4,12 @@
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test",
-    "lint": "echo \"lint baseline pending package setup\"",
-    "typecheck": "echo \"typecheck baseline pending package setup\"",
-    "test": "echo \"test baseline pending package setup\""
+    "lint": "pnpm --filter @welfare-mall/api run lint",
+    "typecheck": "pnpm --filter @welfare-mall/api run typecheck",
+    "test": "pnpm --filter @welfare-mall/api run test",
+    "build": "pnpm --filter @welfare-mall/api run build",
+    "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
+    "verify:api": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run openapi:generate"
   },
   "devDependencies": {}
 }
-

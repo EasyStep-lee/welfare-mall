@@ -18,6 +18,8 @@ Create API files:
 - `apps/api/tsconfig.json`: API TypeScript config.
 - `apps/api/tsconfig.build.json`: build config.
 - `apps/api/jest.config.ts`: Jest config.
+- `apps/api/eslint.config.mjs`: ESLint flat config.
+- `apps/api/nest-cli.json`: Nest build config.
 - `apps/api/src/main.ts`: Nest bootstrap.
 - `apps/api/src/app.module.ts`: root module.
 - `apps/api/src/health/health.module.ts`: health module.
@@ -56,7 +58,7 @@ Expected:
 codex/api-foundation
 ```
 
-- [ ] **Step 2: Run existing root verify**
+- [x] **Step 2: Run existing root verify**
 
 Run:
 
@@ -73,9 +75,11 @@ Expected: baseline root verification exits 0.
 - Create: `apps/api/tsconfig.json`
 - Create: `apps/api/tsconfig.build.json`
 - Create: `apps/api/jest.config.ts`
+- Create: `apps/api/eslint.config.mjs`
+- Create: `apps/api/nest-cli.json`
 - Modify: `package.json`
 
-- [ ] **Step 1: Add API package manifest**
+- [x] **Step 1: Add API package manifest**
 
 Create `apps/api/package.json`:
 
@@ -129,7 +133,7 @@ Create `apps/api/package.json`:
 }
 ```
 
-- [ ] **Step 2: Add API TypeScript config**
+- [x] **Step 2: Add API TypeScript config**
 
 Create `apps/api/tsconfig.json`:
 
@@ -158,7 +162,7 @@ Create `apps/api/tsconfig.build.json`:
 }
 ```
 
-- [ ] **Step 3: Add Jest config**
+- [x] **Step 3: Add Jest config**
 
 Create `apps/api/jest.config.ts`:
 
@@ -178,7 +182,7 @@ const config: Config = {
 export default config;
 ```
 
-- [ ] **Step 4: Add root workspace scripts**
+- [x] **Step 4: Add root workspace scripts**
 
 Modify root `package.json` scripts:
 
@@ -203,7 +207,7 @@ Modify root `package.json` scripts:
 - Create: `apps/api/src/health/health.controller.ts`
 - Create: `apps/api/test/health.e2e-spec.ts`
 
-- [ ] **Step 1: Add root module**
+- [x] **Step 1: Add root module**
 
 Create `apps/api/src/app.module.ts`:
 
@@ -217,7 +221,7 @@ import { HealthModule } from './health/health.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 2: Add health module**
+- [x] **Step 2: Add health module**
 
 Create `apps/api/src/health/health.module.ts`:
 
@@ -231,7 +235,7 @@ import { HealthController } from './health.controller';
 export class HealthModule {}
 ```
 
-- [ ] **Step 3: Add health controller**
+- [x] **Step 3: Add health controller**
 
 Create `apps/api/src/health/health.controller.ts`:
 
@@ -266,7 +270,7 @@ export class HealthController {
 }
 ```
 
-- [ ] **Step 4: Add bootstrap**
+- [x] **Step 4: Add bootstrap**
 
 Create `apps/api/src/main.ts`:
 
@@ -302,7 +306,7 @@ if (require.main === module) {
 }
 ```
 
-- [ ] **Step 5: Add health e2e test**
+- [x] **Step 5: Add health e2e test**
 
 Create `apps/api/test/health.e2e-spec.ts`:
 
@@ -342,7 +346,7 @@ describe('Health API', () => {
 - Create: `apps/api/.env.example`
 - Create: `docker-compose.yml`
 
-- [ ] **Step 1: Add Prisma schema shell**
+- [x] **Step 1: Add Prisma schema shell**
 
 Create `apps/api/prisma/schema.prisma`:
 
@@ -365,7 +369,7 @@ model SystemMigrationMarker {
 }
 ```
 
-- [ ] **Step 2: Add API env example**
+- [x] **Step 2: Add API env example**
 
 Create `apps/api/.env.example`:
 
@@ -375,11 +379,13 @@ DATABASE_URL="mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_
 REDIS_URL="redis://127.0.0.1:6379/0"
 ```
 
-- [ ] **Step 3: Add Docker services**
+- [x] **Step 3: Add Docker services**
 
-Create `docker-compose.yml`:
+Create `docker-compose.yml`. The top-level `name` is required because this workspace path can contain non-ASCII characters and Docker Compose must not derive an invalid empty project name from the directory.
 
 ```yaml
+name: welfare-mall-v2
+
 services:
   mysql:
     image: mysql:8.4
@@ -420,7 +426,7 @@ volumes:
 - Create: `apps/api/src/openapi/generate-openapi.ts`
 - Create directory through script output: `packages/contracts/openapi`
 
-- [ ] **Step 1: Add OpenAPI generator**
+- [x] **Step 1: Add OpenAPI generator**
 
 Create `apps/api/src/openapi/generate-openapi.ts`:
 
@@ -455,7 +461,7 @@ async function generateOpenApi() {
 void generateOpenApi();
 ```
 
-- [ ] **Step 2: Verify OpenAPI generation**
+- [x] **Step 2: Verify OpenAPI generation**
 
 Run:
 
@@ -475,7 +481,7 @@ True
 **Files:**
 - All files in this plan
 
-- [ ] **Step 1: Install dependencies**
+- [x] **Step 1: Install dependencies**
 
 Run:
 
@@ -485,7 +491,7 @@ pnpm install
 
 Expected: dependencies install and `pnpm-lock.yaml` updates.
 
-- [ ] **Step 2: Run local API verification**
+- [x] **Step 2: Run local API verification**
 
 Run:
 
@@ -501,7 +507,7 @@ Expected:
 - OpenAPI JSON is generated.
 - Build exits 0.
 
-- [ ] **Step 3: Run root verification**
+- [x] **Step 3: Run root verification**
 
 Run:
 
@@ -511,7 +517,7 @@ pnpm run verify
 
 Expected: root verification exits 0.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
 Run:
 
@@ -542,4 +548,3 @@ Type consistency:
 - Health endpoint path is `/api/health` because `main.ts` sets the global prefix to `api`.
 - OpenAPI output path is `packages/contracts/openapi/welfare-mall-api.openapi.json`.
 - API package name is `@welfare-mall/api`, matching root filter scripts.
-
