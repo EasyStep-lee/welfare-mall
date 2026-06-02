@@ -343,6 +343,86 @@
         ]
       }
     },
+    "/api/products/{productId}/draft-snapshots": {
+      "post": {
+        "operationId": "ProductController_saveDraftSnapshot",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Save a product draft snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "snapshot-001",
+                    "productId": "product-001",
+                    "versionNo": 1,
+                    "payload": {
+                      "code": "P-RICE-001",
+                      "name": "东北五常大米福利装"
+                    },
+                    "createdBy": "merchant-user-001",
+                    "createdAt": "2026-06-02T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/{productId}/draft-snapshots/latest": {
+      "get": {
+        "operationId": "ProductController_getLatestDraftSnapshot",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get the latest product draft snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "snapshot": {
+                      "id": "snapshot-004",
+                      "productId": "product-001",
+                      "versionNo": 4,
+                      "payload": {
+                        "code": "P-RICE-001",
+                        "name": "东北五常大米福利装"
+                      },
+                      "createdBy": "merchant-user-001",
+                      "createdAt": "2026-06-02T00:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/product-pools/statuses": {
       "get": {
         "operationId": "ProductPoolController_getStatuses",
