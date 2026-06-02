@@ -315,6 +315,34 @@
         ]
       }
     },
+    "/api/products/draft-validation": {
+      "post": {
+        "operationId": "ProductController_validateDraft",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Validate a merchant product draft command before saving or submitting for review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "valid": true,
+                    "issues": [],
+                    "submitReadiness": {
+                      "ready": true,
+                      "missingRequirements": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/product-pools/statuses": {
       "get": {
         "operationId": "ProductPoolController_getStatuses",
