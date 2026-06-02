@@ -77,6 +77,8 @@ describe('Product draft save real database integration', () => {
   afterAll(async () => {
     await prisma.productDraftSnapshot.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productReviewLog.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
+    await prisma.productPoolItem.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
+    await prisma.productPool.deleteMany({ where: { code: `FRANCHISE-${ids.franchiseId}-DEFAULT` } });
     await prisma.productDetailSection.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productParameter.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productQualification.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
@@ -212,6 +214,75 @@ describe('Product draft save real database integration', () => {
         toStatus: 'approved',
         reason: null
       }
+    ]);
+
+    const publishResponse = await request(app.getHttpServer())
+      .post('/api/product-pools/items/publish')
+      .send({ productId, actorUserId: 'admin-user-db' })
+      .expect(201);
+
+    expect(publishResponse.body.productPool).toEqual(
+      expect.objectContaining({
+        code: `FRANCHISE-${ids.franchiseId}-DEFAULT`,
+        name: '默认商品池',
+        status: 'active',
+        franchiseId: ids.franchiseId
+      })
+    );
+    expect(publishResponse.body.publishedItems).toEqual([
+      expect.objectContaining({
+        productId,
+        displayName: '真实库五常大米福利装二次编辑',
+        displaySkuCode: `SKU-${runId}-10KG`,
+        displayPriceAmount: 12990,
+        displayImageUrl: `https://cdn.example.com/${runId}/main.jpg`,
+        sortOrder: 0
+      })
+    ]);
+
+    await expect(
+      prisma.productPool.findUnique({
+        where: { code: `FRANCHISE-${ids.franchiseId}-DEFAULT` },
+        select: { status: true, franchiseId: true }
+      })
+    ).resolves.toEqual({ status: 'active', franchiseId: ids.franchiseId });
+    await expect(
+      prisma.productPoolItem.findMany({
+        where: { productId },
+        select: {
+          displayName: true,
+          displaySkuCode: true,
+          displayPriceAmount: true,
+          displayImageUrl: true
+        }
+      })
+    ).resolves.toEqual([
+      {
+        displayName: '真实库五常大米福利装二次编辑',
+        displaySkuCode: `SKU-${runId}-10KG`,
+        displayPriceAmount: 12990,
+        displayImageUrl: `https://cdn.example.com/${runId}/main.jpg`
+      }
+    ]);
+
+    const catalogResponse = await request(app.getHttpServer())
+      .get('/api/product-pools/catalog')
+      .query({ franchiseId: ids.franchiseId })
+      .expect(200);
+
+    expect(catalogResponse.body.productPools).toEqual([
+      expect.objectContaining({
+        code: `FRANCHISE-${ids.franchiseId}-DEFAULT`,
+        status: 'active',
+        franchiseId: ids.franchiseId,
+        items: [
+          expect.objectContaining({
+            productId,
+            displaySkuCode: `SKU-${runId}-10KG`,
+            displayPriceAmount: 12990
+          })
+        ]
+      })
     ]);
 
     const rejectedDraftPayload = createDraft({

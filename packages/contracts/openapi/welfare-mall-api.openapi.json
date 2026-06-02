@@ -588,6 +588,90 @@
           "product-pools"
         ]
       }
+    },
+    "/api/product-pools/items/publish": {
+      "post": {
+        "operationId": "ProductPoolController_publishApprovedProduct",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Publish an approved product into a product pool",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "productPool": {
+                      "id": "pool-001",
+                      "code": "FRANCHISE-franchise-001-DEFAULT",
+                      "name": "默认商品池",
+                      "status": "active",
+                      "franchiseId": "franchise-001"
+                    },
+                    "publishedItems": [
+                      {
+                        "id": "pool-item-001",
+                        "productId": "product-001",
+                        "skuId": "sku-001",
+                        "displayName": "东北五常大米福利装",
+                        "displaySkuCode": "SKU-RICE-5KG",
+                        "displayPriceAmount": 6990,
+                        "displayImageUrl": "https://cdn.example.com/products/rice-main.jpg",
+                        "sortOrder": 0
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-pools"
+        ]
+      }
+    },
+    "/api/product-pools/catalog": {
+      "get": {
+        "operationId": "ProductPoolController_listCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Active product pool catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "productPools": [
+                      {
+                        "id": "pool-001",
+                        "code": "FRANCHISE-franchise-001-DEFAULT",
+                        "name": "默认商品池",
+                        "status": "active",
+                        "franchiseId": "franchise-001",
+                        "items": [
+                          {
+                            "id": "pool-item-001",
+                            "productId": "product-001",
+                            "skuId": "sku-001",
+                            "displayName": "东北五常大米福利装",
+                            "displaySkuCode": "SKU-RICE-5KG",
+                            "displayPriceAmount": 6990,
+                            "displayImageUrl": "https://cdn.example.com/products/rice-main.jpg",
+                            "sortOrder": 0
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-pools"
+        ]
+      }
     }
   },
   "info": {
