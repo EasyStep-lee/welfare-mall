@@ -51,6 +51,84 @@
           "iam"
         ]
       }
+    },
+    "/api/franchises/statuses": {
+      "get": {
+        "operationId": "FranchiseController_getStatuses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Franchise status catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "active",
+                      "name": "正常"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "franchises"
+        ]
+      }
+    },
+    "/api/merchants/statuses": {
+      "get": {
+        "operationId": "MerchantController_getStatuses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Merchant status catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "pending_review",
+                      "name": "待审核"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "merchants"
+        ]
+      }
+    },
+    "/api/regions/levels": {
+      "get": {
+        "operationId": "RegionController_getLevels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Region level catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "province",
+                      "name": "省"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "regions"
+        ]
+      }
     }
   },
   "info": {

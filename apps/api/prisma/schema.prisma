@@ -15,6 +15,62 @@ model SystemMigrationMarker {
   @@map("system_migration_marker")
 }
 
+model Region {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  name       String
+  level      String
+  parentId   String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deletedAt  DateTime?
+  parent     Region?     @relation("RegionHierarchy", fields: [parentId], references: [id])
+  children   Region[]    @relation("RegionHierarchy")
+  franchises Franchise[]
+  merchants  Merchant[]
+
+  @@index([parentId])
+  @@index([level])
+  @@map("region")
+}
+
+model Franchise {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  status    String
+  regionId  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  region    Region?    @relation(fields: [regionId], references: [id])
+  merchants Merchant[]
+
+  @@index([regionId])
+  @@index([status])
+  @@map("franchise")
+}
+
+model Merchant {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  name           String
+  status         String
+  franchiseId    String
+  regionId       String?
+  businessScopes Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  franchise      Franchise @relation(fields: [franchiseId], references: [id])
+  region         Region?   @relation(fields: [regionId], references: [id])
+
+  @@index([franchiseId])
+  @@index([regionId])
+  @@index([status])
+  @@map("merchant")
+}
+
 model IamUser {
   id        String        @id @default(cuid())
   username  String        @unique
