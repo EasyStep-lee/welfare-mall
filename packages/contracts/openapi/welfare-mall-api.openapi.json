@@ -343,6 +343,56 @@
         ]
       }
     },
+    "/api/products/drafts/save": {
+      "post": {
+        "operationId": "ProductController_saveDraft",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Validate and save product master data plus a draft snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "product": {
+                      "productId": "product-001",
+                      "mode": "created",
+                      "skuCount": 1,
+                      "mediaCount": 2,
+                      "qualificationCount": 1,
+                      "parameterCount": 1,
+                      "detailSectionCount": 1
+                    },
+                    "snapshot": {
+                      "id": "snapshot-001",
+                      "productId": "product-001",
+                      "versionNo": 1,
+                      "payload": {
+                        "code": "P-RICE-001",
+                        "name": "东北五常大米福利装"
+                      },
+                      "createdBy": "merchant-user-001",
+                      "createdAt": "2026-06-02T00:00:00.000Z"
+                    },
+                    "validation": {
+                      "valid": true,
+                      "issues": [],
+                      "submitReadiness": {
+                        "ready": true,
+                        "missingRequirements": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/products/{productId}/draft-snapshots": {
       "post": {
         "operationId": "ProductController_saveDraftSnapshot",
