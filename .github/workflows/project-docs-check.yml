@@ -50,8 +50,14 @@ jobs:
 
       - name: Install lockfile
         shell: bash
-        run: pnpm install --lockfile-only
+        run: pnpm install --frozen-lockfile
 
       - name: Verify project foundation
         shell: bash
         run: pnpm run verify
+
+      - name: Verify API foundation
+        shell: bash
+        run: |
+          pnpm run verify:api
+          pnpm run build

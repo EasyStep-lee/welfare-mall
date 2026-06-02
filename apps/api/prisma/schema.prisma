@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model SystemMigrationMarker {
+  id        String   @id @default(cuid())
+  marker    String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("system_migration_marker")
+}
+
