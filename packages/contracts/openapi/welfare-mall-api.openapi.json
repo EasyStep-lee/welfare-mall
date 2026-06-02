@@ -129,6 +129,162 @@
           "regions"
         ]
       }
+    },
+    "/api/products/statuses": {
+      "get": {
+        "operationId": "ProductController_getStatuses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product review status catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "draft",
+                      "name": "草稿"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/sale-statuses": {
+      "get": {
+        "operationId": "ProductController_getSaleStatuses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product sale status catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "on_sale",
+                      "name": "上架"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/media-types": {
+      "get": {
+        "operationId": "ProductController_getMediaTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product media type catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "detail_image",
+                      "name": "详情图"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/qualification-types": {
+      "get": {
+        "operationId": "ProductController_getQualificationTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product qualification type catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "origin_certificate",
+                      "name": "产地证明"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/parameter-value-types": {
+      "get": {
+        "operationId": "ProductController_getParameterValueTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product parameter value type catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "text",
+                      "name": "文本"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/product-pools/statuses": {
+      "get": {
+        "operationId": "ProductPoolController_getStatuses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product pool status catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "active",
+                      "name": "启用"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-pools"
+        ]
+      }
     }
   },
   "info": {
