@@ -1,5 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import type { ProductDraftCommandInput } from './product-draft-command';
+import { validateProductDraftCommand } from './product-draft-command';
 import { ProductMediaTypeCatalog } from './product-media-type';
 import { ProductParameterValueTypeCatalog } from './product-parameter-value-type';
 import { ProductQualificationTypeCatalog } from './product-qualification-type';
@@ -72,5 +74,21 @@ export class ProductController {
   })
   getStatusTransitions() {
     return ProductStatusTransitionCatalog;
+  }
+
+  @Post('draft-validation')
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Validate a merchant product draft command before saving or submitting for review',
+    schema: {
+      example: {
+        valid: true,
+        issues: [],
+        submitReadiness: { ready: true, missingRequirements: [] }
+      }
+    }
+  })
+  validateDraft(@Body() input: ProductDraftCommandInput) {
+    return validateProductDraftCommand(input);
   }
 }
