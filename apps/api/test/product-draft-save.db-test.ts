@@ -76,6 +76,7 @@ describe('Product draft save real database integration', () => {
 
   afterAll(async () => {
     await prisma.productDraftSnapshot.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
+    await prisma.productReviewLog.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productDetailSection.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productParameter.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
     await prisma.productQualification.deleteMany({ where: { product: { code: { startsWith: `P-${runId}` } } } });
@@ -155,5 +156,36 @@ describe('Product draft save real database integration', () => {
       { value: '10kg' }
     ]);
     await expect(prisma.productDraftSnapshot.count({ where: { productId } })).resolves.toBe(2);
+
+    const submitResponse = await request(app.getHttpServer())
+      .post(`/api/products/${productId}/review-submissions`)
+      .send({ actorUserId: 'merchant-user-db' })
+      .expect(201);
+
+    expect(submitResponse.body).toEqual(
+      expect.objectContaining({
+        productId,
+        action: 'submit_review',
+        fromStatus: 'draft',
+        toStatus: 'pending_review'
+      })
+    );
+    await expect(prisma.product.findUnique({ where: { id: productId } })).resolves.toEqual(
+      expect.objectContaining({ status: 'pending_review' })
+    );
+    await expect(
+      prisma.productReviewLog.findMany({
+        where: { productId },
+        select: { actorUserId: true, actorType: true, action: true, fromStatus: true, toStatus: true }
+      })
+    ).resolves.toEqual([
+      {
+        actorUserId: 'merchant-user-db',
+        actorType: 'merchant',
+        action: 'submit_review',
+        fromStatus: 'draft',
+        toStatus: 'pending_review'
+      }
+    ]);
   });
 });

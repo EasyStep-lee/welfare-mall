@@ -10,6 +10,8 @@ import { ProductMediaTypeCatalog } from './product-media-type';
 import { ProductParameterValueTypeCatalog } from './product-parameter-value-type';
 import { ProductQualificationTypeCatalog } from './product-qualification-type';
 import { ProductReviewActionCatalog } from './product-review-action';
+import { ProductReviewSubmissionService } from './product-review-submission.service';
+import type { ProductReviewSubmissionSummary } from './product-review-submission.service';
 import { ProductSaleStatusCatalog } from './product-sale-status';
 import { ProductStatusCatalog } from './product-status';
 import { ProductStatusTransitionCatalog } from './product-status-transition';
@@ -19,7 +21,8 @@ import { ProductStatusTransitionCatalog } from './product-status-transition';
 export class ProductController {
   constructor(
     private readonly productDraftRepository: ProductDraftRepository,
-    private readonly productDraftSaveService: ProductDraftSaveService
+    private readonly productDraftSaveService: ProductDraftSaveService,
+    private readonly productReviewSubmissionService: ProductReviewSubmissionService
   ) {}
 
   @Get('statuses')
@@ -144,6 +147,42 @@ export class ProductController {
     return toProductDraftSaveResponse(result);
   }
 
+  @Post(':productId/review-submissions')
+  @HttpCode(201)
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiCreatedResponse({
+    description: 'Submit a saved merchant product draft for review',
+    schema: {
+      example: {
+        productId: 'product-001',
+        action: 'submit_review',
+        fromStatus: 'draft',
+        toStatus: 'pending_review',
+        reviewLog: {
+          id: 'review-log-001',
+          productId: 'product-001',
+          actorUserId: 'merchant-user-001',
+          actorType: 'merchant',
+          action: 'submit_review',
+          fromStatus: 'draft',
+          toStatus: 'pending_review',
+          reason: null,
+          createdAt: '2026-06-02T00:00:00.000Z'
+        }
+      }
+    }
+  })
+  async submitForReview(@Param('productId') productId: string, @Body() input: SubmitProductReviewRequest) {
+    assertSubmitProductReviewRequest(input);
+
+    const result = await this.productReviewSubmissionService.submitForReview({
+      productId,
+      actorUserId: input.actorUserId
+    });
+
+    return toProductReviewSubmissionResponse(result);
+  }
+
   @Post(':productId/draft-snapshots')
   @HttpCode(201)
   @ApiParam({ name: 'productId', description: 'Product ID' })
@@ -209,6 +248,10 @@ type SaveProductDraftRequest = {
   actorUserId: string;
 };
 
+type SubmitProductReviewRequest = {
+  actorUserId: string;
+};
+
 type ProductDraftSnapshotResponse = {
   id: string;
   productId: string;
@@ -224,11 +267,30 @@ type ProductDraftSaveResponse = {
   validation: ProductDraftSaveResult['validation'];
 };
 
+type ProductReviewSubmissionResponse = Omit<ProductReviewSubmissionSummary, 'allowed' | 'reviewLog'> & {
+  reviewLog: Omit<ProductReviewSubmissionSummary['reviewLog'], 'createdAt'> & {
+    createdAt: string;
+  };
+};
+
 function toProductDraftSaveResponse(result: ProductDraftSaveResult): ProductDraftSaveResponse {
   return {
     product: result.product,
     snapshot: toProductDraftSnapshotResponse(result.snapshot),
     validation: result.validation
+  };
+}
+
+function toProductReviewSubmissionResponse(result: ProductReviewSubmissionSummary): ProductReviewSubmissionResponse {
+  return {
+    productId: result.productId,
+    action: result.action,
+    fromStatus: result.fromStatus,
+    toStatus: result.toStatus,
+    reviewLog: {
+      ...result.reviewLog,
+      createdAt: result.reviewLog.createdAt.toISOString()
+    }
   };
 }
 
@@ -265,6 +327,20 @@ function assertSaveProductDraftRequest(input: SaveProductDraftRequest | undefine
   if (!input?.payload || typeof input.payload !== 'object') {
     messages.push('payload is required.');
   }
+
+  if (typeof input?.actorUserId !== 'string' || input.actorUserId.trim().length === 0) {
+    messages.push('actorUserId is required.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function assertSubmitProductReviewRequest(
+  input: SubmitProductReviewRequest | undefined
+): asserts input is SubmitProductReviewRequest {
+  const messages: string[] = [];
 
   if (typeof input?.actorUserId !== 'string' || input.actorUserId.trim().length === 0) {
     messages.push('actorUserId is required.');
