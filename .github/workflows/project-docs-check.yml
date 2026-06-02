@@ -30,8 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE 'TBD|TODO' README.md docs .github; then
+          if grep -RInE 'TBD|TODO' README.md docs .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE; then
             echo "Unresolved placeholder found"
             exit 1
           fi
-
