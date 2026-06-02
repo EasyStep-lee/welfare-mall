@@ -260,6 +260,61 @@
         ]
       }
     },
+    "/api/products/review-actions": {
+      "get": {
+        "operationId": "ProductController_getReviewActions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product review workflow action catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "submit_review",
+                      "name": "提交审核",
+                      "actor": "merchant"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/products/status-transitions": {
+      "get": {
+        "operationId": "ProductController_getStatusTransitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product review status transition catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "actor": "admin",
+                      "fromStatus": "pending_review",
+                      "action": "approve",
+                      "toStatus": "approved"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/product-pools/statuses": {
       "get": {
         "operationId": "ProductPoolController_getStatuses",

@@ -178,6 +178,8 @@ model Product {
   parameters         ProductParameter[]
   detailSections     ProductDetailSection[]
   productPoolItems   ProductPoolItem[]
+  draftSnapshots     ProductDraftSnapshot[]
+  reviewLogs         ProductReviewLog[]
 
   @@index([merchantId])
   @@index([franchiseId])
@@ -186,6 +188,38 @@ model Product {
   @@index([status])
   @@index([saleStatus])
   @@map("product")
+}
+
+model ProductDraftSnapshot {
+  id        String   @id @default(cuid())
+  productId String
+  versionNo Int
+  payload   Json
+  createdBy String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([productId, versionNo])
+  @@index([productId])
+  @@map("product_draft_snapshot")
+}
+
+model ProductReviewLog {
+  id          String   @id @default(cuid())
+  productId   String
+  actorUserId String?
+  actorType   String
+  action      String
+  fromStatus  String
+  toStatus    String
+  reason      String?
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([actorUserId])
+  @@index([action])
+  @@map("product_review_log")
 }
 
 model ProductSku {
