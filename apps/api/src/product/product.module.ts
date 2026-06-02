@@ -6,6 +6,8 @@ import { ProductDraftSaveService } from './product-draft-save.service';
 import { ProductMasterRepository } from './product-master.repository';
 import { ProductReviewDecisionRepository } from './product-review-decision.repository';
 import { ProductReviewDecisionService } from './product-review-decision.service';
+import { ProductReviewQueueRepository } from './product-review-queue.repository';
+import { ProductReviewQueueService } from './product-review-queue.service';
 import { ProductReviewSubmissionRepository } from './product-review-submission.repository';
 import { ProductReviewSubmissionService } from './product-review-submission.service';
 
@@ -18,6 +20,8 @@ import { ProductReviewSubmissionService } from './product-review-submission.serv
     ProductDraftSaveService,
     ProductReviewDecisionRepository,
     ProductReviewDecisionService,
+    ProductReviewQueueRepository,
+    ProductReviewQueueService,
     ProductReviewSubmissionRepository,
     ProductReviewSubmissionService
   ],
@@ -27,6 +31,8 @@ import { ProductReviewSubmissionService } from './product-review-submission.serv
     ProductDraftSaveService,
     ProductReviewDecisionRepository,
     ProductReviewDecisionService,
+    ProductReviewQueueRepository,
+    ProductReviewQueueService,
     ProductReviewSubmissionRepository,
     ProductReviewSubmissionService
   ]
