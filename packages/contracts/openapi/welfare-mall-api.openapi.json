@@ -438,6 +438,51 @@
         ]
       }
     },
+    "/api/products/{productId}/review-decisions": {
+      "post": {
+        "operationId": "ProductController_decideReview",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Approve or reject a pending product review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "productId": "product-001",
+                    "action": "approve",
+                    "fromStatus": "pending_review",
+                    "toStatus": "approved",
+                    "reviewLog": {
+                      "id": "review-log-001",
+                      "productId": "product-001",
+                      "actorUserId": "admin-user-001",
+                      "actorType": "admin",
+                      "action": "approve",
+                      "fromStatus": "pending_review",
+                      "toStatus": "approved",
+                      "reason": null,
+                      "createdAt": "2026-06-02T00:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/products/{productId}/draft-snapshots": {
       "post": {
         "operationId": "ProductController_saveDraftSnapshot",

@@ -9,7 +9,10 @@ import type { ProductDraftSaveResult } from './product-draft-save.service';
 import { ProductMediaTypeCatalog } from './product-media-type';
 import { ProductParameterValueTypeCatalog } from './product-parameter-value-type';
 import { ProductQualificationTypeCatalog } from './product-qualification-type';
-import { ProductReviewActionCatalog } from './product-review-action';
+import { ProductReviewActionCatalog, ProductReviewActions } from './product-review-action';
+import { ProductReviewDecisionService } from './product-review-decision.service';
+import type { ProductReviewDecisionSummary } from './product-review-decision.service';
+import type { ProductReviewDecisionAction } from './product-review-decision.repository';
 import { ProductReviewSubmissionService } from './product-review-submission.service';
 import type { ProductReviewSubmissionSummary } from './product-review-submission.service';
 import { ProductSaleStatusCatalog } from './product-sale-status';
@@ -22,6 +25,7 @@ export class ProductController {
   constructor(
     private readonly productDraftRepository: ProductDraftRepository,
     private readonly productDraftSaveService: ProductDraftSaveService,
+    private readonly productReviewDecisionService: ProductReviewDecisionService,
     private readonly productReviewSubmissionService: ProductReviewSubmissionService
   ) {}
 
@@ -183,6 +187,44 @@ export class ProductController {
     return toProductReviewSubmissionResponse(result);
   }
 
+  @Post(':productId/review-decisions')
+  @HttpCode(201)
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiCreatedResponse({
+    description: 'Approve or reject a pending product review',
+    schema: {
+      example: {
+        productId: 'product-001',
+        action: 'approve',
+        fromStatus: 'pending_review',
+        toStatus: 'approved',
+        reviewLog: {
+          id: 'review-log-001',
+          productId: 'product-001',
+          actorUserId: 'admin-user-001',
+          actorType: 'admin',
+          action: 'approve',
+          fromStatus: 'pending_review',
+          toStatus: 'approved',
+          reason: null,
+          createdAt: '2026-06-02T00:00:00.000Z'
+        }
+      }
+    }
+  })
+  async decideReview(@Param('productId') productId: string, @Body() input: DecideProductReviewRequest) {
+    assertDecideProductReviewRequest(input);
+
+    const result = await this.productReviewDecisionService.decide({
+      productId,
+      action: input.action,
+      actorUserId: input.actorUserId,
+      reason: normalizeOptionalText(input.reason)
+    });
+
+    return toProductReviewDecisionResponse(result);
+  }
+
   @Post(':productId/draft-snapshots')
   @HttpCode(201)
   @ApiParam({ name: 'productId', description: 'Product ID' })
@@ -252,6 +294,12 @@ type SubmitProductReviewRequest = {
   actorUserId: string;
 };
 
+type DecideProductReviewRequest = {
+  action: ProductReviewDecisionAction;
+  actorUserId: string;
+  reason?: string | null;
+};
+
 type ProductDraftSnapshotResponse = {
   id: string;
   productId: string;
@@ -273,6 +321,12 @@ type ProductReviewSubmissionResponse = Omit<ProductReviewSubmissionSummary, 'all
   };
 };
 
+type ProductReviewDecisionResponse = Omit<ProductReviewDecisionSummary, 'allowed' | 'reviewLog'> & {
+  reviewLog: Omit<ProductReviewDecisionSummary['reviewLog'], 'createdAt'> & {
+    createdAt: string;
+  };
+};
+
 function toProductDraftSaveResponse(result: ProductDraftSaveResult): ProductDraftSaveResponse {
   return {
     product: result.product,
@@ -282,6 +336,19 @@ function toProductDraftSaveResponse(result: ProductDraftSaveResult): ProductDraf
 }
 
 function toProductReviewSubmissionResponse(result: ProductReviewSubmissionSummary): ProductReviewSubmissionResponse {
+  return {
+    productId: result.productId,
+    action: result.action,
+    fromStatus: result.fromStatus,
+    toStatus: result.toStatus,
+    reviewLog: {
+      ...result.reviewLog,
+      createdAt: result.reviewLog.createdAt.toISOString()
+    }
+  };
+}
+
+function toProductReviewDecisionResponse(result: ProductReviewDecisionSummary): ProductReviewDecisionResponse {
   return {
     productId: result.productId,
     action: result.action,
@@ -349,4 +416,30 @@ function assertSubmitProductReviewRequest(
   if (messages.length > 0) {
     throw new BadRequestException(messages);
   }
+}
+
+function assertDecideProductReviewRequest(
+  input: DecideProductReviewRequest | undefined
+): asserts input is DecideProductReviewRequest {
+  const messages: string[] = [];
+
+  if (input?.action !== ProductReviewActions.Approve && input?.action !== ProductReviewActions.Reject) {
+    messages.push('action must be approve or reject.');
+  }
+
+  if (typeof input?.actorUserId !== 'string' || input.actorUserId.trim().length === 0) {
+    messages.push('actorUserId is required.');
+  }
+
+  if (input?.action === ProductReviewActions.Reject && !normalizeOptionalText(input.reason)) {
+    messages.push('reason is required for reject.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
