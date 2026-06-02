@@ -64,7 +64,7 @@ Modify:
 - Read: `apps/api/src/app.module.ts`
 - Read: `apps/api/prisma/schema.prisma`
 
-- [ ] **Step 1: Confirm branch**
+- [x] **Step 1: Confirm branch**
 
 Run:
 
@@ -80,7 +80,7 @@ Expected:
 codex/iam-rbac-audit
 ```
 
-- [ ] **Step 2: Run current API checks**
+- [x] **Step 2: Run current API checks**
 
 Run:
 
@@ -98,7 +98,7 @@ Expected: both commands exit 0 before IAM changes.
 - Create: `apps/api/src/iam/permission-evaluator.ts`
 - Create: `apps/api/test/iam/permission-evaluator.spec.ts`
 
-- [ ] **Step 1: Write failing permission evaluator test**
+- [x] **Step 1: Write failing permission evaluator test**
 
 Create `apps/api/test/iam/permission-evaluator.spec.ts`:
 
@@ -134,7 +134,7 @@ pnpm --filter @welfare-mall/api run test -- --runInBand test/iam/permission-eval
 
 Expected: fails because `permission-evaluator` does not exist.
 
-- [ ] **Step 2: Add permission catalog**
+- [x] **Step 2: Add permission catalog**
 
 Create `apps/api/src/iam/permissions.ts`:
 
@@ -168,7 +168,7 @@ export const PermissionCatalog: Array<{ code: PermissionCode; name: string; risk
 ];
 ```
 
-- [ ] **Step 3: Add permission evaluator**
+- [x] **Step 3: Add permission evaluator**
 
 Create `apps/api/src/iam/permission-evaluator.ts`:
 
@@ -196,7 +196,7 @@ export function evaluatePermissions(input: PermissionEvaluationInput): Permissio
 }
 ```
 
-- [ ] **Step 4: Verify evaluator**
+- [x] **Step 4: Verify evaluator**
 
 Run:
 
@@ -212,7 +212,7 @@ Expected: tests pass.
 - Create: `apps/api/src/iam/data-scope.ts`
 - Create: `apps/api/test/iam/data-scope.spec.ts`
 
-- [ ] **Step 1: Write failing data-scope tests**
+- [x] **Step 1: Write failing data-scope tests**
 
 Create `apps/api/test/iam/data-scope.spec.ts`:
 
@@ -244,7 +244,7 @@ pnpm --filter @welfare-mall/api run test -- --runInBand test/iam/data-scope.spec
 
 Expected: fails because `data-scope` does not exist.
 
-- [ ] **Step 2: Add evaluator**
+- [x] **Step 2: Add evaluator**
 
 Create `apps/api/src/iam/data-scope.ts`:
 
@@ -284,7 +284,7 @@ export function evaluateDataScope(input: { scope: DataScope; target: DataScopeTa
 }
 ```
 
-- [ ] **Step 3: Verify data scope**
+- [x] **Step 3: Verify data scope**
 
 Run:
 
@@ -301,11 +301,11 @@ Expected: tests pass.
 - Create: `apps/api/src/iam/permission.guard.ts`
 - Create: `apps/api/test/iam/permission.guard.spec.ts`
 
-- [ ] **Step 1: Write failing guard tests**
+- [x] **Step 1: Write failing guard tests**
 
 Create `apps/api/test/iam/permission.guard.spec.ts` with tests proving the guard allows users with required permissions and rejects missing permissions.
 
-- [ ] **Step 2: Add decorator**
+- [x] **Step 2: Add decorator**
 
 Create `apps/api/src/iam/require-permissions.decorator.ts`:
 
@@ -320,11 +320,11 @@ export function RequirePermissions(...permissions: PermissionCode[]) {
 }
 ```
 
-- [ ] **Step 3: Add guard**
+- [x] **Step 3: Add guard**
 
 Create `apps/api/src/iam/permission.guard.ts` with a `CanActivate` implementation that reads required permissions from metadata and user permissions from `request.user.permissions`.
 
-- [ ] **Step 4: Verify guard**
+- [x] **Step 4: Verify guard**
 
 Run:
 
@@ -340,15 +340,15 @@ Expected: tests pass.
 - Create: `apps/api/src/iam/audit-event.ts`
 - Create: `apps/api/test/iam/audit-event.spec.ts`
 
-- [ ] **Step 1: Write failing audit event tests**
+- [x] **Step 1: Write failing audit event tests**
 
 Create `apps/api/test/iam/audit-event.spec.ts` proving audit events contain actor, action, target, reason, risk, and timestamp.
 
-- [ ] **Step 2: Add audit event factory**
+- [x] **Step 2: Add audit event factory**
 
 Create `apps/api/src/iam/audit-event.ts` with a pure `createAuditEvent()` function.
 
-- [ ] **Step 3: Verify audit event**
+- [x] **Step 3: Verify audit event**
 
 Run:
 
@@ -365,7 +365,7 @@ Expected: tests pass.
 - Create: `apps/api/src/iam/iam.controller.ts`
 - Modify: `apps/api/src/app.module.ts`
 
-- [ ] **Step 1: Add IAM module and controller**
+- [x] **Step 1: Add IAM module and controller**
 
 The controller exposes:
 
@@ -375,7 +375,7 @@ GET /api/iam/permissions/catalog
 
 The endpoint returns `PermissionCatalog`.
 
-- [ ] **Step 2: Register IAM module**
+- [x] **Step 2: Register IAM module**
 
 Modify `apps/api/src/app.module.ts`:
 
@@ -390,11 +390,11 @@ import { IamModule } from './iam/iam.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Add endpoint test**
+- [x] **Step 3: Add endpoint test**
 
 Add an e2e test proving `GET /api/iam/permissions/catalog` returns the catalog.
 
-- [ ] **Step 4: Verify endpoint**
+- [x] **Step 4: Verify endpoint**
 
 Run:
 
@@ -409,7 +409,7 @@ Expected: tests pass.
 **Files:**
 - Modify: `apps/api/prisma/schema.prisma`
 
-- [ ] **Step 1: Add IAM models**
+- [x] **Step 1: Add IAM models**
 
 Add models:
 
@@ -428,12 +428,12 @@ Required fields:
 - soft delete timestamp on user and role
 - JSON metadata only for non-core audit context
 
-- [ ] **Step 2: Validate Prisma schema**
+- [x] **Step 2: Validate Prisma schema**
 
 Run:
 
 ```powershell
-pnpm --filter @welfare-mall/api exec prisma validate
+pnpm --filter @welfare-mall/api run prisma:validate
 ```
 
 Expected: Prisma schema is valid.
@@ -443,7 +443,7 @@ Expected: Prisma schema is valid.
 **Files:**
 - All files in this plan
 
-- [ ] **Step 1: Regenerate OpenAPI**
+- [x] **Step 1: Regenerate OpenAPI**
 
 Run:
 
@@ -453,7 +453,7 @@ pnpm run openapi:generate
 
 Expected: `packages/contracts/openapi/welfare-mall-api.openapi.json` includes `/api/iam/permissions/catalog`.
 
-- [ ] **Step 2: Full verification**
+- [x] **Step 2: Full verification**
 
 Run:
 
@@ -465,7 +465,7 @@ pnpm run verify
 
 Expected: all commands exit 0.
 
-- [ ] **Step 3: Runtime smoke**
+- [x] **Step 3: Runtime smoke**
 
 Run the built API on a temporary port and request:
 
@@ -475,7 +475,7 @@ GET /api/iam/permissions/catalog
 
 Expected: response contains permission code `product:read`.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
 Run:
 
@@ -506,4 +506,3 @@ Type consistency:
 - Permission codes are strings with domain-action shape.
 - `DataScope` uses platform, franchise, merchant, and self as explicit variants.
 - IAM endpoint path uses the existing global `/api` prefix.
-

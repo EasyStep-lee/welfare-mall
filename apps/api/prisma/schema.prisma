@@ -15,3 +15,85 @@ model SystemMigrationMarker {
   @@map("system_migration_marker")
 }
 
+model IamUser {
+  id        String        @id @default(cuid())
+  username  String        @unique
+  displayName String
+  subjectType String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+  roles     IamUserRole[]
+  auditLogs IamAuditLog[]
+
+  @@map("iam_user")
+}
+
+model IamRole {
+  id          String              @id @default(cuid())
+  code        String              @unique
+  name        String
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
+  users       IamUserRole[]
+  permissions IamRolePermission[]
+
+  @@map("iam_role")
+}
+
+model IamPermission {
+  id        String              @id @default(cuid())
+  code      String              @unique
+  name      String
+  risk      String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  roles     IamRolePermission[]
+
+  @@map("iam_permission")
+}
+
+model IamUserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      IamUser  @relation(fields: [userId], references: [id])
+  role      IamRole  @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+  @@map("iam_user_role")
+}
+
+model IamRolePermission {
+  id           String        @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime      @default(now())
+  role         IamRole       @relation(fields: [roleId], references: [id])
+  permission   IamPermission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@map("iam_role_permission")
+}
+
+model IamAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorType   String
+  action      String
+  targetType  String
+  targetId    String
+  reason      String
+  risk        String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       IamUser? @relation(fields: [actorUserId], references: [id])
+
+  @@index([actorUserId])
+  @@index([targetType, targetId])
+  @@map("iam_audit_log")
+}
+
