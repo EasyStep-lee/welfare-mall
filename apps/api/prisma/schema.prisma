@@ -45,6 +45,8 @@ model Franchise {
   deletedAt DateTime?
   region    Region?    @relation(fields: [regionId], references: [id])
   merchants Merchant[]
+  products  Product[]
+  productPools ProductPool[]
 
   @@index([regionId])
   @@index([status])
@@ -64,11 +66,269 @@ model Merchant {
   deletedAt      DateTime?
   franchise      Franchise @relation(fields: [franchiseId], references: [id])
   region         Region?   @relation(fields: [regionId], references: [id])
+  products       Product[]
 
   @@index([franchiseId])
   @@index([regionId])
   @@index([status])
   @@map("merchant")
+}
+
+model ProductCategory {
+  id         String                 @id @default(cuid())
+  code       String                 @unique
+  name       String
+  parentId   String?
+  sortOrder  Int                    @default(0)
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  deletedAt  DateTime?
+  parent     ProductCategory?       @relation("ProductCategoryHierarchy", fields: [parentId], references: [id])
+  children   ProductCategory[]      @relation("ProductCategoryHierarchy")
+  products   Product[]
+  specTemplates ProductSpecTemplate[]
+
+  @@index([parentId])
+  @@map("product_category")
+}
+
+model ProductBrand {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  logoUrl   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  products  Product[]
+
+  @@map("product_brand")
+}
+
+model ProductSpecTemplate {
+  id         String                 @id @default(cuid())
+  code       String                 @unique
+  name       String
+  categoryId String?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  deletedAt  DateTime?
+  category   ProductCategory?       @relation(fields: [categoryId], references: [id])
+  attributes ProductSpecAttribute[]
+
+  @@index([categoryId])
+  @@map("product_spec_template")
+}
+
+model ProductSpecAttribute {
+  id         String              @id @default(cuid())
+  templateId String
+  code       String
+  name       String
+  sortOrder  Int                 @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  template   ProductSpecTemplate @relation(fields: [templateId], references: [id])
+  values     ProductSpecValue[]
+
+  @@unique([templateId, code])
+  @@index([templateId])
+  @@map("product_spec_attribute")
+}
+
+model ProductSpecValue {
+  id          String               @id @default(cuid())
+  attributeId String
+  code        String
+  value       String
+  sortOrder   Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  attribute   ProductSpecAttribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([attributeId, code])
+  @@index([attributeId])
+  @@map("product_spec_value")
+}
+
+model Product {
+  id                 String                 @id @default(cuid())
+  code               String                 @unique
+  name               String
+  merchantId         String
+  franchiseId        String
+  categoryId         String
+  brandId            String?
+  status             String
+  saleStatus         String
+  originCountry      String
+  originProvince     String?
+  originCity         String?
+  originDescription  String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  deletedAt          DateTime?
+  merchant           Merchant               @relation(fields: [merchantId], references: [id])
+  franchise          Franchise              @relation(fields: [franchiseId], references: [id])
+  category           ProductCategory        @relation(fields: [categoryId], references: [id])
+  brand              ProductBrand?          @relation(fields: [brandId], references: [id])
+  skus               ProductSku[]
+  media              ProductMedia[]
+  qualifications     ProductQualification[]
+  parameters         ProductParameter[]
+  detailSections     ProductDetailSection[]
+  productPoolItems   ProductPoolItem[]
+
+  @@index([merchantId])
+  @@index([franchiseId])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([status])
+  @@index([saleStatus])
+  @@map("product")
+}
+
+model ProductSku {
+  id                 String            @id @default(cuid())
+  productId          String
+  code               String            @unique
+  priceAmount        Int
+  marketPriceAmount  Int
+  costPriceAmount    Int?
+  barcode            String?
+  specs              Json
+  weightGrams        Int?
+  volumeMilliliters  Int?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+  product            Product           @relation(fields: [productId], references: [id])
+  productPoolItems   ProductPoolItem[]
+
+  @@index([productId])
+  @@map("product_sku")
+}
+
+model ProductMedia {
+  id        String   @id @default(cuid())
+  productId String
+  type      String
+  url       String
+  sortOrder Int      @default(0)
+  altText   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([type])
+  @@map("product_media")
+}
+
+model ProductQualification {
+  id            String    @id @default(cuid())
+  productId     String
+  type          String
+  title         String
+  certificateNo String?
+  fileUrl       String?
+  validFrom     DateTime?
+  validTo       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  product       Product   @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([type])
+  @@map("product_qualification")
+}
+
+model ProductParameter {
+  id        String   @id @default(cuid())
+  productId String
+  groupName String
+  name      String
+  value     String
+  valueType String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([valueType])
+  @@map("product_parameter")
+}
+
+model ProductDetailSection {
+  id        String   @id @default(cuid())
+  productId String
+  type      String
+  title     String?
+  content   String?
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([type])
+  @@map("product_detail_section")
+}
+
+model ProductPool {
+  id          String                @id @default(cuid())
+  code        String                @unique
+  name        String
+  status      String
+  franchiseId String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  deletedAt   DateTime?
+  franchise   Franchise?            @relation(fields: [franchiseId], references: [id])
+  items       ProductPoolItem[]
+  snapshots   ProductPoolSnapshot[]
+
+  @@index([franchiseId])
+  @@index([status])
+  @@map("product_pool")
+}
+
+model ProductPoolItem {
+  id                 String      @id @default(cuid())
+  productPoolId      String
+  productId          String
+  skuId              String?
+  sortOrder          Int         @default(0)
+  displayName        String
+  displaySkuCode     String?
+  displayPriceAmount Int
+  displayImageUrl    String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  productPool        ProductPool @relation(fields: [productPoolId], references: [id])
+  product            Product     @relation(fields: [productId], references: [id])
+  sku                ProductSku? @relation(fields: [skuId], references: [id])
+
+  @@index([productPoolId])
+  @@index([productId])
+  @@index([skuId])
+  @@map("product_pool_item")
+}
+
+model ProductPoolSnapshot {
+  id            String      @id @default(cuid())
+  productPoolId String
+  snapshotNo    String      @unique
+  status        String
+  payload       Json
+  createdAt     DateTime    @default(now())
+  productPool   ProductPool @relation(fields: [productPoolId], references: [id])
+
+  @@index([productPoolId])
+  @@index([status])
+  @@map("product_pool_snapshot")
 }
 
 model IamUser {
