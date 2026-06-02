@@ -393,6 +393,51 @@
         ]
       }
     },
+    "/api/products/{productId}/review-submissions": {
+      "post": {
+        "operationId": "ProductController_submitForReview",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Submit a saved merchant product draft for review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "productId": "product-001",
+                    "action": "submit_review",
+                    "fromStatus": "draft",
+                    "toStatus": "pending_review",
+                    "reviewLog": {
+                      "id": "review-log-001",
+                      "productId": "product-001",
+                      "actorUserId": "merchant-user-001",
+                      "actorType": "merchant",
+                      "action": "submit_review",
+                      "fromStatus": "draft",
+                      "toStatus": "pending_review",
+                      "reason": null,
+                      "createdAt": "2026-06-02T00:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "products"
+        ]
+      }
+    },
     "/api/products/{productId}/draft-snapshots": {
       "post": {
         "operationId": "ProductController_saveDraftSnapshot",
