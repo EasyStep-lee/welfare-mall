@@ -1,0 +1,13 @@
+{
+  "name": "welfare-mall-v2",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "lint": "echo \"lint baseline pending package setup\"",
+    "typecheck": "echo \"typecheck baseline pending package setup\"",
+    "test": "echo \"test baseline pending package setup\""
+  },
+  "devDependencies": {}
+}
+
