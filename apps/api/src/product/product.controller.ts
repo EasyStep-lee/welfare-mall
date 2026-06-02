@@ -3,8 +3,10 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ProductMediaTypeCatalog } from './product-media-type';
 import { ProductParameterValueTypeCatalog } from './product-parameter-value-type';
 import { ProductQualificationTypeCatalog } from './product-qualification-type';
+import { ProductReviewActionCatalog } from './product-review-action';
 import { ProductSaleStatusCatalog } from './product-sale-status';
 import { ProductStatusCatalog } from './product-status';
+import { ProductStatusTransitionCatalog } from './product-status-transition';
 
 @ApiTags('products')
 @Controller('products')
@@ -52,5 +54,23 @@ export class ProductController {
   })
   getParameterValueTypes() {
     return ProductParameterValueTypeCatalog;
+  }
+
+  @Get('review-actions')
+  @ApiOkResponse({
+    description: 'Product review workflow action catalog',
+    schema: { example: [{ code: 'submit_review', name: '提交审核', actor: 'merchant' }] }
+  })
+  getReviewActions() {
+    return ProductReviewActionCatalog;
+  }
+
+  @Get('status-transitions')
+  @ApiOkResponse({
+    description: 'Product review status transition catalog',
+    schema: { example: [{ actor: 'admin', fromStatus: 'pending_review', action: 'approve', toStatus: 'approved' }] }
+  })
+  getStatusTransitions() {
+    return ProductStatusTransitionCatalog;
   }
 }
