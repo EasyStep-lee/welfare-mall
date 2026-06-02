@@ -173,10 +173,27 @@ describe('Product draft save real database integration', () => {
     await expect(prisma.product.findUnique({ where: { id: productId } })).resolves.toEqual(
       expect.objectContaining({ status: 'pending_review' })
     );
+    const approveResponse = await request(app.getHttpServer())
+      .post(`/api/products/${productId}/review-decisions`)
+      .send({ action: 'approve', actorUserId: 'admin-user-db' })
+      .expect(201);
+
+    expect(approveResponse.body).toEqual(
+      expect.objectContaining({
+        productId,
+        action: 'approve',
+        fromStatus: 'pending_review',
+        toStatus: 'approved'
+      })
+    );
+    await expect(prisma.product.findUnique({ where: { id: productId } })).resolves.toEqual(
+      expect.objectContaining({ status: 'approved' })
+    );
     await expect(
       prisma.productReviewLog.findMany({
         where: { productId },
-        select: { actorUserId: true, actorType: true, action: true, fromStatus: true, toStatus: true }
+        orderBy: { createdAt: 'asc' },
+        select: { actorUserId: true, actorType: true, action: true, fromStatus: true, toStatus: true, reason: true }
       })
     ).resolves.toEqual([
       {
@@ -184,7 +201,71 @@ describe('Product draft save real database integration', () => {
         actorType: 'merchant',
         action: 'submit_review',
         fromStatus: 'draft',
-        toStatus: 'pending_review'
+        toStatus: 'pending_review',
+        reason: null
+      },
+      {
+        actorUserId: 'admin-user-db',
+        actorType: 'admin',
+        action: 'approve',
+        fromStatus: 'pending_review',
+        toStatus: 'approved',
+        reason: null
+      }
+    ]);
+
+    const rejectedDraftPayload = createDraft({
+      code: `P-${runId}-REJECT`,
+      name: '真实库待驳回福利装',
+      skus: [
+        {
+          code: `SKU-${runId}-REJECT`,
+          priceAmount: 3990,
+          marketPriceAmount: 4990,
+          specs: [{ name: '规格', value: '2kg' }]
+        }
+      ]
+    });
+
+    const rejectedCreateResponse = await request(app.getHttpServer())
+      .post('/api/products/drafts/save')
+      .send({ payload: rejectedDraftPayload, actorUserId: 'merchant-user-db' })
+      .expect(201);
+    const rejectedProductId = rejectedCreateResponse.body.product.productId as string;
+
+    await request(app.getHttpServer())
+      .post(`/api/products/${rejectedProductId}/review-submissions`)
+      .send({ actorUserId: 'merchant-user-db' })
+      .expect(201);
+    const rejectResponse = await request(app.getHttpServer())
+      .post(`/api/products/${rejectedProductId}/review-decisions`)
+      .send({ action: 'reject', actorUserId: 'admin-user-db', reason: '资质材料不完整' })
+      .expect(201);
+
+    expect(rejectResponse.body).toEqual(
+      expect.objectContaining({
+        productId: rejectedProductId,
+        action: 'reject',
+        fromStatus: 'pending_review',
+        toStatus: 'rejected'
+      })
+    );
+    await expect(prisma.product.findUnique({ where: { id: rejectedProductId } })).resolves.toEqual(
+      expect.objectContaining({ status: 'rejected' })
+    );
+    await expect(
+      prisma.productReviewLog.findMany({
+        where: { productId: rejectedProductId, actorType: 'admin' },
+        select: { actorUserId: true, actorType: true, action: true, fromStatus: true, toStatus: true, reason: true }
+      })
+    ).resolves.toEqual([
+      {
+        actorUserId: 'admin-user-db',
+        actorType: 'admin',
+        action: 'reject',
+        fromStatus: 'pending_review',
+        toStatus: 'rejected',
+        reason: '资质材料不完整'
       }
     ]);
   });
