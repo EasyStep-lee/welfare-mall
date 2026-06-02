@@ -24,6 +24,33 @@
           "health"
         ]
       }
+    },
+    "/api/iam/permissions/catalog": {
+      "get": {
+        "operationId": "IamController_getPermissionCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Permission catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "code": "product:read",
+                      "name": "商品查看",
+                      "risk": "low"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "iam"
+        ]
+      }
     }
   },
   "info": {

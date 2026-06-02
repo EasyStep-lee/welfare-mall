@@ -9,7 +9,7 @@
     "test": "pnpm --filter @welfare-mall/api run test",
     "build": "pnpm --filter @welfare-mall/api run build",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
-    "verify:api": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run openapi:generate"
+    "verify:api": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run prisma:validate && pnpm --filter @welfare-mall/api run openapi:generate"
   },
   "devDependencies": {}
 }

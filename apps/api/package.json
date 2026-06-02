@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest --config jest.config.ts",
     "test:e2e": "jest --config jest.config.ts --runInBand",
+    "prisma:validate": "cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 prisma validate",
     "openapi:generate": "tsx src/openapi/generate-openapi.ts"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "@types/supertest": "6.0.3",
     "@typescript-eslint/eslint-plugin": "8.33.1",
     "@typescript-eslint/parser": "8.33.1",
+    "cross-env": "7.0.3",
     "eslint": "9.28.0",
     "jest": "30.0.0",
     "prisma": "6.9.0",
@@ -45,4 +47,3 @@
     "schema": "prisma/schema.prisma"
   }
 }
-
