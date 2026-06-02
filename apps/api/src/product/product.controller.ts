@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
 import type { ProductDraftCommandInput } from './product-draft-command';
 import { validateProductDraftCommand } from './product-draft-command';
@@ -13,6 +13,7 @@ import { ProductReviewActionCatalog, ProductReviewActions } from './product-revi
 import { ProductReviewDecisionService } from './product-review-decision.service';
 import type { ProductReviewDecisionSummary } from './product-review-decision.service';
 import type { ProductReviewDecisionAction } from './product-review-decision.repository';
+import { ProductReviewQueueService } from './product-review-queue.service';
 import { ProductReviewSubmissionService } from './product-review-submission.service';
 import type { ProductReviewSubmissionSummary } from './product-review-submission.service';
 import { ProductSaleStatusCatalog } from './product-sale-status';
@@ -26,6 +27,7 @@ export class ProductController {
     private readonly productDraftRepository: ProductDraftRepository,
     private readonly productDraftSaveService: ProductDraftSaveService,
     private readonly productReviewDecisionService: ProductReviewDecisionService,
+    private readonly productReviewQueueService: ProductReviewQueueService,
     private readonly productReviewSubmissionService: ProductReviewSubmissionService
   ) {}
 
@@ -90,6 +92,45 @@ export class ProductController {
   })
   getStatusTransitions() {
     return ProductStatusTransitionCatalog;
+  }
+
+  @Get('review-queue')
+  @ApiOkResponse({
+    description: 'Admin product review queue with business-facing product master fields',
+    schema: {
+      example: {
+        status: 'pending_review',
+        items: [
+          {
+            productId: 'product-001',
+            code: 'P-RICE-001',
+            name: '东北五常大米福利装',
+            status: 'pending_review',
+            saleStatus: 'off_sale',
+            merchant: { id: 'merchant-001', code: 'M-001', name: '哈尔滨优选商贸' },
+            franchise: { id: 'franchise-001', code: 'F-001', name: '黑龙江福利卡中心' },
+            category: { id: 'category-001', code: 'grain', name: '粮油副食' },
+            brand: { id: 'brand-001', code: 'wuchang', name: '五常香米' },
+            origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
+            skuCount: 2,
+            imageCount: 3,
+            qualificationCount: 1,
+            parameterCount: 4,
+            detailSectionCount: 2,
+            primaryImageUrl: 'https://img.example.com/rice-cover.jpg',
+            latestReviewLog: {
+              action: 'submit_review',
+              actorUserId: 'merchant-user-001',
+              reason: null,
+              createdAt: '2026-06-02T00:00:00.000Z'
+            }
+          }
+        ]
+      }
+    }
+  })
+  async listReviewQueue(@Query('status') status?: string) {
+    return this.productReviewQueueService.list({ status });
   }
 
   @Post('draft-validation')

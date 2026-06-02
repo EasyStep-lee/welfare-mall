@@ -4,10 +4,10 @@
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "verify": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm run lint && pnpm run typecheck && pnpm run test",
-    "lint": "pnpm --filter @welfare-mall/api run lint",
-    "typecheck": "pnpm --filter @welfare-mall/api run typecheck",
-    "test": "pnpm --filter @welfare-mall/api run test",
-    "build": "pnpm --filter @welfare-mall/api run build",
+    "lint": "pnpm --filter @welfare-mall/api run lint && pnpm --filter @welfare-mall/admin run lint",
+    "typecheck": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/admin run typecheck",
+    "test": "pnpm --filter @welfare-mall/api run test --runInBand && pnpm --filter @welfare-mall/admin run test --run",
+    "build": "pnpm --filter @welfare-mall/api run build && pnpm --filter @welfare-mall/admin run build",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "verify:api": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run prisma:validate && pnpm --filter @welfare-mall/api run openapi:generate",
     "verify:product-save-db": "pnpm --filter @welfare-mall/api run test:db:product-save"
