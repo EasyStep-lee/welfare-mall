@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
 
 const reviewQueueResponse = {
@@ -79,17 +79,42 @@ const adminOrdersResponse = {
   ]
 };
 
+const refundProcessingOrdersResponse = {
+  orders: [
+    {
+      ...adminOrdersResponse.orders[0],
+      status: 'refund_processing'
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
+    let adminOrderLoads = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
 
-        if (url.includes('/orders/admin')) {
+        if (url.includes('/orders/refunds')) {
           return {
             ok: true,
-            json: async () => adminOrdersResponse
+            json: async () => ({
+              idempotentReplay: false,
+              refund: {
+                refundNo: 'REF-20260603-001',
+                status: 'processing',
+                orderNo: 'ORDER-20260603-001'
+              }
+            })
+          };
+        }
+
+        if (url.includes('/orders/admin')) {
+          adminOrderLoads += 1;
+          return {
+            ok: true,
+            json: async () => (adminOrderLoads === 1 ? adminOrdersResponse : refundProcessingOrdersResponse)
           };
         }
 
@@ -146,5 +171,30 @@ describe('Admin product review workbench', () => {
     expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
+  });
+
+  it('creates a full refund request for a paid order', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '申请退款' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/refunds', expect.any(Object));
+    });
+    const refundCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).includes('/orders/refunds'));
+    expect(refundCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(refundCall?.[1]?.body))).toMatchObject({
+      paymentNo: 'PAY-20260603-001',
+      orderNo: 'ORDER-20260603-001',
+      channel: 'wechat',
+      refundAmount: 13980,
+      reason: 'after_sale',
+      requestId: expect.stringMatching(/^admin-refund-ORDER-20260603-001-\d+$/)
+    });
+    expect(await screen.findByText('ORDER-20260603-001 已提交退款申请 REF-20260603-001')).toBeInTheDocument();
+    expect(await screen.findByText('退款处理中')).toBeInTheDocument();
   });
 });

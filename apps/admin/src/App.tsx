@@ -1,9 +1,10 @@
-import { Check, RefreshCw, Send, X } from 'lucide-react';
+import { Check, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminOrder,
   ReviewQueueItem,
   ReviewQueueStatus,
+  createOrderRefund,
   decideProductReview,
   fetchAdminOrders,
   fetchReviewQueue,
@@ -97,6 +98,27 @@ export default function App() {
     });
   }
 
+  async function requestRefund(order: AdminOrder) {
+    const payment = order.latestPayment;
+
+    if (!payment) {
+      return;
+    }
+
+    await runAction(async () => {
+      const result = await createOrderRefund({
+        requestId: `admin-refund-${order.orderNo}-${Date.now()}`,
+        paymentNo: payment.paymentNo,
+        orderNo: order.orderNo,
+        channel: payment.channel,
+        refundAmount: order.totalAmount,
+        reason: 'after_sale'
+      });
+      setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
+      await loadOrders();
+    });
+  }
+
   async function runAction(action: () => Promise<void>) {
     setError(null);
     setMessage(null);
@@ -176,6 +198,14 @@ export default function App() {
                   </span>
                 ))}
               </div>
+              {canRequestRefund(order) ? (
+                <div className="order-actions">
+                  <button type="button" onClick={() => void requestRefund(order)}>
+                    <RotateCcw size={15} />
+                    申请退款
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>
@@ -420,10 +450,16 @@ function orderStatusLabel(status: string) {
   return orderStatusLabels[status] ?? status;
 }
 
+function canRequestRefund(order: AdminOrder) {
+  return order.status === 'paid' && order.latestPayment !== null && order.latestPayment.status === 'paid';
+}
+
 const orderStatusLabels: Record<string, string> = {
   pending_payment: '待支付',
   paid: '已支付',
+  refund_processing: '退款处理中',
   completed: '已完成',
+  cancelled: '已取消',
   canceled: '已取消',
   refunded: '已退款'
 };

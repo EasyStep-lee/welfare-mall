@@ -100,6 +100,29 @@ export type AdminOrderResponse = {
   orders: AdminOrder[];
 };
 
+export type CreateOrderRefundInput = {
+  requestId: string;
+  paymentNo: string;
+  orderNo: string;
+  channel: string;
+  refundAmount: number;
+  reason: 'user_cancel' | 'merchant_out_of_stock' | 'after_sale';
+};
+
+export type CreateOrderRefundResponse = {
+  idempotentReplay: boolean;
+  refund: {
+    refundNo: string;
+    requestId: string;
+    paymentNo: string;
+    orderNo: string;
+    status: string;
+    channel: string;
+    refundAmount: number;
+    reason: string;
+  };
+};
+
 export const statusLabels: Record<ReviewQueueStatus, string> = {
   pending_review: '待审核',
   approved: '已通过',
@@ -131,6 +154,20 @@ export async function fetchAdminOrders(): Promise<AdminOrderResponse> {
   }
 
   return response.json() as Promise<AdminOrderResponse>;
+}
+
+export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/refunds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create order refund: ${response.status}`);
+  }
+
+  return response.json() as Promise<CreateOrderRefundResponse>;
 }
 
 export async function decideProductReview(input: {
