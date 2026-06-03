@@ -27,12 +27,48 @@ const draftQueueResponse = {
   ]
 };
 
+const fulfillmentQueueResponse = {
+  orders: [
+    {
+      orderNo: 'ORDER-20260603-001',
+      status: 'paid',
+      totalAmount: 13980,
+      cashPayableAmount: 8980,
+      welfareCardPayableAmount: 5000,
+      fulfillmentType: 'delivery',
+      receiverName: 'Li Lei',
+      receiverPhone: '13800000000',
+      receiverAddress: 'Pudong Avenue 1',
+      latestPayment: {
+        paymentNo: 'PAY-20260603-001',
+        status: 'paid',
+        channel: 'wechat'
+      },
+      lines: [
+        {
+          displayName: 'Local Rice',
+          displaySkuCode: 'SKU-RICE-5KG',
+          quantity: 2,
+          lineTotalAmount: 13980
+        }
+      ]
+    }
+  ]
+};
+
 describe('Merchant product submission workbench', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/orders/merchant/fulfillment')) {
+          return {
+            ok: true,
+            json: async () => fulfillmentQueueResponse
+          };
+        }
+
         if (url.includes('/review-submissions')) {
           return {
             ok: true,
@@ -59,6 +95,16 @@ describe('Merchant product submission workbench', () => {
 
   it('renders product readiness and submits a draft for review', async () => {
     render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '履约订单' })).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001');
+    expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
+    expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
+    expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
+    expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
+    expect(screen.getByText('现金 ¥89.80')).toBeInTheDocument();
+    expect(screen.getByText('福利卡 ¥50.00')).toBeInTheDocument();
 
     const row = await screen.findByRole('row', { name: /东北五常大米福利装/ });
     expect(within(row).getByText('草稿')).toBeInTheDocument();

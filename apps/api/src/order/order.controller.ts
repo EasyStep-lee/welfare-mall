@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Quer
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
 import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
+import { OrderFulfillmentService } from './order-fulfillment.service';
 import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
 import { OrderReadService } from './order-read.service';
 import { CreateOrderRefundInput, OrderRefundService, ProcessOrderRefundCallbackServiceInput } from './order-refund.service';
@@ -16,7 +17,8 @@ export class OrderController {
     private readonly orderCheckoutService: OrderCheckoutService,
     private readonly orderPaymentService: OrderPaymentService,
     private readonly orderRefundService: OrderRefundService,
-    private readonly orderReadService: OrderReadService
+    private readonly orderReadService: OrderReadService,
+    private readonly orderFulfillmentService: OrderFulfillmentService
   ) {}
 
   @Get('statuses')
@@ -67,6 +69,29 @@ export class OrderController {
     assertRequiredText(buyerUserId, 'buyerUserId');
 
     return this.orderReadService.listOrders({ buyerUserId: buyerUserId.trim() });
+  }
+
+  @Get('merchant/fulfillment')
+  @ApiOkResponse({
+    description: 'List paid orders that contain products owned by one merchant',
+    schema: {
+      example: {
+        orders: [
+          {
+            orderNo: 'ORDER-20260603-001',
+            status: 'paid',
+            totalAmount: 13980,
+            receiverName: 'Li Lei',
+            lines: [{ displayName: '东北五常大米福利装', quantity: 2 }]
+          }
+        ]
+      }
+    }
+  })
+  async listMerchantFulfillmentOrders(@Query('merchantId') merchantId: string) {
+    assertRequiredText(merchantId, 'merchantId');
+
+    return this.orderFulfillmentService.listMerchantFulfillmentOrders({ merchantId: merchantId.trim() });
   }
 
   @Get(':orderNo')
