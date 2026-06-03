@@ -123,14 +123,16 @@ Expected: response contains line totals and `cashPayableAmount` derived from `di
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run: `git add docs/superpowers/plans/2026-06-03-order-state-amount-foundation.md apps/api/src/order apps/api/src/app.module.ts apps/api/test/order`
 
 Run: `git commit -m "feat: add order amount preview foundation"`
 
-- [ ] **Step 2: Push and open a draft PR**
+- [x] **Step 2: Push and open a draft PR**
 
 Run: `git push -u origin codex/order-state-amount-foundation`
 
 Expected: branch is pushed and a draft PR is created against `main`.
+
+Result: PR #29 was opened, marked ready after verification, and squash-merged into `main` as `b90e722`.
