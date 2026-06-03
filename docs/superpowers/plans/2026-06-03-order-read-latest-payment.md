@@ -28,7 +28,7 @@
 
 ### Task 1: API Order Read Projection
 
-- [ ] **Step 1: Write failing API read tests**
+- [x] **Step 1: Write failing API read tests**
 
 Add tests proving:
 
@@ -44,11 +44,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-read --runInBand
 
 Expected: FAIL because order reads do not yet attach payment data.
 
-- [ ] **Step 2: Implement API read projection**
+- [x] **Step 2: Implement API read projection**
 
 Extend order read records with `latestPayment`. Query `orderPayment.findMany` for the order numbers in the read result, ordered newest first, and attach the first payment per `orderNo`.
 
-- [ ] **Step 3: Re-run API read tests**
+- [x] **Step 3: Re-run API read tests**
 
 Run:
 
@@ -60,7 +60,7 @@ Expected: PASS.
 
 ### Task 2: User Mini Program Payment Display
 
-- [ ] **Step 1: Write failing mini-program display tests**
+- [x] **Step 1: Write failing mini-program display tests**
 
 Add tests proving:
 
@@ -76,11 +76,11 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- utils/order.test.mjs pa
 
 Expected: FAIL because display helpers and markup do not render persisted payment status.
 
-- [ ] **Step 2: Implement mini-program display**
+- [x] **Step 2: Implement mini-program display**
 
 Format optional `latestPayment` with channel/status labels and render it on order cards and order details. Keep local `paymentDisplay` from newly created payments as the immediate result block.
 
-- [ ] **Step 3: Re-run mini-program display tests**
+- [x] **Step 3: Re-run mini-program display tests**
 
 Run:
 
@@ -92,7 +92,7 @@ Expected: PASS.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused order and mini-program tests**
+- [x] **Step 1: Run focused order and mini-program tests**
 
 Run:
 
@@ -101,7 +101,7 @@ pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 pnpm --filter @welfare-mall/user-miniprogram run test -- --run
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -114,7 +114,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -123,7 +123,7 @@ git add docs/superpowers/plans/2026-06-03-order-read-latest-payment.md apps/api/
 git commit -m "feat: expose latest order payment reads"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
