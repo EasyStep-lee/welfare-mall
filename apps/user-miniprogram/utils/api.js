@@ -23,6 +23,14 @@ function orderCheckoutUrl(baseUrl) {
   return apiUrl('/orders', baseUrl);
 }
 
+function orderListUrl(buyerUserId, baseUrl) {
+  return apiUrl(`/orders?buyerUserId=${encodeURIComponent(buyerUserId)}`, baseUrl);
+}
+
+function orderDetailUrl(orderNo, buyerUserId, baseUrl) {
+  return apiUrl(`/orders/${encodeURIComponent(orderNo)}?buyerUserId=${encodeURIComponent(buyerUserId)}`, baseUrl);
+}
+
 function requestJson(path, options = {}) {
   const app = typeof getApp === 'function' ? getApp() : null;
   const baseUrl = options.baseUrl || app?.globalData?.apiBaseUrl || DEFAULT_API_BASE_URL;
@@ -52,6 +60,8 @@ module.exports = {
   apiUrl,
   orderAmountPreviewUrl,
   orderCheckoutUrl,
+  orderDetailUrl,
+  orderListUrl,
   productPoolCatalogUrl,
   productPoolItemDetailUrl,
   requestJson

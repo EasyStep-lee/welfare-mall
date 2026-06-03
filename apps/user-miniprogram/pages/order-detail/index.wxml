@@ -1,0 +1,43 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state-text">加载中</view>
+  <view wx:elif="{{error}}" class="state-text error">{{error}}</view>
+
+  <view wx:elif="{{orderDisplay}}" class="detail">
+    <view class="section">
+      <view class="header-line">
+        <text class="order-no">{{orderDisplay.orderNo}}</text>
+        <text class="status">{{orderDisplay.statusText}}</text>
+      </view>
+      <text class="total">{{orderDisplay.totalText}}</text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">支付拆分</text>
+      <view class="line">
+        <text>福利卡支付</text>
+        <text>{{orderDisplay.welfareCardText}}</text>
+      </view>
+      <view class="line">
+        <text>现金支付</text>
+        <text>{{orderDisplay.cashText}}</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">收货信息</text>
+      <text class="muted">{{orderDisplay.receiverText}}</text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">商品明细</text>
+      <view wx:for="{{orderDisplay.lines}}" wx:key="id" class="order-line">
+        <text class="line-name">{{item.displayName}}</text>
+        <text class="muted">{{item.skuText}} {{item.quantityText}}</text>
+        <view class="line">
+          <text>{{item.unitPriceText}}</text>
+          <text>{{item.lineTotalText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

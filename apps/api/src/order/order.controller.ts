@@ -1,8 +1,9 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
 import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
 import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
+import { OrderReadService } from './order-read.service';
 import { CreateOrderRefundInput, OrderRefundService, ProcessOrderRefundCallbackServiceInput } from './order-refund.service';
 import { OrderStatusCatalog } from './order-status';
 import { OrderStatusTransitionCatalog } from './order-status-transition';
@@ -14,7 +15,8 @@ export class OrderController {
     private readonly orderAmountService: OrderAmountService,
     private readonly orderCheckoutService: OrderCheckoutService,
     private readonly orderPaymentService: OrderPaymentService,
-    private readonly orderRefundService: OrderRefundService
+    private readonly orderRefundService: OrderRefundService,
+    private readonly orderReadService: OrderReadService
   ) {}
 
   @Get('statuses')
@@ -43,6 +45,53 @@ export class OrderController {
   })
   getStatusTransitions() {
     return OrderStatusTransitionCatalog;
+  }
+
+  @Get()
+  @ApiOkResponse({
+    description: 'List orders for one buyer',
+    schema: {
+      example: {
+        orders: [
+          {
+            orderNo: 'ORDER-20260603-001',
+            buyerUserId: 'user-001',
+            status: 'pending_payment',
+            totalAmount: 13980
+          }
+        ]
+      }
+    }
+  })
+  async listOrders(@Query('buyerUserId') buyerUserId: string) {
+    assertRequiredText(buyerUserId, 'buyerUserId');
+
+    return this.orderReadService.listOrders({ buyerUserId: buyerUserId.trim() });
+  }
+
+  @Get(':orderNo')
+  @ApiOkResponse({
+    description: 'Get one buyer-scoped order detail',
+    schema: {
+      example: {
+        order: {
+          orderNo: 'ORDER-20260603-001',
+          buyerUserId: 'user-001',
+          status: 'pending_payment',
+          totalAmount: 13980,
+          lines: [{ displayName: '东北五常大米福利装', quantity: 2 }]
+        }
+      }
+    }
+  })
+  async getOrderDetail(@Param('orderNo') orderNo: string, @Query('buyerUserId') buyerUserId: string) {
+    assertRequiredText(orderNo, 'orderNo');
+    assertRequiredText(buyerUserId, 'buyerUserId');
+
+    return this.orderReadService.getOrderDetail({
+      orderNo: orderNo.trim(),
+      buyerUserId: buyerUserId.trim()
+    });
   }
 
   @Post('amount-preview')
@@ -398,6 +447,12 @@ function assertCreateOrderPaymentRequest(input: CreateOrderPaymentRequest | unde
 
   if (messages.length > 0) {
     throw new BadRequestException(messages);
+  }
+}
+
+function assertRequiredText(value: string | undefined, fieldName: string): asserts value is string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new BadRequestException(`${fieldName} is required.`);
   }
 }
 
