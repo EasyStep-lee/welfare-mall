@@ -115,14 +115,16 @@ Expected: `totalAmount = 13980`, `welfareCardPayableAmount = 5000`, `cashPayable
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run: `git add docs/superpowers/plans/2026-06-03-order-payment-split-foundation.md apps/api/src/order apps/api/test/order`
 
 Run: `git commit -m "feat: add order payment split foundation"`
 
-- [ ] **Step 2: Push and open a draft PR**
+- [x] **Step 2: Push and open a draft PR**
 
 Run: `git push -u origin codex/order-payment-split-foundation`
 
 Expected: branch is pushed and a draft PR is created against `main`.
+
+Result: PR #31 was opened, marked ready after verification, and squash-merged into `main` as `b5a0cd5`.
