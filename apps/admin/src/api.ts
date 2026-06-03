@@ -71,6 +71,35 @@ export type ReviewQueueResponse = {
   items: ReviewQueueItem[];
 };
 
+export type AdminOrder = {
+  orderNo: string;
+  buyerUserId: string;
+  status: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  latestPayment: {
+    paymentNo: string;
+    status: string;
+    channel: string;
+  } | null;
+  lines: Array<{
+    displayName: string;
+    displaySkuCode: string | null;
+    quantity: number;
+    lineTotalAmount: number;
+  }>;
+};
+
+export type AdminOrderResponse = {
+  orders: AdminOrder[];
+};
+
 export const statusLabels: Record<ReviewQueueStatus, string> = {
   pending_review: '待审核',
   approved: '已通过',
@@ -93,6 +122,15 @@ export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<Revie
   }
 
   return response.json() as Promise<ReviewQueueResponse>;
+}
+
+export async function fetchAdminOrders(): Promise<AdminOrderResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/admin`);
+  if (!response.ok) {
+    throw new Error(`Failed to load admin orders: ${response.status}`);
+  }
+
+  return response.json() as Promise<AdminOrderResponse>;
 }
 
 export async function decideProductReview(input: {

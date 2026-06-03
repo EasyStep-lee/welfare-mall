@@ -32,6 +32,7 @@ const orderRecord = {
 function createRepositoryMock() {
   return {
     listOrdersByBuyer: jest.fn().mockResolvedValue([orderRecord]),
+    listRecentAdminOrders: jest.fn().mockResolvedValue([orderRecord]),
     findOrderForBuyer: jest.fn().mockResolvedValue(orderRecord)
   };
 }
@@ -50,6 +51,16 @@ describe('OrderReadService', () => {
       status: 'pending',
       channel: 'wechat'
     });
+  });
+
+  it('lists recent orders for Admin order management', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderReadService(repository as unknown as OrderReadRepository);
+
+    const result = await service.listAdminOrders();
+
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith();
+    expect(result).toEqual({ orders: [orderRecord] });
   });
 
   it('rejects blank buyer IDs', async () => {

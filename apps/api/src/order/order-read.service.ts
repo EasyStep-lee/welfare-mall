@@ -22,6 +22,12 @@ export class OrderReadService {
     return { orders };
   }
 
+  async listAdminOrders(): Promise<{ orders: OrderCheckoutRecord[] }> {
+    const orders = await this.orderReadRepository.listRecentAdminOrders();
+
+    return { orders };
+  }
+
   async getOrderDetail(input: GetOrderDetailInput): Promise<{ order: OrderCheckoutRecord }> {
     const buyerUserId = requireText(input.buyerUserId, 'buyerUserId');
     const orderNo = requireText(input.orderNo, 'orderNo');

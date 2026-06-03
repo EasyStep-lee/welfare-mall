@@ -1,9 +1,11 @@
 import { Check, RefreshCw, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AdminOrder,
   ReviewQueueItem,
   ReviewQueueStatus,
   decideProductReview,
+  fetchAdminOrders,
   fetchReviewQueue,
   publishProductToPool,
   statusLabels
@@ -16,6 +18,7 @@ const statuses: ReviewQueueStatus[] = ['pending_review', 'approved', 'rejected']
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,9 +45,23 @@ export default function App() {
     }
   }
 
+  async function loadOrders() {
+    try {
+      const response = await fetchAdminOrders();
+      setOrders(response.orders);
+    } catch (loadError) {
+      setOrders([]);
+      setError(loadError instanceof Error ? loadError.message : '订单管理列表加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
+
+  useEffect(() => {
+    void loadOrders();
+  }, []);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -117,6 +134,52 @@ export default function App() {
 
       {message ? <div className="notice success">{message}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
+
+      <section className="order-panel" aria-label="订单管理">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">订单域</p>
+            <h2>订单管理</h2>
+          </div>
+          <span className="queue-count">{orders.length} 单</span>
+        </div>
+        <div className="order-list">
+          {orders.length === 0 ? <p className="empty-text">暂无订单</p> : null}
+          {orders.map((order) => (
+            <article className="order-card" key={order.orderNo}>
+              <div className="order-card-header">
+                <strong>{order.orderNo}</strong>
+                <span>{orderStatusLabel(order.status)}</span>
+              </div>
+              <dl className="order-metrics">
+                <div>
+                  <dt>买家</dt>
+                  <dd>{order.buyerUserId}</dd>
+                </div>
+                <div>
+                  <dt>收货</dt>
+                  <dd>{formatReceiver(order)}</dd>
+                </div>
+                <div>
+                  <dt>金额</dt>
+                  <dd>合计 {formatMoney(order.totalAmount)}</dd>
+                </div>
+                <div>
+                  <dt>支付</dt>
+                  <dd>{formatPayment(order)}</dd>
+                </div>
+              </dl>
+              <div className="order-lines">
+                {order.lines.map((line) => (
+                  <span key={`${order.orderNo}-${line.displayName}-${line.displaySkuCode ?? 'default'}`}>
+                    {line.displayName} x{line.quantity}
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="workbench">
         <div className="table-region">
@@ -334,6 +397,50 @@ function statusActionLabel(action: string) {
 function formatMoney(amount: number) {
   return `¥${(amount / 100).toFixed(2)}`;
 }
+
+function formatReceiver(order: AdminOrder) {
+  if (order.fulfillmentType === 'pickup') {
+    return order.pickupStoreName ?? '到店自提';
+  }
+
+  return [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / ');
+}
+
+function formatPayment(order: AdminOrder) {
+  if (!order.latestPayment) {
+    return '未生成支付单';
+  }
+
+  return `${paymentChannelLabels[order.latestPayment.channel] ?? order.latestPayment.channel} ${
+    paymentStatusLabels[order.latestPayment.status] ?? order.latestPayment.status
+  }`;
+}
+
+function orderStatusLabel(status: string) {
+  return orderStatusLabels[status] ?? status;
+}
+
+const orderStatusLabels: Record<string, string> = {
+  pending_payment: '待支付',
+  paid: '已支付',
+  completed: '已完成',
+  canceled: '已取消',
+  refunded: '已退款'
+};
+
+const paymentChannelLabels: Record<string, string> = {
+  wechat: '微信支付',
+  alipay: '支付宝',
+  cash: '现金'
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  pending: '待支付',
+  paid: '已支付',
+  failed: '支付失败',
+  closed: '已关闭',
+  refunded: '已退款'
+};
 
 function mediaTypeLabel(type: string) {
   const labels: Record<string, string> = {

@@ -7,6 +7,7 @@ import { OrderReadService } from '../../src/order/order-read.service';
 function createOrderReadServiceMock() {
   return {
     listOrders: jest.fn(),
+    listAdminOrders: jest.fn(),
     getOrderDetail: jest.fn()
   };
 }
@@ -60,6 +61,44 @@ describe('Order read API contract', () => {
       paymentNo: 'PAY-20260603-001',
       status: 'pending',
       channel: 'wechat'
+    });
+  });
+
+  it('lists recent orders for Admin order management', async () => {
+    orderReadService.listAdminOrders.mockResolvedValue({
+      orders: [
+        {
+          orderNo: 'ORDER-20260603-001',
+          buyerUserId: 'user-001',
+          status: 'paid',
+          totalAmount: 13980,
+          receiverName: 'Li Lei',
+          receiverPhone: '13800000000',
+          latestPayment: {
+            paymentNo: 'PAY-20260603-001',
+            status: 'paid',
+            channel: 'wechat'
+          },
+          lines: [{ displayName: 'Local Rice', quantity: 2 }]
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer()).get('/api/orders/admin').expect(200);
+
+    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith();
+    expect(orderReadService.getOrderDetail).not.toHaveBeenCalled();
+    expect(response.body.orders).toHaveLength(1);
+    expect(response.body.orders[0]).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      buyerUserId: 'user-001',
+      status: 'paid',
+      totalAmount: 13980,
+      latestPayment: {
+        paymentNo: 'PAY-20260603-001',
+        status: 'paid',
+        channel: 'wechat'
+      }
     });
   });
 
