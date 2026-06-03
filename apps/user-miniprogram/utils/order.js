@@ -1,4 +1,5 @@
 const { formatMoney } = require('./format');
+const { toPaymentDisplay } = require('./payment');
 
 const OrderStatusText = {
   pending_payment: '待支付',
@@ -15,7 +16,8 @@ function toOrderSummaryDisplay(order) {
     statusText: formatStatus(order.status),
     firstLineName: lines[0]?.displayName || '订单商品',
     lineCountText: `${lines.length} 件商品`,
-    totalText: formatMoney(order.totalAmount)
+    totalText: formatMoney(order.totalAmount),
+    paymentText: formatLatestPaymentText(order.latestPayment)
   };
 }
 
@@ -25,6 +27,7 @@ function toOrderDetailDisplay(order) {
     totalText: formatMoney(order.totalAmount),
     welfareCardText: formatMoney(order.welfareCardPayableAmount),
     cashText: formatMoney(order.cashPayableAmount),
+    latestPaymentDisplay: order.latestPayment ? toPaymentDisplay(order.latestPayment) : null,
     receiverText: [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / '),
     lines: (order.lines || []).map((line) => ({
       ...line,
@@ -38,6 +41,16 @@ function toOrderDetailDisplay(order) {
 
 function formatStatus(status) {
   return OrderStatusText[status] || status;
+}
+
+function formatLatestPaymentText(payment) {
+  if (!payment) {
+    return '';
+  }
+
+  const paymentDisplay = toPaymentDisplay(payment);
+
+  return `${paymentDisplay.channelText} ${paymentDisplay.statusText}`;
 }
 
 module.exports = {

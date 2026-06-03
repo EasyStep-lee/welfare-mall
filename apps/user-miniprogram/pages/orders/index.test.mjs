@@ -9,6 +9,11 @@ const orderResponse = {
       orderNo: 'ORDER-20260603-001',
       status: 'pending_payment',
       totalAmount: 13980,
+      latestPayment: {
+        paymentNo: 'PAY-20260603-001',
+        status: 'pending',
+        channel: 'wechat'
+      },
       lines: [{ displayName: 'Local Rice', quantity: 2 }]
     }
   ]
@@ -64,7 +69,8 @@ describe('user mini-program order list page', () => {
       orderNo: 'ORDER-20260603-001',
       statusText: '待支付',
       firstLineName: 'Local Rice',
-      totalText: '¥139.80'
+      totalText: '¥139.80',
+      paymentText: '微信支付 待支付'
     });
     expect(wx.navigateTo).toHaveBeenCalledWith({
       url: '/pages/order-detail/index?orderNo=ORDER-20260603-001'

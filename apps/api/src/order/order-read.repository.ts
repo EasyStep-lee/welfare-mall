@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrderCheckoutRecord } from './order-checkout.repository';
+import { OrderCheckoutPaymentRecord, OrderCheckoutRecord } from './order-checkout.repository';
 
 export type FindOrderForBuyerInput = {
   buyerUserId: string;
@@ -12,21 +12,57 @@ export class OrderReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listOrdersByBuyer(buyerUserId: string): Promise<OrderCheckoutRecord[]> {
-    return this.prisma.orderHeader.findMany({
+    const orders = await this.prisma.orderHeader.findMany({
       where: { buyerUserId },
       orderBy: { createdAt: 'desc' },
       select: orderReadSelect()
     });
+
+    return this.attachLatestPayments(orders);
   }
 
   async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<OrderCheckoutRecord | null> {
-    return this.prisma.orderHeader.findFirst({
+    const order = await this.prisma.orderHeader.findFirst({
       where: {
         buyerUserId: input.buyerUserId,
         orderNo: input.orderNo
       },
       select: orderReadSelect()
     });
+
+    if (!order) {
+      return null;
+    }
+
+    const [orderWithPayment] = await this.attachLatestPayments([order]);
+
+    return orderWithPayment ?? null;
+  }
+
+  private async attachLatestPayments(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]> {
+    const orderNos = orders.map((order) => order.orderNo);
+
+    if (orderNos.length === 0) {
+      return orders;
+    }
+
+    const payments = await this.prisma.orderPayment.findMany({
+      where: { orderNo: { in: orderNos } },
+      orderBy: { createdAt: 'desc' },
+      select: paymentReadSelect()
+    });
+    const latestPaymentByOrderNo = new Map<string, OrderCheckoutPaymentRecord>();
+
+    for (const payment of payments) {
+      if (!latestPaymentByOrderNo.has(payment.orderNo)) {
+        latestPaymentByOrderNo.set(payment.orderNo, payment);
+      }
+    }
+
+    return orders.map((order) => ({
+      ...order,
+      latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null
+    }));
   }
 }
 
@@ -65,5 +101,23 @@ function orderReadSelect() {
         createdAt: true
       }
     }
+  } as const;
+}
+
+function paymentReadSelect() {
+  return {
+    id: true,
+    paymentNo: true,
+    requestId: true,
+    orderNo: true,
+    status: true,
+    channel: true,
+    totalAmount: true,
+    welfareCardPayableAmount: true,
+    cashPayableAmount: true,
+    providerPaymentNo: true,
+    paidAt: true,
+    createdAt: true,
+    updatedAt: true
   } as const;
 }

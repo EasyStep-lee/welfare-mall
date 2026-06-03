@@ -41,6 +41,11 @@ describe('Order read API contract', () => {
           buyerUserId: 'user-001',
           status: 'pending_payment',
           totalAmount: 13980,
+          latestPayment: {
+            paymentNo: 'PAY-20260603-001',
+            status: 'pending',
+            channel: 'wechat'
+          },
           lines: [{ displayName: 'Local Rice', quantity: 2 }]
         }
       ]
@@ -51,6 +56,11 @@ describe('Order read API contract', () => {
     expect(orderReadService.listOrders).toHaveBeenCalledWith({ buyerUserId: 'user-001' });
     expect(response.body.orders).toHaveLength(1);
     expect(response.body.orders[0].orderNo).toBe('ORDER-20260603-001');
+    expect(response.body.orders[0].latestPayment).toMatchObject({
+      paymentNo: 'PAY-20260603-001',
+      status: 'pending',
+      channel: 'wechat'
+    });
   });
 
   it('gets one buyer-scoped order detail', async () => {
@@ -60,6 +70,11 @@ describe('Order read API contract', () => {
         buyerUserId: 'user-001',
         status: 'pending_payment',
         totalAmount: 13980,
+        latestPayment: {
+          paymentNo: 'PAY-20260603-001',
+          status: 'pending',
+          channel: 'wechat'
+        },
         lines: [{ displayName: 'Local Rice', quantity: 2 }]
       }
     });
@@ -73,6 +88,11 @@ describe('Order read API contract', () => {
       orderNo: 'ORDER-20260603-001'
     });
     expect(response.body.order.orderNo).toBe('ORDER-20260603-001');
+    expect(response.body.order.latestPayment).toMatchObject({
+      paymentNo: 'PAY-20260603-001',
+      status: 'pending',
+      channel: 'wechat'
+    });
   });
 
   it('rejects blank buyer ID before calling service', async () => {

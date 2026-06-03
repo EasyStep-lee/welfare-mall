@@ -56,6 +56,12 @@
   font-weight: 600;
 }
 
+.payment-status {
+  color: #1f7a5c;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
 .total {
   color: #9c3f22;
   font-size: 32rpx;

@@ -20,7 +20,13 @@ const orderRecord = {
   pickupStoreName: null,
   createdAt: new Date('2026-06-03T00:00:00.000Z'),
   updatedAt: new Date('2026-06-03T00:00:00.000Z'),
-  lines: []
+  lines: [],
+  latestPayment: {
+    paymentNo: 'PAY-20260603-001',
+    status: 'pending',
+    channel: 'wechat',
+    totalAmount: 13980
+  }
 };
 
 function createRepositoryMock() {
@@ -39,6 +45,11 @@ describe('OrderReadService', () => {
 
     expect(repository.listOrdersByBuyer).toHaveBeenCalledWith('user-001');
     expect(result).toEqual({ orders: [orderRecord] });
+    expect(result.orders[0]?.latestPayment).toMatchObject({
+      paymentNo: 'PAY-20260603-001',
+      status: 'pending',
+      channel: 'wechat'
+    });
   });
 
   it('rejects blank buyer IDs', async () => {
