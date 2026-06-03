@@ -19,7 +19,8 @@ Page({
     refund: null,
     refundDisplay: null,
     refundError: '',
-    canRequestRefund: false
+    canRequestRefund: false,
+    refreshingOrder: false
   },
 
   onLoad(options) {
@@ -52,7 +53,8 @@ Page({
         refund: null,
         refundDisplay: null,
         refundError: '',
-        canRequestRefund: canRequestRefund(order)
+        canRequestRefund: canRequestRefund(order),
+        refreshingOrder: false
       });
     } catch (error) {
       this.setData({
@@ -60,9 +62,20 @@ Page({
         orderDisplay: null,
         loading: false,
         error: error instanceof Error ? error.message : '订单详情加载失败',
-        canRequestRefund: false
+        canRequestRefund: false,
+        refreshingOrder: false
       });
     }
+  },
+
+  async refreshOrderDetail() {
+    if (!this.data.order) {
+      this.setData({ error: '缺少订单信息' });
+      return;
+    }
+
+    this.setData({ refreshingOrder: true });
+    await this.loadOrderDetail(this.data.order.orderNo);
   },
 
   async submitPayment() {

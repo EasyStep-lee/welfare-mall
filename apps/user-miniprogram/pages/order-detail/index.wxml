@@ -9,6 +9,9 @@
         <text class="status">{{orderDisplay.statusText}}</text>
       </view>
       <text class="total">{{orderDisplay.totalText}}</text>
+      <button class="secondary-button" loading="{{refreshingOrder}}" disabled="{{refreshingOrder}}" bindtap="refreshOrderDetail">
+        刷新订单状态
+      </button>
     </view>
 
     <view class="section">
