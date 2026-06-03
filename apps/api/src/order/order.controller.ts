@@ -94,6 +94,30 @@ export class OrderController {
     return this.orderFulfillmentService.listMerchantFulfillmentOrders({ merchantId: merchantId.trim() });
   }
 
+  @Post('merchant/fulfillment/:orderNo/complete')
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Complete one paid merchant fulfillment order',
+    schema: {
+      example: {
+        order: {
+          orderNo: 'ORDER-20260603-001',
+          status: 'completed',
+          lines: [{ displayName: '东北五常大米福利装', quantity: 2 }]
+        }
+      }
+    }
+  })
+  async completeMerchantFulfillmentOrder(@Param('orderNo') orderNo: string, @Body() input: CompleteMerchantFulfillmentOrderRequest) {
+    assertRequiredText(orderNo, 'orderNo');
+    assertRequiredText(input?.merchantId, 'merchantId');
+
+    return this.orderFulfillmentService.completeMerchantFulfillmentOrder({
+      orderNo: orderNo.trim(),
+      merchantId: input.merchantId.trim()
+    });
+  }
+
   @Get(':orderNo')
   @ApiOkResponse({
     description: 'Get one buyer-scoped order detail',
@@ -331,6 +355,9 @@ export class OrderController {
 
 type OrderAmountPreviewRequest = OrderAmountPreviewInput;
 type OrderCheckoutRequest = OrderCheckoutInput;
+type CompleteMerchantFulfillmentOrderRequest = {
+  merchantId: string;
+};
 type CreateOrderPaymentRequest = CreateOrderPaymentInput;
 type ProcessOrderPaymentCallbackRequest = Omit<ProcessOrderPaymentCallbackServiceInput, 'paidAt'> & {
   paidAt?: string | Date | null;

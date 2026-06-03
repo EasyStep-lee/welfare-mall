@@ -1,6 +1,7 @@
 import { RefreshCw, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  completeMerchantFulfillmentOrder,
   fetchMerchantFulfillmentOrders,
   ProductDraftPayload,
   MerchantFulfillmentOrder,
@@ -108,6 +109,21 @@ export default function App() {
     }
   }
 
+  async function completeFulfillmentOrder(order: MerchantFulfillmentOrder) {
+    setError(null);
+    setMessage(null);
+    try {
+      await completeMerchantFulfillmentOrder({
+        merchantId: fixedMerchantContext.merchantId,
+        orderNo: order.orderNo
+      });
+      setMessage(`${order.orderNo} 已确认完成`);
+      await loadFulfillmentOrders();
+    } catch (completeError) {
+      setError(completeError instanceof Error ? completeError.message : '确认履约完成失败');
+    }
+  }
+
   function updateDraftField(field: keyof typeof draftForm, value: string) {
     setDraftForm((current) => ({
       ...current,
@@ -171,6 +187,11 @@ export default function App() {
                 <span>合计 {formatMoney(order.totalAmount)}</span>
                 <span>现金 {formatMoney(order.cashPayableAmount)}</span>
                 <span>福利卡 {formatMoney(order.welfareCardPayableAmount)}</span>
+              </div>
+              <div className="fulfillment-actions">
+                <button type="button" className="submit-button" onClick={() => void completeFulfillmentOrder(order)}>
+                  确认完成
+                </button>
               </div>
             </article>
           ))}

@@ -1,14 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   OrderCheckoutLineRecord,
   OrderCheckoutPaymentRecord,
   OrderCheckoutRecord
 } from './order-checkout.repository';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrderStatuses } from './order-status';
+import { orderStateSelect } from './order-state.repository';
 
 export type MerchantFulfillmentOrderRecord = OrderCheckoutRecord & {
   lines: OrderCheckoutLineRecord[];
   latestPayment: OrderCheckoutPaymentRecord | null;
+};
+
+export type CompletePaidOrderForMerchantInput = {
+  merchantId: string;
+  orderNo: string;
+};
+
+type OrderFulfillmentTransaction = {
+  product: {
+    findMany(args: unknown): Promise<Array<{ id: string }>>;
+  };
+  orderHeader: {
+    findFirst(args: unknown): Promise<OrderCheckoutRecord | null>;
+    update(args: unknown): Promise<OrderCheckoutRecord>;
+  };
+  orderState: {
+    update(args: unknown): Promise<unknown>;
+  };
 };
 
 @Injectable()
@@ -54,6 +74,58 @@ export class OrderFulfillmentRepository {
       latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null
     }));
   }
+
+  async completePaidOrderForMerchant(input: CompletePaidOrderForMerchantInput): Promise<MerchantFulfillmentOrderRecord | null> {
+    return this.prisma.$transaction(async (prismaTx) => {
+      const tx = prismaTx as unknown as OrderFulfillmentTransaction;
+      const productIds = await findMerchantProductIds(tx, input.merchantId);
+
+      if (productIds.length === 0) {
+        return null;
+      }
+
+      const order = await tx.orderHeader.findFirst({
+        where: {
+          orderNo: input.orderNo,
+          lines: { some: { productId: { in: productIds } } }
+        },
+        select: fulfillmentOrderSelect()
+      });
+
+      if (!order) {
+        return null;
+      }
+
+      if (order.status !== OrderStatuses.Paid) {
+        throw new BadRequestException('Only paid orders can be completed by merchant fulfillment.');
+      }
+
+      const completedOrder = await tx.orderHeader.update({
+        where: { orderNo: input.orderNo },
+        data: { status: OrderStatuses.Completed },
+        select: fulfillmentOrderSelect()
+      });
+      await tx.orderState.update({
+        where: { orderNo: input.orderNo },
+        data: { status: OrderStatuses.Completed },
+        select: orderStateSelect()
+      });
+
+      return {
+        ...completedOrder,
+        latestPayment: null
+      };
+    });
+  }
+}
+
+async function findMerchantProductIds(client: { product: { findMany(args: unknown): Promise<Array<{ id: string }>> } }, merchantId: string) {
+  const products = await client.product.findMany({
+    where: { merchantId },
+    select: { id: true }
+  });
+
+  return products.map((product) => product.id);
 }
 
 function fulfillmentOrderSelect() {
