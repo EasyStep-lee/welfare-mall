@@ -34,9 +34,27 @@ const payment = {
   channel: 'wechat'
 };
 
-function mountPage() {
+const paidOrder = {
+  ...order,
+  status: 'paid',
+  latestPayment: {
+    paymentNo: 'PAY-20260603-PAID',
+    status: 'paid',
+    channel: 'wechat'
+  }
+};
+
+const refund = {
+  refundNo: 'REF-20260603-001',
+  status: 'processing',
+  channel: 'wechat',
+  refundAmount: 13980
+};
+
+function mountPage(options = {}) {
   let pageDefinition;
   const requests = [];
+  const orderResponse = options.order || order;
 
   global.Page = vi.fn((definition) => {
     pageDefinition = definition;
@@ -49,8 +67,12 @@ function mountPage() {
         request.success({ statusCode: 201, data: { payment } });
         return;
       }
+      if (request.url.endsWith('/orders/refunds')) {
+        request.success({ statusCode: 201, data: { refund } });
+        return;
+      }
 
-      request.success({ statusCode: 200, data: { order } });
+      request.success({ statusCode: 200, data: { order: orderResponse } });
     })
   };
 
@@ -128,5 +150,34 @@ describe('user mini-program order detail page', () => {
       statusText: '待支付',
       channelText: '微信支付'
     });
+  });
+
+  it('creates a full after-sale refund request from a paid order', async () => {
+    const { page, requests } = mountPage({ order: paidOrder });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.submitRefund();
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/refunds',
+      data: {
+        paymentNo: 'PAY-20260603-PAID',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'wechat',
+        refundAmount: 13980,
+        reason: 'after_sale'
+      }
+    });
+    expect(requests[1].data.requestId).toMatch(/^mini-refund-ORDER-20260603-001-\d+$/);
+    expect(page.data.refund).toEqual(refund);
+    expect(page.data.refundDisplay).toEqual({
+      refundNo: 'REF-20260603-001',
+      statusText: '退款处理中',
+      channelText: '微信支付',
+      refundAmountText: '¥139.80'
+    });
+    expect(page.data.order.status).toBe('refund_processing');
+    expect(page.data.orderDisplay.statusText).toBe('退款处理中');
   });
 });

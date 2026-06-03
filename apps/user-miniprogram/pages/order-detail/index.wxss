@@ -59,11 +59,13 @@
   padding-top: 18rpx;
 }
 
-.payment-action {
+.payment-action,
+.refund-action {
   gap: 18rpx;
 }
 
-.primary-button {
+.primary-button,
+.secondary-button {
   background: #1f7a5c;
   border-radius: 12rpx;
   color: #ffffff;
@@ -71,6 +73,12 @@
   font-weight: 700;
   line-height: 84rpx;
   width: 100%;
+}
+
+.secondary-button {
+  background: #ffffff;
+  border: 2rpx solid #1f7a5c;
+  color: #1f7a5c;
 }
 
 .payment-result {

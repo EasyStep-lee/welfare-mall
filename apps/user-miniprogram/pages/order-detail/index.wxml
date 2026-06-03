@@ -60,6 +60,31 @@
       <text wx:if="{{paymentError}}" class="error">{{paymentError}}</text>
     </view>
 
+    <view wx:if="{{canRequestRefund || refundDisplay}}" class="section refund-action">
+      <button wx:if="{{canRequestRefund}}" class="secondary-button" loading="{{requestingRefund}}" disabled="{{requestingRefund}}" bindtap="submitRefund">
+        申请售后退款
+      </button>
+      <view wx:if="{{refundDisplay}}" class="payment-result">
+        <view class="line">
+          <text>退款单号</text>
+          <text>{{refundDisplay.refundNo}}</text>
+        </view>
+        <view class="line">
+          <text>退款渠道</text>
+          <text>{{refundDisplay.channelText}}</text>
+        </view>
+        <view class="line">
+          <text>退款金额</text>
+          <text>{{refundDisplay.refundAmountText}}</text>
+        </view>
+        <view class="line">
+          <text>退款状态</text>
+          <text>{{refundDisplay.statusText}}</text>
+        </view>
+      </view>
+      <text wx:if="{{refundError}}" class="error">{{refundError}}</text>
+    </view>
+
     <view class="section">
       <text class="section-title">收货信息</text>
       <text class="muted">{{orderDisplay.receiverText}}</text>
