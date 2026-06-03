@@ -9,6 +9,11 @@ const order = {
   totalAmount: 13980,
   welfareCardPayableAmount: 5000,
   cashPayableAmount: 8980,
+  latestPayment: {
+    paymentNo: 'PAY-20260603-001',
+    status: 'pending',
+    channel: 'wechat'
+  },
   receiverName: 'Li Lei',
   receiverPhone: '13800000000',
   receiverAddress: 'Pudong Avenue 1',
@@ -84,6 +89,11 @@ describe('user mini-program order detail page', () => {
       totalText: '¥139.80',
       welfareCardText: '¥50.00',
       cashText: '¥89.80',
+      latestPaymentDisplay: {
+        paymentNo: 'PAY-20260603-001',
+        statusText: '待支付',
+        channelText: '微信支付'
+      },
       receiverText: 'Li Lei / 13800000000 / Pudong Avenue 1'
     });
     expect(page.data.orderDisplay.lines[0]).toMatchObject({

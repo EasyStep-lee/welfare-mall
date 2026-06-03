@@ -19,6 +19,22 @@ export type OrderCheckoutLineRecord = {
   createdAt: Date;
 };
 
+export type OrderCheckoutPaymentRecord = {
+  id: string;
+  paymentNo: string;
+  requestId: string;
+  orderNo: string;
+  status: string;
+  channel: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+  providerPaymentNo: string | null;
+  paidAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type OrderCheckoutRecord = {
   id: string;
   orderNo: string;
@@ -38,6 +54,7 @@ export type OrderCheckoutRecord = {
   createdAt: Date;
   updatedAt: Date;
   lines: OrderCheckoutLineRecord[];
+  latestPayment?: OrderCheckoutPaymentRecord | null;
 };
 
 export type CreateOrderCheckoutLineInput = {

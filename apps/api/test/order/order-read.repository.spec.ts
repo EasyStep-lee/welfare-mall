@@ -36,11 +36,30 @@ const orderRecord = {
   ]
 };
 
+const paymentRecord = {
+  id: 'payment-001',
+  paymentNo: 'PAY-20260603-001',
+  requestId: 'payment-request-001',
+  orderNo: 'ORDER-20260603-001',
+  status: 'pending',
+  channel: 'wechat',
+  totalAmount: 13980,
+  welfareCardPayableAmount: 5000,
+  cashPayableAmount: 8980,
+  providerPaymentNo: null,
+  paidAt: null,
+  createdAt: new Date('2026-06-03T00:05:00.000Z'),
+  updatedAt: new Date('2026-06-03T00:05:00.000Z')
+};
+
 function createPrismaMock() {
   return {
     orderHeader: {
       findMany: jest.fn().mockResolvedValue([orderRecord]),
       findFirst: jest.fn().mockResolvedValue(orderRecord)
+    },
+    orderPayment: {
+      findMany: jest.fn().mockResolvedValue([paymentRecord])
     }
   };
 }
@@ -57,7 +76,12 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(result).toEqual([orderRecord]);
+    expect(prisma.orderPayment.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord }]);
   });
 
   it('finds one order scoped to the buyer', async () => {
@@ -76,6 +100,11 @@ describe('OrderReadRepository', () => {
       },
       select: expect.any(Object)
     });
-    expect(result).toEqual(orderRecord);
+    expect(prisma.orderPayment.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord });
   });
 });
