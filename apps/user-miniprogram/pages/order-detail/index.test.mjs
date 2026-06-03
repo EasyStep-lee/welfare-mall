@@ -23,6 +23,12 @@ const order = {
   ]
 };
 
+const payment = {
+  paymentNo: 'PAY-20260603-001',
+  status: 'pending',
+  channel: 'wechat'
+};
+
 function mountPage() {
   let pageDefinition;
   const requests = [];
@@ -34,6 +40,11 @@ function mountPage() {
   global.wx = {
     request: vi.fn((request) => {
       requests.push(request);
+      if (request.url.endsWith('/orders/payments')) {
+        request.success({ statusCode: 201, data: { payment } });
+        return;
+      }
+
       request.success({ statusCode: 200, data: { order } });
     })
   };
@@ -80,6 +91,32 @@ describe('user mini-program order detail page', () => {
       skuText: 'SKU-RICE-5KG',
       quantityText: 'x2',
       lineTotalText: '¥139.80'
+    });
+  });
+
+  it('creates a WeChat payment order from the loaded order snapshot', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.submitPayment();
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/payments',
+      data: {
+        orderNo: 'ORDER-20260603-001',
+        channel: 'wechat',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
+      }
+    });
+    expect(requests[1].data.requestId).toMatch(/^mini-payment-ORDER-20260603-001-\d+$/);
+    expect(page.data.payment).toEqual(payment);
+    expect(page.data.paymentDisplay).toEqual({
+      paymentNo: 'PAY-20260603-001',
+      statusText: '待支付',
+      channelText: '微信支付'
     });
   });
 });
