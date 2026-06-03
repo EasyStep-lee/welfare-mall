@@ -43,5 +43,13 @@ describe('Health API', () => {
     expect(response.headers['access-control-allow-methods']).toContain('GET');
     expect(response.headers['access-control-allow-methods']).toContain('POST');
   });
+
+  it('allows the local Merchant app to call the API from the browser', async () => {
+    await request(app.getHttpServer())
+      .get('/api/health')
+      .set('Origin', 'http://localhost:5174')
+      .expect(200)
+      .expect('Access-Control-Allow-Origin', 'http://localhost:5174');
+  });
 });
 
