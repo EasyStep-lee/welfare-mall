@@ -61,6 +61,12 @@ function createPrismaMock() {
         createdAt: new Date('2026-06-03T00:00:00.000Z'),
         updatedAt: new Date('2026-06-03T00:05:00.000Z')
       })
+    },
+    orderHeader: {
+      update: jest.fn().mockResolvedValue({
+        orderNo: 'ORDER-20260603-001',
+        status: 'paid'
+      })
     }
   };
   const prisma = {
@@ -167,6 +173,10 @@ describe('OrderPaymentRepository', () => {
       },
       select: expect.any(Object)
     });
+    expect(tx.orderHeader.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: { status: 'paid' }
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -202,6 +212,7 @@ describe('OrderPaymentRepository', () => {
     expect(tx.orderPaymentCallback.create).not.toHaveBeenCalled();
     expect(tx.orderPayment.update).not.toHaveBeenCalled();
     expect(tx.orderState.update).not.toHaveBeenCalled();
+    expect(tx.orderHeader.update).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,

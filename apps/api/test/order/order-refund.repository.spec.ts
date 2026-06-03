@@ -61,6 +61,12 @@ function createPrismaMock() {
         createdAt: new Date('2026-06-03T00:00:00.000Z'),
         updatedAt: new Date('2026-06-03T00:15:00.000Z')
       })
+    },
+    orderHeader: {
+      update: jest.fn().mockResolvedValue({
+        orderNo: 'ORDER-20260603-001',
+        status: 'refunded'
+      })
     }
   };
   const prisma = {
@@ -88,6 +94,12 @@ function createPrismaMock() {
         refundedAt: null,
         createdAt: new Date('2026-06-03T00:00:00.000Z'),
         updatedAt: new Date('2026-06-03T00:10:00.000Z')
+      })
+    },
+    orderHeader: {
+      update: jest.fn().mockResolvedValue({
+        orderNo: 'ORDER-20260603-001',
+        status: 'refund_processing'
       })
     },
     $transaction: jest.fn(async (callback) => callback(tx))
@@ -131,6 +143,10 @@ describe('OrderRefundRepository', () => {
         refundRequestedAt: expect.any(Date)
       },
       select: expect.any(Object)
+    });
+    expect(prisma.orderHeader.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: { status: 'refund_processing' }
     });
     expect(result).toEqual(refundRecord);
   });
@@ -176,6 +192,10 @@ describe('OrderRefundRepository', () => {
       },
       select: expect.any(Object)
     });
+    expect(tx.orderHeader.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: { status: 'refunded' }
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -211,10 +231,64 @@ describe('OrderRefundRepository', () => {
     expect(tx.orderRefundCallback.create).not.toHaveBeenCalled();
     expect(tx.orderRefund.update).not.toHaveBeenCalled();
     expect(tx.orderState.update).not.toHaveBeenCalled();
+    expect(tx.orderHeader.update).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
         refund: expect.objectContaining({ status: 'succeeded', providerRefundNo: 'wx-refund-001' })
+      })
+    );
+  });
+
+  it('marks a refund failed and restores paid order header status', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderRefund.update.mockResolvedValue({
+      ...refundRecord,
+      status: 'failed',
+      providerRefundNo: 'wx-refund-001'
+    });
+    tx.orderState.update.mockResolvedValue({
+      id: 'order-state-001',
+      orderNo: 'ORDER-20260603-001',
+      status: 'paid',
+      paidAt: new Date('2026-06-03T00:05:00.000Z'),
+      refundRequestedAt: new Date('2026-06-03T00:10:00.000Z'),
+      refundedAt: null,
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-03T00:15:00.000Z')
+    });
+    const repository = new OrderRefundRepository(prisma as never);
+
+    const result = await repository.processCallback({
+      providerEventId: 'refund-event-failed-001',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001',
+      status: 'failed',
+      succeededAt: null,
+      payload: { event: 'refund.failed' }
+    });
+
+    expect(tx.orderRefund.update).toHaveBeenCalledWith({
+      where: { id: 'refund-001' },
+      data: {
+        status: 'failed',
+        providerRefundNo: 'wx-refund-001'
+      },
+      select: expect.any(Object)
+    });
+    expect(tx.orderState.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: { status: 'paid' },
+      select: expect.any(Object)
+    });
+    expect(tx.orderHeader.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: { status: 'paid' }
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        duplicate: false,
+        refund: expect.objectContaining({ status: 'failed', providerRefundNo: 'wx-refund-001' })
       })
     );
   });

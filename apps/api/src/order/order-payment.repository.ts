@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderPaymentStatus, OrderPaymentStatuses } from './order-payment-status';
+import { OrderStatuses } from './order-status';
 import { applySystemOrderTransition, ensurePendingPaymentOrderState, OrderStateClient } from './order-state.repository';
 
 export type OrderPaymentRecord = {
@@ -63,6 +64,9 @@ type OrderPaymentTransaction = {
   orderPaymentCallback: {
     findUnique(args: unknown): Promise<(OrderPaymentCallbackRecord & { payment: OrderPaymentRecord }) | null>;
     create(args: unknown): Promise<OrderPaymentCallbackRecord>;
+  };
+  orderHeader: {
+    update(args: unknown): Promise<unknown>;
   };
 } & OrderStateClient;
 
@@ -155,11 +159,17 @@ async function updatePaymentFromCallback(
   input: ProcessOrderPaymentCallbackInput
 ): Promise<OrderPaymentRecord> {
   if (input.status === OrderPaymentStatuses.Paid && payment.status !== OrderPaymentStatuses.Paid) {
-    await applySystemOrderTransition(tx, {
+    const orderState = await applySystemOrderTransition(tx, {
       orderNo: payment.orderNo,
       action: 'pay',
       paidAt: input.paidAt
     });
+    if (orderState?.status === OrderStatuses.Paid) {
+      await tx.orderHeader.update({
+        where: { orderNo: payment.orderNo },
+        data: { status: OrderStatuses.Paid }
+      });
+    }
 
     return tx.orderPayment.update({
       where: { id: payment.id },
