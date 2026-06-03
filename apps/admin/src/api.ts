@@ -130,6 +130,28 @@ export type CreateOrderRefundResponse = {
   };
 };
 
+export type ProcessOrderPaymentCallbackInput = {
+  providerEventId: string;
+  paymentNo: string;
+  providerPaymentNo: string;
+  status: 'paid' | 'failed';
+  paidAt: string;
+  payload: Record<string, unknown>;
+};
+
+export type ProcessOrderPaymentCallbackResponse = {
+  duplicate: boolean;
+  payment: {
+    paymentNo: string;
+    status: string;
+    providerPaymentNo: string | null;
+  };
+  callback: {
+    providerEventId: string;
+    status: string;
+  };
+};
+
 export const statusLabels: Record<ReviewQueueStatus, string> = {
   pending_review: '待审核',
   approved: '已通过',
@@ -175,6 +197,22 @@ export async function createOrderRefund(input: CreateOrderRefundInput): Promise<
   }
 
   return response.json() as Promise<CreateOrderRefundResponse>;
+}
+
+export async function processOrderPaymentCallback(
+  input: ProcessOrderPaymentCallbackInput
+): Promise<ProcessOrderPaymentCallbackResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to process order payment callback: ${response.status}`);
+  }
+
+  return response.json() as Promise<ProcessOrderPaymentCallbackResponse>;
 }
 
 export async function decideProductReview(input: {

@@ -95,6 +95,35 @@ const refundProcessingOrdersResponse = {
   ]
 };
 
+const pendingPaymentOrdersResponse = {
+  orders: [
+    {
+      ...adminOrdersResponse.orders[0],
+      status: 'pending_payment',
+      latestPayment: {
+        paymentNo: 'PAY-20260603-PENDING',
+        status: 'pending',
+        channel: 'wechat'
+      },
+      latestRefund: null
+    }
+  ]
+};
+
+const paidAfterCallbackOrdersResponse = {
+  orders: [
+    {
+      ...pendingPaymentOrdersResponse.orders[0],
+      status: 'paid',
+      latestPayment: {
+        paymentNo: 'PAY-20260603-PENDING',
+        status: 'paid',
+        channel: 'wechat'
+      }
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
     let adminOrderLoads = 0;
@@ -205,5 +234,76 @@ describe('Admin product review workbench', () => {
     });
     expect(await screen.findByText('ORDER-20260603-001 已提交退款申请 REF-20260603-001')).toBeInTheDocument();
     expect(await screen.findByText('退款处理中')).toBeInTheDocument();
+  });
+
+  it('confirms a pending payment callback for Admin order management', async () => {
+    let adminOrderLoads = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.includes('/orders/payments/callbacks')) {
+          return {
+            ok: true,
+            json: async () => ({
+              duplicate: false,
+              payment: {
+                paymentNo: 'PAY-20260603-PENDING',
+                status: 'paid',
+                providerPaymentNo: 'admin-confirm-PAY-20260603-PENDING'
+              },
+              callback: {
+                providerEventId: 'admin-payment-ORDER-20260603-001-1717394400000',
+                status: 'paid'
+              }
+            })
+          };
+        }
+
+        if (url.includes('/orders/admin')) {
+          adminOrderLoads += 1;
+          return {
+            ok: true,
+            json: async () => (adminOrderLoads === 1 ? pendingPaymentOrdersResponse : paidAfterCallbackOrdersResponse)
+          };
+        }
+
+        if (url.includes('/products/review-queue')) {
+          return {
+            ok: true,
+            json: async () => reviewQueueResponse
+          };
+        }
+
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '确认支付成功' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/payments/callbacks', expect.any(Object));
+    });
+    const callbackCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).includes('/orders/payments/callbacks'));
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(callbackCall?.[1]?.body))).toMatchObject({
+      providerEventId: expect.stringMatching(/^admin-payment-ORDER-20260603-001-\d+$/),
+      paymentNo: 'PAY-20260603-PENDING',
+      providerPaymentNo: 'admin-confirm-PAY-20260603-PENDING',
+      status: 'paid',
+      paidAt: expect.any(String),
+      payload: { source: 'admin-order-management' }
+    });
+    expect(await screen.findByText('ORDER-20260603-001 已确认支付成功 PAY-20260603-PENDING')).toBeInTheDocument();
+    expect(await screen.findByText('已支付')).toBeInTheDocument();
+    expect(await screen.findByText('微信支付 已支付')).toBeInTheDocument();
   });
 });
