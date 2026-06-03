@@ -133,7 +133,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -142,7 +142,7 @@ git add docs/superpowers/plans/2026-06-03-user-miniprogram-refund-request.md app
 git commit -m "feat: add user mini-program refund request action"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
