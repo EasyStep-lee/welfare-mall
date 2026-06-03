@@ -80,4 +80,71 @@ describe('Merchant product submission workbench', () => {
     });
     expect(await screen.findByText('东北五常大米福利装 已提交审核')).toBeInTheDocument();
   });
+
+  it('saves a complete product draft from merchant-facing fields', async () => {
+    render(<App />);
+
+    await userEvent.clear(screen.getByLabelText('商品编码'));
+    await userEvent.type(screen.getByLabelText('商品编码'), 'P-TEA-001');
+    await userEvent.clear(screen.getByLabelText('商品名称'));
+    await userEvent.type(screen.getByLabelText('商品名称'), '安吉白茶福利礼盒');
+    await userEvent.clear(screen.getByLabelText('销售价'));
+    await userEvent.type(screen.getByLabelText('销售价'), '168.50');
+    await userEvent.clear(screen.getByLabelText('主图地址'));
+    await userEvent.type(screen.getByLabelText('主图地址'), 'https://img.example.com/tea-main.jpg');
+    await userEvent.clear(screen.getByLabelText('详情图地址'));
+    await userEvent.type(screen.getByLabelText('详情图地址'), 'https://img.example.com/tea-detail.jpg');
+    await userEvent.clear(screen.getByLabelText('资质文件'));
+    await userEvent.type(screen.getByLabelText('资质文件'), 'https://img.example.com/certs/tea-origin.pdf');
+    await userEvent.clear(screen.getByLabelText('商品参数'));
+    await userEvent.type(screen.getByLabelText('商品参数'), '净含量 250g');
+    await userEvent.clear(screen.getByLabelText('详情图文'));
+    await userEvent.type(screen.getByLabelText('详情图文'), '适合企业节日福利发放。');
+
+    await userEvent.click(screen.getByRole('button', { name: '保存草稿' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/products/drafts/save',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: expect.any(String)
+        })
+      );
+    });
+
+    const saveCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/products/drafts/save'));
+    const requestBody = JSON.parse(String(saveCall?.[1]?.body));
+    expect(requestBody.actorUserId).toBe('merchant-user-001');
+    expect(requestBody.payload).toEqual(
+      expect.objectContaining({
+        code: 'P-TEA-001',
+        name: '安吉白茶福利礼盒',
+        merchantId: 'merchant-001',
+        franchiseId: 'franchise-001',
+        categoryId: 'category-rice',
+        brandId: 'brand-rice',
+        originCountry: '中国'
+      })
+    );
+    expect(requestBody.payload.skus[0]).toEqual(
+      expect.objectContaining({
+        code: 'SKU-P-TEA-001',
+        priceAmount: 16850,
+        specs: [{ name: '规格', value: '标准装' }]
+      })
+    );
+    expect(requestBody.payload.media).toEqual([
+      expect.objectContaining({ type: 'main_image', url: 'https://img.example.com/tea-main.jpg' }),
+      expect.objectContaining({ type: 'detail_image', url: 'https://img.example.com/tea-detail.jpg' })
+    ]);
+    expect(requestBody.payload.qualifications[0]).toEqual(
+      expect.objectContaining({
+        type: 'origin_certificate',
+        fileUrl: 'https://img.example.com/certs/tea-origin.pdf'
+      })
+    );
+    expect(await screen.findByText('安吉白茶福利礼盒 草稿已保存')).toBeInTheDocument();
+  });
 });

@@ -41,6 +41,56 @@ export type SubmissionQueueResponse = {
   items: SubmissionQueueItem[];
 };
 
+export type ProductDraftPayload = {
+  code: string;
+  name: string;
+  merchantId: string;
+  franchiseId: string;
+  categoryId: string;
+  brandId: string;
+  originCountry: string;
+  originProvince: string;
+  originCity: string;
+  originDescription: string;
+  skus: Array<{
+    code: string;
+    priceAmount: number;
+    marketPriceAmount: number;
+    costPriceAmount: number;
+    barcode: string;
+    specs: Array<{ name: string; value: string }>;
+    weightGrams: number;
+    volumeMilliliters: number;
+  }>;
+  media: Array<{
+    type: 'main_image' | 'detail_image';
+    url: string;
+    sortOrder: number;
+    altText: string;
+  }>;
+  qualifications: Array<{
+    type: 'origin_certificate';
+    title: string;
+    certificateNo: string;
+    fileUrl: string;
+    validFrom: string;
+    validTo: string;
+  }>;
+  parameters: Array<{
+    groupName: string;
+    name: string;
+    value: string;
+    valueType: 'text';
+    sortOrder: number;
+  }>;
+  detailSections: Array<{
+    type: 'text';
+    title: string;
+    content: string;
+    sortOrder: number;
+  }>;
+};
+
 export const statusLabels: Record<SubmissionQueueStatus, string> = {
   draft: '草稿',
   rejected: '已驳回'
@@ -73,6 +123,24 @@ export async function submitProductForReview(input: { productId: string; actorUs
 
   if (!response.ok) {
     throw new Error(`Failed to submit product for review: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function saveProductDraft(input: { payload: ProductDraftPayload; actorUserId: string; productId?: string | null }) {
+  const response = await fetch(`${apiBaseUrl()}/products/drafts/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productId: input.productId ?? null,
+      payload: input.payload,
+      actorUserId: input.actorUserId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to save product draft: ${response.status}`);
   }
 
   return response.json();
