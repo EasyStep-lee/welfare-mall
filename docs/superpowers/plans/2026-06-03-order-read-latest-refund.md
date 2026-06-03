@@ -142,7 +142,7 @@ Expected: PASS.
 
 ### Task 5: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -151,7 +151,7 @@ git add docs/superpowers/plans/2026-06-03-order-read-latest-refund.md apps/api a
 git commit -m "feat: expose latest refund on order reads"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
