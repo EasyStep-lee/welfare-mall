@@ -27,6 +27,10 @@ function orderPaymentUrl(baseUrl) {
   return apiUrl('/orders/payments', baseUrl);
 }
 
+function orderRefundUrl(baseUrl) {
+  return apiUrl('/orders/refunds', baseUrl);
+}
+
 function orderListUrl(buyerUserId, baseUrl) {
   return apiUrl(`/orders?buyerUserId=${encodeURIComponent(buyerUserId)}`, baseUrl);
 }
@@ -67,6 +71,7 @@ module.exports = {
   orderDetailUrl,
   orderListUrl,
   orderPaymentUrl,
+  orderRefundUrl,
   productPoolCatalogUrl,
   productPoolItemDetailUrl,
   requestJson

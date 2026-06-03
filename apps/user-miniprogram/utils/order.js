@@ -4,6 +4,7 @@ const { toPaymentDisplay } = require('./payment');
 const OrderStatusText = {
   pending_payment: '待支付',
   paid: '已支付',
+  refund_processing: '退款处理中',
   cancelled: '已取消',
   refunded: '已退款'
 };
