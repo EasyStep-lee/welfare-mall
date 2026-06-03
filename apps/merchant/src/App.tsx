@@ -1,7 +1,9 @@
 import { RefreshCw, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  fetchMerchantFulfillmentOrders,
   ProductDraftPayload,
+  MerchantFulfillmentOrder,
   SubmissionQueueItem,
   SubmissionQueueStatus,
   fetchMerchantSubmissionQueue,
@@ -24,6 +26,7 @@ export default function App() {
   const [activeStatus, setActiveStatus] = useState<SubmissionQueueStatus>('draft');
   const [items, setItems] = useState<SubmissionQueueItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [fulfillmentOrders, setFulfillmentOrders] = useState<MerchantFulfillmentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +64,23 @@ export default function App() {
     }
   }
 
+  async function loadFulfillmentOrders() {
+    try {
+      const response = await fetchMerchantFulfillmentOrders(fixedMerchantContext.merchantId);
+      setFulfillmentOrders(response.orders);
+    } catch (loadError) {
+      setFulfillmentOrders([]);
+      setError(loadError instanceof Error ? loadError.message : '履约订单加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
+
+  useEffect(() => {
+    void loadFulfillmentOrders();
+  }, []);
 
   async function submit(item: SubmissionQueueItem) {
     setError(null);
@@ -125,6 +142,40 @@ export default function App() {
 
       {message ? <div className="notice success">{message}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
+
+      <section className="fulfillment-panel" aria-label="履约订单">
+        <div className="editor-heading">
+          <div>
+            <p className="eyebrow">订单履约</p>
+            <h2>履约订单</h2>
+          </div>
+          <span className="queue-count">{fulfillmentOrders.length} 单</span>
+        </div>
+        <div className="fulfillment-list">
+          {fulfillmentOrders.length === 0 ? <p className="empty-text">暂无待履约订单</p> : null}
+          {fulfillmentOrders.map((order) => (
+            <article className="fulfillment-card" key={order.orderNo}>
+              <div className="fulfillment-card-header">
+                <strong>{order.orderNo}</strong>
+                <span>{formatPayment(order)}</span>
+              </div>
+              <p>{formatReceiver(order)}</p>
+              <div className="fulfillment-lines">
+                {order.lines.map((line) => (
+                  <span key={`${order.orderNo}-${line.displayName}-${line.displaySkuCode ?? 'default'}`}>
+                    {line.displayName} x{line.quantity}
+                  </span>
+                ))}
+              </div>
+              <div className="fulfillment-card-footer">
+                <span>合计 {formatMoney(order.totalAmount)}</span>
+                <span>现金 {formatMoney(order.cashPayableAmount)}</span>
+                <span>福利卡 {formatMoney(order.welfareCardPayableAmount)}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="editor-panel" aria-label="商品草稿编辑">
         <div className="editor-heading">
@@ -298,6 +349,42 @@ function fallbackImageUrl(name: string) {
   const encoded = encodeURIComponent(name.slice(0, 6));
   return `https://placehold.co/320x220/eef6f5/24524d?text=${encoded}`;
 }
+
+function formatPayment(order: MerchantFulfillmentOrder) {
+  if (!order.latestPayment) {
+    return '未生成支付单';
+  }
+
+  return `${paymentChannelLabels[order.latestPayment.channel] ?? order.latestPayment.channel} ${
+    paymentStatusLabels[order.latestPayment.status] ?? order.latestPayment.status
+  }`;
+}
+
+function formatReceiver(order: MerchantFulfillmentOrder) {
+  if (order.fulfillmentType === 'pickup') {
+    return order.pickupStoreName ?? '到店自提';
+  }
+
+  return [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / ');
+}
+
+function formatMoney(amount: number) {
+  return `¥${(amount / 100).toFixed(2)}`;
+}
+
+const paymentChannelLabels: Record<string, string> = {
+  wechat: '微信支付',
+  alipay: '支付宝',
+  cash: '现金'
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  pending: '待支付',
+  paid: '已支付',
+  failed: '支付失败',
+  closed: '已关闭',
+  refunded: '已退款'
+};
 
 function toDraftPayload(form: {
   code: string;

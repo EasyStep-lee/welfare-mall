@@ -222,6 +222,63 @@ tbody tr:hover {
   padding: 16px;
 }
 
+.fulfillment-panel {
+  background: #ffffff;
+  border: 1px solid #d9e4e1;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.queue-count,
+.empty-text {
+  color: #637a76;
+  font-size: 13px;
+}
+
+.fulfillment-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fulfillment-card {
+  border: 1px solid #e0e9e6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.fulfillment-card p {
+  color: #637a76;
+  margin: 0;
+}
+
+.fulfillment-card-header,
+.fulfillment-card-footer {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.fulfillment-card-header span {
+  color: #1f6b42;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fulfillment-lines,
+.fulfillment-card-footer {
+  color: #637a76;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 8px;
+}
+
 .editor-heading {
   align-items: center;
   display: flex;
@@ -300,6 +357,10 @@ dd {
   }
 
   .editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fulfillment-list {
     grid-template-columns: 1fr;
   }
 

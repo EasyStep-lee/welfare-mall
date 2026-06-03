@@ -91,6 +91,36 @@ export type ProductDraftPayload = {
   }>;
 };
 
+export type MerchantFulfillmentOrderLine = {
+  displayName: string;
+  displaySkuCode: string | null;
+  quantity: number;
+  lineTotalAmount: number;
+};
+
+export type MerchantFulfillmentOrder = {
+  orderNo: string;
+  status: string;
+  totalAmount: number;
+  cashPayableAmount: number;
+  welfareCardPayableAmount: number;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  latestPayment: {
+    paymentNo: string;
+    status: string;
+    channel: string;
+  } | null;
+  lines: MerchantFulfillmentOrderLine[];
+};
+
+export type MerchantFulfillmentQueueResponse = {
+  orders: MerchantFulfillmentOrder[];
+};
+
 export const statusLabels: Record<SubmissionQueueStatus, string> = {
   draft: '草稿',
   rejected: '已驳回'
@@ -144,4 +174,16 @@ export async function saveProductDraft(input: { payload: ProductDraftPayload; ac
   }
 
   return response.json();
+}
+
+export async function fetchMerchantFulfillmentOrders(merchantId: string): Promise<MerchantFulfillmentQueueResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders/merchant/fulfillment`);
+  url.searchParams.set('merchantId', merchantId);
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load merchant fulfillment orders: ${response.status}`);
+  }
+
+  return response.json() as Promise<MerchantFulfillmentQueueResponse>;
 }
