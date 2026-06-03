@@ -124,7 +124,7 @@ Expected: detail response contains `本地审核五常大米福利装`, `SKU-LOC
 
 ## Task 5: GitHub
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit on `codex/user-product-browse-detail`, push to GitHub, create a PR to `main`, merge after it is mergeable, and fast-forward local `main`.
 
