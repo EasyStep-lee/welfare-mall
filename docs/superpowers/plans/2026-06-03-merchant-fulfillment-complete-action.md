@@ -27,7 +27,7 @@
 
 ### Task 1: API Merchant Completion Action
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Add tests proving:
 
@@ -45,11 +45,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-fulfillment --runIn
 
 Expected: FAIL because the completion repository method, service method, and route do not exist.
 
-- [ ] **Step 2: Implement API completion behavior**
+- [x] **Step 2: Implement API completion behavior**
 
 Add the repository transaction, service method, and controller route. Keep the route before `GET /:orderNo` so it cannot be captured as a buyer order detail request.
 
-- [ ] **Step 3: Re-run API tests**
+- [x] **Step 3: Re-run API tests**
 
 Run:
 
@@ -61,7 +61,7 @@ Expected: PASS.
 
 ### Task 2: Merchant Web Completion Button
 
-- [ ] **Step 1: Write failing merchant UI test**
+- [x] **Step 1: Write failing merchant UI test**
 
 Extend `apps/merchant/src/App.test.tsx` to click `确认完成` on a fulfillment card, assert the request uses:
 
@@ -80,11 +80,11 @@ pnpm --filter @welfare-mall/merchant run test -- --run
 
 Expected: FAIL because the client and button do not exist.
 
-- [ ] **Step 2: Implement merchant UI completion behavior**
+- [x] **Step 2: Implement merchant UI completion behavior**
 
 Add API client, render a `确认完成` button on each fulfillment card, call the API, show a success message, and reload fulfillment orders.
 
-- [ ] **Step 3: Re-run merchant tests**
+- [x] **Step 3: Re-run merchant tests**
 
 Run:
 
@@ -96,7 +96,7 @@ Expected: PASS.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused order and merchant tests**
+- [x] **Step 1: Run focused order and merchant tests**
 
 Run:
 
@@ -105,7 +105,7 @@ pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 pnpm --filter @welfare-mall/merchant run test -- --run
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -118,7 +118,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -127,7 +127,7 @@ git add docs/superpowers/plans/2026-06-03-merchant-fulfillment-complete-action.m
 git commit -m "feat: complete merchant fulfillment orders"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
