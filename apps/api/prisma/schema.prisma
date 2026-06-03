@@ -379,6 +379,53 @@ model OrderState {
   @@map("order_state")
 }
 
+model OrderHeader {
+  id                       String      @id @default(cuid())
+  orderNo                  String      @unique
+  requestId                String      @unique
+  buyerUserId              String
+  status                   String
+  subtotalAmount           Int
+  discountAmount           Int
+  totalAmount              Int
+  welfareCardPayableAmount Int
+  cashPayableAmount        Int
+  fulfillmentType          String
+  receiverName             String?
+  receiverPhone            String?
+  receiverAddress          String?
+  pickupStoreName          String?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  lines                    OrderLine[]
+
+  @@index([buyerUserId])
+  @@index([status])
+  @@map("order_header")
+}
+
+model OrderLine {
+  id                String      @id @default(cuid())
+  orderId           String
+  productPoolItemId String
+  productId         String
+  skuId             String?
+  displayName       String
+  displaySkuCode    String?
+  displayImageUrl   String
+  unitPriceAmount   Int
+  quantity          Int
+  lineTotalAmount   Int
+  createdAt         DateTime    @default(now())
+  order             OrderHeader @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([productPoolItemId])
+  @@index([productId])
+  @@index([skuId])
+  @@map("order_line")
+}
+
 model OrderPayment {
   id                       String                 @id @default(cuid())
   paymentNo                String                 @unique
