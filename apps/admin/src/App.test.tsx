@@ -67,6 +67,7 @@ describe('Admin product review workbench', () => {
     render(<App />);
 
     const row = await screen.findByRole('row', { name: /东北五常大米福利装/ });
+    expect(within(row).getByText('P-RICE-001')).toBeInTheDocument();
     expect(within(row).getByText('哈尔滨优选商贸')).toBeInTheDocument();
     expect(within(row).getByText('黑龙江福利卡中心')).toBeInTheDocument();
     expect(within(row).getByText('2 个 SKU')).toBeInTheDocument();

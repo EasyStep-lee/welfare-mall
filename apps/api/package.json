@@ -11,6 +11,7 @@
     "test": "jest --config jest.config.ts",
     "test:e2e": "jest --config jest.config.ts --runInBand",
     "test:db:product-save": "cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 prisma db push --skip-generate && cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 jest --config jest.db.config.ts --runInBand",
+    "seed:local-review-product": "cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 tsx src/dev/seed-local-review-product.ts",
     "prisma:generate": "cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 prisma generate",
     "prisma:validate": "cross-env DATABASE_URL=mysql://welfare_mall:welfare_mall_password@127.0.0.1:3306/welfare_mall_v2 prisma validate",
     "openapi:generate": "tsx src/openapi/generate-openapi.ts"

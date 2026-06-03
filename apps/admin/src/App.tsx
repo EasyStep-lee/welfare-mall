@@ -154,6 +154,7 @@ export default function App() {
                           <img src={item.primaryImageUrl ?? fallbackImageUrl(item.name)} alt={item.name} />
                           <div>
                             <strong>{item.name}</strong>
+                            <span>{item.code}</span>
                             <span>{item.category.name}</span>
                           </div>
                         </div>
