@@ -62,26 +62,37 @@ describe('Order amount preview API contract', () => {
       subtotalAmount: 13980,
       discountAmount: 0,
       totalAmount: 13980,
-      welfareCardPayableAmount: 0,
-      cashPayableAmount: 13980
+      welfareCardPayableAmount: 5000,
+      cashPayableAmount: 8980
     });
 
     const response = await request(app.getHttpServer())
       .post('/api/orders/amount-preview')
-      .send({ items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }] })
+      .send({ items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }], welfareCardPaymentAmount: 5000 })
       .expect(200);
 
     expect(orderAmountService.previewAmount).toHaveBeenCalledWith({
-      items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }]
+      items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }],
+      welfareCardPaymentAmount: 5000
     });
     expect(response.body.totalAmount).toBe(13980);
-    expect(response.body.cashPayableAmount).toBe(13980);
+    expect(response.body.welfareCardPayableAmount).toBe(5000);
+    expect(response.body.cashPayableAmount).toBe(8980);
   });
 
   it('rejects invalid amount preview request fields before calling service', async () => {
     await request(app.getHttpServer())
       .post('/api/orders/amount-preview')
       .send({ items: [{ productPoolItemId: ' ', quantity: 2 }] })
+      .expect(400);
+
+    expect(orderAmountService.previewAmount).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid welfare-card amount before calling service', async () => {
+    await request(app.getHttpServer())
+      .post('/api/orders/amount-preview')
+      .send({ items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }], welfareCardPaymentAmount: -1 })
       .expect(400);
 
     expect(orderAmountService.previewAmount).not.toHaveBeenCalled();

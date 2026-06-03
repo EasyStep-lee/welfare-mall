@@ -71,7 +71,8 @@ export class OrderController {
       items: input.items.map((item) => ({
         productPoolItemId: item.productPoolItemId.trim(),
         quantity: item.quantity
-      }))
+      })),
+      welfareCardPaymentAmount: input.welfareCardPaymentAmount
     });
   }
 }
@@ -93,6 +94,13 @@ function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | unde
     if (!Number.isInteger(item?.quantity) || item.quantity <= 0) {
       messages.push(`items[${index}].quantity must be a positive integer.`);
     }
+  }
+
+  if (
+    input?.welfareCardPaymentAmount !== undefined &&
+    (!Number.isInteger(input.welfareCardPaymentAmount) || input.welfareCardPaymentAmount < 0)
+  ) {
+    messages.push('welfareCardPaymentAmount must be a non-negative integer.');
   }
 
   if (messages.length > 0) {
