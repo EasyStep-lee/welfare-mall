@@ -1,0 +1,67 @@
+.page {
+  padding: 24rpx;
+}
+
+.summary,
+.order-card {
+  background: #ffffff;
+  border: 1rpx solid #d7e1dd;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 24rpx;
+}
+
+.summary {
+  margin-bottom: 20rpx;
+}
+
+.eyebrow,
+.meta,
+.line-name,
+.order-card-footer {
+  color: #5c7177;
+  font-size: 26rpx;
+}
+
+.title {
+  color: #172026;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.order-card-header,
+.order-card-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-no {
+  color: #172026;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.status {
+  color: #1f7a5c;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.total {
+  color: #9c3f22;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.error {
+  color: #9c2d20;
+}

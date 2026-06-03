@@ -1,0 +1,81 @@
+import { OrderReadRepository } from '../../src/order/order-read.repository';
+
+const orderRecord = {
+  id: 'order-001',
+  orderNo: 'ORDER-20260603-001',
+  requestId: 'checkout-request-001',
+  buyerUserId: 'user-001',
+  status: 'pending_payment',
+  subtotalAmount: 13980,
+  discountAmount: 0,
+  totalAmount: 13980,
+  welfareCardPayableAmount: 5000,
+  cashPayableAmount: 8980,
+  fulfillmentType: 'delivery',
+  receiverName: 'Li Lei',
+  receiverPhone: '13800000000',
+  receiverAddress: 'Pudong Avenue 1',
+  pickupStoreName: null,
+  createdAt: new Date('2026-06-03T00:00:00.000Z'),
+  updatedAt: new Date('2026-06-03T00:00:00.000Z'),
+  lines: [
+    {
+      id: 'order-line-001',
+      orderId: 'order-001',
+      productPoolItemId: 'pool-item-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      displayName: 'Local Rice',
+      displaySkuCode: 'SKU-RICE-5KG',
+      displayImageUrl: 'https://cdn.example.com/rice.jpg',
+      unitPriceAmount: 6990,
+      quantity: 2,
+      lineTotalAmount: 13980,
+      createdAt: new Date('2026-06-03T00:00:00.000Z')
+    }
+  ]
+};
+
+function createPrismaMock() {
+  return {
+    orderHeader: {
+      findMany: jest.fn().mockResolvedValue([orderRecord]),
+      findFirst: jest.fn().mockResolvedValue(orderRecord)
+    }
+  };
+}
+
+describe('OrderReadRepository', () => {
+  it('lists buyer orders newest first with snapshot lines', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    const result = await repository.listOrdersByBuyer('user-001');
+
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: { buyerUserId: 'user-001' },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([orderRecord]);
+  });
+
+  it('finds one order scoped to the buyer', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    const result = await repository.findOrderForBuyer({
+      buyerUserId: 'user-001',
+      orderNo: 'ORDER-20260603-001'
+    });
+
+    expect(prisma.orderHeader.findFirst).toHaveBeenCalledWith({
+      where: {
+        buyerUserId: 'user-001',
+        orderNo: 'ORDER-20260603-001'
+      },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual(orderRecord);
+  });
+});
