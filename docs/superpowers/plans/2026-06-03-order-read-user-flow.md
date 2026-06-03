@@ -39,7 +39,7 @@
 - Test: `apps/api/test/order/order-read.repository.spec.ts`
 - Test: `apps/api/test/order/order-read.service.spec.ts`
 
-- [ ] **Step 1: Write failing repository and service tests**
+- [x] **Step 1: Write failing repository and service tests**
 
 Repository tests must assert:
 
@@ -60,7 +60,7 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-read.repository.spe
 
 Expected: FAIL because order read repository/service do not exist.
 
-- [ ] **Step 2: Implement repository and service**
+- [x] **Step 2: Implement repository and service**
 
 Implement:
 
@@ -71,7 +71,7 @@ Implement:
 
 Reuse the same selected snapshot fields as checkout records.
 
-- [ ] **Step 3: Re-run repository and service tests**
+- [x] **Step 3: Re-run repository and service tests**
 
 Run:
 
@@ -88,7 +88,7 @@ Expected: PASS.
 - Modify: `apps/api/src/order/order.module.ts`
 - Test: `apps/api/test/order/order-read.e2e-spec.ts`
 
-- [ ] **Step 1: Write failing HTTP tests**
+- [x] **Step 1: Write failing HTTP tests**
 
 Add e2e tests proving:
 
@@ -104,14 +104,14 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-read.e2e-spec.ts --
 
 Expected: FAIL because the GET endpoints do not exist.
 
-- [ ] **Step 2: Register read service and routes**
+- [x] **Step 2: Register read service and routes**
 
 Add `OrderReadRepository` and `OrderReadService` to `OrderModule`. Inject `OrderReadService` into `OrderController`. Add:
 
 - `@Get()` list route.
 - `@Get(':orderNo')` detail route.
 
-- [ ] **Step 3: Re-run HTTP tests**
+- [x] **Step 3: Re-run HTTP tests**
 
 Run:
 
@@ -129,7 +129,7 @@ Expected: PASS.
 - Create: `apps/user-miniprogram/utils/order.js`
 - Create: `apps/user-miniprogram/utils/order.test.mjs`
 
-- [ ] **Step 1: Write failing helper tests**
+- [x] **Step 1: Write failing helper tests**
 
 Cover:
 
@@ -145,11 +145,11 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- utils/api.test.mjs util
 
 Expected: FAIL because helper exports do not exist.
 
-- [ ] **Step 2: Implement helper functions**
+- [x] **Step 2: Implement helper functions**
 
 Add URL helpers to `utils/api.js`. Add display helpers to `utils/order.js`.
 
-- [ ] **Step 3: Re-run helper tests**
+- [x] **Step 3: Re-run helper tests**
 
 Run:
 
@@ -168,7 +168,7 @@ Expected: PASS.
 - Create: `apps/user-miniprogram/pages/orders/index.test.mjs`
 - Create: `apps/user-miniprogram/pages/order-detail/index.test.mjs`
 
-- [ ] **Step 1: Write failing page tests**
+- [x] **Step 1: Write failing page tests**
 
 List page test must assert it requests `/orders?buyerUserId=local-user-001`, formats returned orders, and navigates to order detail.
 
@@ -182,11 +182,11 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- pages/orders/index.test
 
 Expected: FAIL because pages do not exist.
 
-- [ ] **Step 2: Implement order list and detail pages**
+- [x] **Step 2: Implement order list and detail pages**
 
 Use `LOCAL_BUYER_USER_ID = 'local-user-001'`. Add order list/detail page files and register pages in `app.json`.
 
-- [ ] **Step 3: Re-run page tests**
+- [x] **Step 3: Re-run page tests**
 
 Run:
 
@@ -201,7 +201,7 @@ Expected: PASS.
 **Files:**
 - Verify all changed files.
 
-- [ ] **Step 1: Run focused order tests**
+- [x] **Step 1: Run focused order tests**
 
 Run:
 
@@ -211,7 +211,7 @@ pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 
 Expected: PASS.
 
-- [ ] **Step 2: Run focused mini-program tests**
+- [x] **Step 2: Run focused mini-program tests**
 
 Run:
 
@@ -221,7 +221,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- --run
 
 Expected: PASS.
 
-- [ ] **Step 3: Run full repository gate**
+- [x] **Step 3: Run full repository gate**
 
 Run:
 
@@ -237,7 +237,7 @@ Expected: PASS.
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -246,7 +246,7 @@ git add docs/superpowers/plans/2026-06-03-order-read-user-flow.md apps/api/src/o
 git commit -m "feat: add user order read flow"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
