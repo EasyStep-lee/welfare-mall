@@ -2,7 +2,8 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const { apiUrl, productPoolCatalogUrl, productPoolItemDetailUrl } = require('./api.js');
+const { apiUrl, orderAmountPreviewUrl, orderCheckoutUrl, productPoolCatalogUrl, productPoolItemDetailUrl } =
+  require('./api.js');
 
 describe('user mini-program API helpers', () => {
   it('builds catalog URLs from the default API base', () => {
@@ -14,5 +15,12 @@ describe('user mini-program API helpers', () => {
     expect(productPoolItemDetailUrl('pool item 001', 'https://api.example.com/api/')).toBe(
       'https://api.example.com/api/product-pools/items/pool%20item%20001'
     );
+  });
+
+  it('builds order checkout URLs', () => {
+    expect(orderAmountPreviewUrl('https://api.example.com/api/')).toBe(
+      'https://api.example.com/api/orders/amount-preview'
+    );
+    expect(orderCheckoutUrl()).toBe('http://localhost:3000/api/orders');
   });
 });

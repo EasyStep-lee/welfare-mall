@@ -34,5 +34,53 @@
         <text>{{item.content}}</text>
       </view>
     </view>
+
+    <view class="section checkout">
+      <text class="section-title">下单信息</text>
+      <label class="field">
+        <text>数量</text>
+        <input value="{{quantity}}" type="number" bindinput="onQuantityInput" />
+      </label>
+      <label class="field">
+        <text>福利卡抵扣(分)</text>
+        <input value="{{welfareCardPaymentAmount}}" type="number" bindinput="onWelfareAmountInput" />
+      </label>
+      <label class="field">
+        <text>收货人</text>
+        <input value="{{receiverName}}" bindinput="onReceiverNameInput" />
+      </label>
+      <label class="field">
+        <text>手机号</text>
+        <input value="{{receiverPhone}}" type="number" bindinput="onReceiverPhoneInput" />
+      </label>
+      <label class="field">
+        <text>收货地址</text>
+        <input value="{{receiverAddress}}" bindinput="onReceiverAddressInput" />
+      </label>
+
+      <button class="secondary-button" loading="{{previewingAmount}}" bindtap="refreshAmountPreview">预览金额</button>
+
+      <view wx:if="{{previewText}}" class="preview-box">
+        <view class="line">
+          <text>订单合计</text>
+          <text>{{previewText.totalText}}</text>
+        </view>
+        <view class="line">
+          <text>福利卡支付</text>
+          <text>{{previewText.welfareCardText}}</text>
+        </view>
+        <view class="line">
+          <text>现金支付</text>
+          <text>{{previewText.cashText}}</text>
+        </view>
+      </view>
+
+      <button class="primary-button" loading="{{creatingOrder}}" bindtap="submitOrder">提交订单</button>
+      <view wx:if="{{createdOrder}}" class="order-result">
+        <text>{{createdOrder.orderNo}}</text>
+        <text>{{createdOrder.status}}</text>
+      </view>
+      <text wx:if="{{checkoutError}}" class="error">{{checkoutError}}</text>
+    </view>
   </view>
 </view>
