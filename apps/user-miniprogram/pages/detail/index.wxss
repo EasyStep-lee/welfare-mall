@@ -1,0 +1,74 @@
+.page {
+  padding: 24rpx;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.hero-image {
+  background: #eef3f1;
+  border-radius: 16rpx;
+  height: 460rpx;
+  width: 100%;
+}
+
+.header,
+.section {
+  background: #ffffff;
+  border: 1rpx solid #d7e1dd;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 24rpx;
+}
+
+.title {
+  color: #172026;
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sku,
+.origin,
+.line,
+.detail-line {
+  color: #5c7177;
+  font-size: 26rpx;
+}
+
+.price {
+  color: #9c3f22;
+  font-size: 42rpx;
+  font-weight: 700;
+}
+
+.section-title {
+  color: #172026;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-line {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.detail-title {
+  color: #172026;
+  font-weight: 600;
+}
+
+.error {
+  color: #9c2d20;
+}

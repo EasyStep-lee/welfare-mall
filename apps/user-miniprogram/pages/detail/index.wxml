@@ -1,0 +1,38 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state-text">加载中</view>
+  <view wx:elif="{{error}}" class="state-text error">{{error}}</view>
+
+  <view wx:elif="{{detail}}" class="detail">
+    <image class="hero-image" src="{{detail.displayImageUrl}}" mode="aspectFill" />
+    <view class="header">
+      <text class="title">{{detail.displayName}}</text>
+      <text class="sku">{{detail.displaySkuCode || '默认规格'}}</text>
+      <text class="price">{{priceText}}</text>
+      <text class="origin">{{originText}}</text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">商品参数</text>
+      <view wx:for="{{detail.product.parameters}}" wx:key="id" class="line">
+        <text>{{item.name}}</text>
+        <text>{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">商品资质</text>
+      <view wx:for="{{detail.product.qualifications}}" wx:key="title" class="line">
+        <text>{{item.title}}</text>
+        <text>{{item.certificateNo || '已上传'}}</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">详情说明</text>
+      <view wx:for="{{detail.product.detailSections}}" wx:key="sortOrder" class="detail-line">
+        <text class="detail-title">{{item.title}}</text>
+        <text>{{item.content}}</text>
+      </view>
+    </view>
+  </view>
+</view>

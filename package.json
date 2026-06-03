@@ -6,7 +6,7 @@
     "verify": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm run lint && pnpm run typecheck && pnpm run test",
     "lint": "pnpm --filter @welfare-mall/api run lint && pnpm --filter @welfare-mall/admin run lint && pnpm --filter @welfare-mall/merchant run lint && pnpm --filter @welfare-mall/portal run lint",
     "typecheck": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/admin run typecheck && pnpm --filter @welfare-mall/merchant run typecheck && pnpm --filter @welfare-mall/portal run typecheck",
-    "test": "pnpm --filter @welfare-mall/api run test --runInBand && pnpm --filter @welfare-mall/admin run test --run && pnpm --filter @welfare-mall/merchant run test --run && pnpm --filter @welfare-mall/portal run test --run",
+    "test": "pnpm --filter @welfare-mall/api run test --runInBand && pnpm --filter @welfare-mall/admin run test --run && pnpm --filter @welfare-mall/merchant run test --run && pnpm --filter @welfare-mall/portal run test --run && pnpm --filter @welfare-mall/user-miniprogram run test --run",
     "build": "pnpm --filter @welfare-mall/api run build && pnpm --filter @welfare-mall/admin run build && pnpm --filter @welfare-mall/merchant run build && pnpm --filter @welfare-mall/portal run build",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ProductPoolService } from './product-pool.service';
 import { ProductPoolStatusCatalog } from './product-pool-status';
@@ -87,6 +87,31 @@ export class ProductPoolController {
     return this.productPoolService.listCatalog({
       franchiseId: normalizeOptionalText(franchiseId)
     });
+  }
+
+  @Get('items/:itemId')
+  @ApiOkResponse({
+    description: 'Product pool item detail with product master data',
+    schema: {
+      example: {
+        id: 'pool-item-001',
+        productId: 'product-001',
+        skuId: 'sku-001',
+        displayName: '东北五常大米福利装',
+        displaySkuCode: 'SKU-RICE-5KG',
+        displayPriceAmount: 6990,
+        displayImageUrl: 'https://cdn.example.com/products/rice-main.jpg',
+        product: {
+          code: 'P-RICE-001',
+          name: '东北五常大米福利装',
+          origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
+          parameters: [{ groupName: '基础参数', name: '净含量', value: '5kg', valueType: 'text', sortOrder: 1 }]
+        }
+      }
+    }
+  })
+  async getItemDetail(@Param('itemId') itemId: string) {
+    return this.productPoolService.getItemDetail(itemId.trim());
   }
 }
 

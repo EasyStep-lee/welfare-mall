@@ -1,0 +1,9 @@
+{
+  "pages": ["pages/catalog/index", "pages/detail/index"],
+  "window": {
+    "navigationBarTitleText": "福利商城",
+    "navigationBarBackgroundColor": "#174c43",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f3f6f4"
+  }
+}
