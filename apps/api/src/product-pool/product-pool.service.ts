@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import {
   ProductPoolCatalogQuery,
   ProductPoolCatalogResult,
+  ProductPoolItemDetail,
   ProductPoolRepository,
   PublishProductPoolInput,
   PublishProductPoolResult
@@ -34,5 +35,15 @@ export class ProductPoolService {
 
   async listCatalog(query: ProductPoolCatalogQuery): Promise<ProductPoolCatalogResult> {
     return this.productPoolRepository.listCatalog(query);
+  }
+
+  async getItemDetail(itemId: string): Promise<ProductPoolItemDetail> {
+    const result = await this.productPoolRepository.getItemDetail(itemId);
+
+    if (!result) {
+      throw new NotFoundException(`Product pool item ${itemId} not found.`);
+    }
+
+    return result;
   }
 }

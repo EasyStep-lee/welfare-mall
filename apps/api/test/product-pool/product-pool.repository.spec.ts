@@ -12,6 +12,38 @@ const approvedProduct = {
   media: [{ url: 'https://cdn.example.com/products/rice-main.jpg' }]
 };
 
+const productPoolItemDetail = {
+  id: 'pool-item-001',
+  productPoolId: 'pool-001',
+  productId: 'product-001',
+  skuId: 'sku-001',
+  sortOrder: 0,
+  displayName: '东北五常大米福利装',
+  displaySkuCode: 'SKU-RICE-5KG',
+  displayPriceAmount: 6990,
+  displayImageUrl: 'https://cdn.example.com/products/rice-main.jpg',
+  product: {
+    code: 'P-RICE-001',
+    name: '东北五常大米福利装',
+    originCountry: '中国',
+    originProvince: '黑龙江',
+    originCity: '哈尔滨',
+    originDescription: '五常核心产区',
+    brand: { id: 'brand-001', code: 'wuchang', name: '五常香米' },
+    category: { id: 'category-001', code: 'grain', name: '粮油副食' },
+    media: [{ type: 'main_image', url: 'https://cdn.example.com/products/rice-main.jpg', sortOrder: 1 }],
+    qualifications: [{ type: 'origin_certificate', title: '产地证明', certificateNo: 'CERT-RICE-001', fileUrl: null }],
+    parameters: [{ groupName: '基础参数', name: '净含量', value: '5kg', valueType: 'text', sortOrder: 1 }],
+    detailSections: [{ type: 'text', title: '福利说明', content: '适合企业福利发放', sortOrder: 1 }]
+  },
+  sku: {
+    code: 'SKU-RICE-5KG',
+    priceAmount: 6990,
+    marketPriceAmount: 7990,
+    specs: [{ name: '规格', value: '5kg' }]
+  }
+};
+
 function createPrismaMock(product: typeof approvedProduct | null = approvedProduct) {
   const tx = {
     product: {
@@ -67,6 +99,9 @@ function createPrismaMock(product: typeof approvedProduct | null = approvedProdu
           ]
         }
       ])
+    },
+    productPoolItem: {
+      findUnique: jest.fn().mockResolvedValue(productPoolItemDetail)
     }
   };
 
@@ -229,6 +264,44 @@ describe('ProductPoolRepository', () => {
         displayName: '东北五常大米福利装'
       })
     );
+  });
+
+  it('returns product pool item detail with product master data', async () => {
+    const { prisma } = createPrismaMock();
+    const repository = new ProductPoolRepository(prisma as never);
+
+    const result = await repository.getItemDetail('pool-item-001');
+
+    expect(prisma.productPoolItem.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'pool-item-001' }
+      })
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'pool-item-001',
+        displayName: '东北五常大米福利装',
+        product: expect.objectContaining({
+          code: 'P-RICE-001',
+          origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
+          parameters: [expect.objectContaining({ name: '净含量', value: '5kg' })],
+          qualifications: [expect.objectContaining({ title: '产地证明' })],
+          detailSections: [expect.objectContaining({ title: '福利说明' })]
+        }),
+        sku: expect.objectContaining({
+          code: 'SKU-RICE-5KG',
+          specText: '规格: 5kg'
+        })
+      })
+    );
+  });
+
+  it('returns null when product pool item detail is missing', async () => {
+    const { prisma } = createPrismaMock();
+    prisma.productPoolItem.findUnique.mockResolvedValue(null);
+    const repository = new ProductPoolRepository(prisma as never);
+
+    await expect(repository.getItemDetail('pool-item-missing')).resolves.toBeNull();
   });
 
   it('registers the repository in product pool module', async () => {

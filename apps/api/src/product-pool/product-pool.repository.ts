@@ -23,6 +23,69 @@ export type ProductPoolItemSummary = Omit<ProductPoolItemSnapshot, 'skuId' | 'di
   sortOrder: number;
 };
 
+export type ProductPoolItemDetail = ProductPoolItemSummary & {
+  productPoolId: string;
+  product: {
+    code: string;
+    name: string;
+    origin: {
+      country: string;
+      province: string | null;
+      city: string | null;
+      description: string | null;
+    };
+    brand: ProductPoolParty | null;
+    category: ProductPoolParty;
+    media: ProductPoolMedia[];
+    qualifications: ProductPoolQualification[];
+    parameters: ProductPoolParameter[];
+    detailSections: ProductPoolDetailSection[];
+  };
+  sku: ProductPoolItemDetailSku | null;
+};
+
+export type ProductPoolParty = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type ProductPoolMedia = {
+  type: string;
+  url: string;
+  sortOrder: number;
+};
+
+export type ProductPoolQualification = {
+  type: string;
+  title: string;
+  certificateNo: string | null;
+  fileUrl: string | null;
+};
+
+export type ProductPoolParameter = {
+  groupName: string;
+  name: string;
+  value: string;
+  valueType: string;
+  sortOrder: number;
+};
+
+export type ProductPoolDetailSection = {
+  type: string;
+  title: string | null;
+  content: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+};
+
+export type ProductPoolItemDetailSku = {
+  code: string;
+  priceAmount: number;
+  marketPriceAmount: number;
+  specText: string;
+};
+
 export type ProductPoolCatalogItem = ProductPoolSummary & {
   items: ProductPoolItemSummary[];
 };
@@ -170,6 +233,99 @@ export class ProductPoolRepository {
 
     return { productPools };
   }
+
+  async getItemDetail(itemId: string): Promise<ProductPoolItemDetail | null> {
+    const item = await this.prisma.productPoolItem.findUnique({
+      where: { id: itemId },
+      select: {
+        id: true,
+        productPoolId: true,
+        productId: true,
+        skuId: true,
+        sortOrder: true,
+        displayName: true,
+        displaySkuCode: true,
+        displayPriceAmount: true,
+        displayImageUrl: true,
+        product: {
+          select: {
+            code: true,
+            name: true,
+            originCountry: true,
+            originProvince: true,
+            originCity: true,
+            originDescription: true,
+            brand: { select: partySelect() },
+            category: { select: partySelect() },
+            media: {
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+              select: { type: true, url: true, sortOrder: true }
+            },
+            qualifications: {
+              orderBy: [{ createdAt: 'asc' }],
+              select: { type: true, title: true, certificateNo: true, fileUrl: true }
+            },
+            parameters: {
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+              select: { groupName: true, name: true, value: true, valueType: true, sortOrder: true }
+            },
+            detailSections: {
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+              select: { type: true, title: true, content: true, imageUrl: true, sortOrder: true }
+            }
+          }
+        },
+        sku: {
+          select: {
+            code: true,
+            priceAmount: true,
+            marketPriceAmount: true,
+            specs: true
+          }
+        }
+      }
+    });
+
+    if (!item) {
+      return null;
+    }
+
+    return {
+      id: item.id,
+      productPoolId: item.productPoolId,
+      productId: item.productId,
+      skuId: item.skuId,
+      sortOrder: item.sortOrder,
+      displayName: item.displayName,
+      displaySkuCode: item.displaySkuCode,
+      displayPriceAmount: item.displayPriceAmount,
+      displayImageUrl: item.displayImageUrl,
+      product: {
+        code: item.product.code,
+        name: item.product.name,
+        origin: {
+          country: item.product.originCountry,
+          province: item.product.originProvince,
+          city: item.product.originCity,
+          description: item.product.originDescription
+        },
+        brand: item.product.brand,
+        category: item.product.category,
+        media: item.product.media,
+        qualifications: item.product.qualifications,
+        parameters: item.product.parameters,
+        detailSections: item.product.detailSections
+      },
+      sku: item.sku
+        ? {
+            code: item.sku.code,
+            priceAmount: item.sku.priceAmount,
+            marketPriceAmount: item.sku.marketPriceAmount,
+            specText: formatSkuSpecs(item.sku.specs)
+          }
+        : null
+    };
+  }
 }
 
 function defaultPoolCode(franchiseId: string): string {
@@ -210,4 +366,34 @@ function productPoolItemSelect() {
     displayPriceAmount: true,
     displayImageUrl: true
   } as const;
+}
+
+function partySelect() {
+  return {
+    id: true,
+    code: true,
+    name: true
+  } as const;
+}
+
+function formatSkuSpecs(specs: unknown): string {
+  if (!Array.isArray(specs)) {
+    return '';
+  }
+
+  return specs
+    .filter((spec): spec is { name: string; value: string } => isSkuSpec(spec))
+    .map((spec) => `${spec.name}: ${spec.value}`)
+    .join(' / ');
+}
+
+function isSkuSpec(spec: unknown): spec is { name: string; value: string } {
+  return (
+    typeof spec === 'object' &&
+    spec !== null &&
+    'name' in spec &&
+    'value' in spec &&
+    typeof spec.name === 'string' &&
+    typeof spec.value === 'string'
+  );
 }
