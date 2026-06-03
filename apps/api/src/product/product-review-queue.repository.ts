@@ -20,6 +20,41 @@ export type ProductReviewQueueLatestLog = {
   createdAt: string;
 };
 
+export type ProductReviewQueuePrimarySku = {
+  code: string;
+  priceAmount: number;
+  marketPriceAmount: number;
+  specText: string;
+};
+
+export type ProductReviewQueueMedia = {
+  type: string;
+  url: string;
+  sortOrder: number;
+};
+
+export type ProductReviewQueueQualification = {
+  type: string;
+  title: string;
+  certificateNo: string | null;
+  fileUrl: string | null;
+};
+
+export type ProductReviewQueueParameter = {
+  groupName: string;
+  name: string;
+  value: string;
+  valueType: string;
+  sortOrder: number;
+};
+
+export type ProductReviewQueueDetailSection = {
+  type: string;
+  title: string | null;
+  content: string | null;
+  sortOrder: number;
+};
+
 export type ProductReviewQueueItem = {
   productId: string;
   code: string;
@@ -42,6 +77,11 @@ export type ProductReviewQueueItem = {
   parameterCount: number;
   detailSectionCount: number;
   primaryImageUrl: string | null;
+  primarySku: ProductReviewQueuePrimarySku | null;
+  media: ProductReviewQueueMedia[];
+  qualifications: ProductReviewQueueQualification[];
+  parameters: ProductReviewQueueParameter[];
+  detailSections: ProductReviewQueueDetailSection[];
   latestReviewLog: ProductReviewQueueLatestLog | null;
 };
 
@@ -75,11 +115,32 @@ export class ProductReviewQueueRepository {
         franchise: { select: partySelect() },
         category: { select: partySelect() },
         brand: { select: partySelect() },
-        media: {
-          where: { type: 'main_image' },
-          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        skus: {
+          where: { deletedAt: null },
+          orderBy: [{ createdAt: 'asc' }],
           take: 1,
-          select: { url: true }
+          select: {
+            code: true,
+            priceAmount: true,
+            marketPriceAmount: true,
+            specs: true
+          }
+        },
+        media: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+          select: { type: true, url: true, sortOrder: true }
+        },
+        qualifications: {
+          orderBy: [{ createdAt: 'asc' }],
+          select: { type: true, title: true, certificateNo: true, fileUrl: true }
+        },
+        parameters: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+          select: { groupName: true, name: true, value: true, valueType: true, sortOrder: true }
+        },
+        detailSections: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+          select: { type: true, title: true, content: true, sortOrder: true }
         },
         reviewLogs: {
           orderBy: { createdAt: 'desc' },
@@ -126,7 +187,19 @@ export class ProductReviewQueueRepository {
         qualificationCount: product._count.qualifications,
         parameterCount: product._count.parameters,
         detailSectionCount: product._count.detailSections,
-        primaryImageUrl: product.media[0]?.url ?? null,
+        primaryImageUrl: product.media.find((media) => media.type === 'main_image')?.url ?? product.media[0]?.url ?? null,
+        primarySku: product.skus[0]
+          ? {
+              code: product.skus[0].code,
+              priceAmount: product.skus[0].priceAmount,
+              marketPriceAmount: product.skus[0].marketPriceAmount,
+              specText: formatSkuSpecs(product.skus[0].specs)
+            }
+          : null,
+        media: product.media,
+        qualifications: product.qualifications,
+        parameters: product.parameters,
+        detailSections: product.detailSections,
         latestReviewLog: product.reviewLogs[0]
           ? {
               ...product.reviewLogs[0],
@@ -134,10 +207,31 @@ export class ProductReviewQueueRepository {
             }
           : null
       }))
-    };
-  }
+  };
+}
 }
 
+function formatSkuSpecs(specs: unknown): string {
+  if (!Array.isArray(specs)) {
+    return '';
+  }
+
+  return specs
+    .filter((spec): spec is { name: string; value: string } => isSkuSpec(spec))
+    .map((spec) => `${spec.name}: ${spec.value}`)
+    .join(' / ');
+}
+
+function isSkuSpec(spec: unknown): spec is { name: string; value: string } {
+  return (
+    typeof spec === 'object' &&
+    spec !== null &&
+    'name' in spec &&
+    'value' in spec &&
+    typeof spec.name === 'string' &&
+    typeof spec.value === 'string'
+  );
+}
 function partySelect() {
   return {
     id: true,

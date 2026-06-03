@@ -53,6 +53,31 @@ describe('Product admin review queue API contract', () => {
           parameterCount: 4,
           detailSectionCount: 2,
           primaryImageUrl: 'https://img.example.com/rice-cover.jpg',
+          primarySku: {
+            code: 'SKU-RICE-5KG',
+            priceAmount: 6990,
+            marketPriceAmount: 7990,
+            specText: '规格: 5kg'
+          },
+          media: [{ type: 'main_image', url: 'https://img.example.com/rice-cover.jpg', sortOrder: 1 }],
+          qualifications: [
+            {
+              type: 'origin_certificate',
+              title: '产地证明',
+              certificateNo: 'CERT-RICE-001',
+              fileUrl: 'https://img.example.com/certs/rice.pdf'
+            }
+          ],
+          parameters: [
+            {
+              groupName: '基础参数',
+              name: '净含量',
+              value: '5kg',
+              valueType: 'text',
+              sortOrder: 1
+            }
+          ],
+          detailSections: [{ type: 'text', title: '福利说明', content: '适合企业福利发放', sortOrder: 1 }],
           latestReviewLog: {
             action: 'submit_review',
             actorUserId: 'merchant-user-001',
@@ -89,6 +114,31 @@ describe('Product admin review queue API contract', () => {
           parameterCount: 4,
           detailSectionCount: 2,
           primaryImageUrl: 'https://img.example.com/rice-cover.jpg',
+          primarySku: {
+            code: 'SKU-RICE-5KG',
+            priceAmount: 6990,
+            marketPriceAmount: 7990,
+            specText: '规格: 5kg'
+          },
+          media: [{ type: 'main_image', url: 'https://img.example.com/rice-cover.jpg', sortOrder: 1 }],
+          qualifications: [
+            {
+              type: 'origin_certificate',
+              title: '产地证明',
+              certificateNo: 'CERT-RICE-001',
+              fileUrl: 'https://img.example.com/certs/rice.pdf'
+            }
+          ],
+          parameters: [
+            {
+              groupName: '基础参数',
+              name: '净含量',
+              value: '5kg',
+              valueType: 'text',
+              sortOrder: 1
+            }
+          ],
+          detailSections: [{ type: 'text', title: '福利说明', content: '适合企业福利发放', sortOrder: 1 }],
           latestReviewLog: {
             action: 'submit_review',
             actorUserId: 'merchant-user-001',

@@ -222,6 +222,85 @@ export default function App() {
                   <dd>{selectedItem.latestReviewLog ? statusActionLabel(selectedItem.latestReviewLog.action) : '无'}</dd>
                 </div>
               </dl>
+              <div className="review-detail-sections">
+                <section className="review-detail-section">
+                  <h3>SKU</h3>
+                  {selectedItem.primarySku ? (
+                    <div className="detail-card">
+                      <strong>{selectedItem.primarySku.code}</strong>
+                      <span>{selectedItem.primarySku.specText || '未填写规格'}</span>
+                      <span>{`销售价 ${formatMoney(selectedItem.primarySku.priceAmount)}`}</span>
+                    </div>
+                  ) : (
+                    <p className="empty-text">暂无 SKU</p>
+                  )}
+                </section>
+
+                <section className="review-detail-section">
+                  <h3>图片</h3>
+                  {selectedItem.media.length > 0 ? (
+                    <ul className="detail-list">
+                      {selectedItem.media.map((media) => (
+                        <li key={`${media.type}-${media.url}`}>
+                          <strong>{mediaTypeLabel(media.type)}</strong>
+                          <span>{media.url}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-text">暂无图片</p>
+                  )}
+                </section>
+
+                <section className="review-detail-section">
+                  <h3>资质</h3>
+                  {selectedItem.qualifications.length > 0 ? (
+                    <ul className="detail-list">
+                      {selectedItem.qualifications.map((qualification) => (
+                        <li key={`${qualification.type}-${qualification.title}`}>
+                          <strong>{qualification.title}</strong>
+                          <span>{qualification.certificateNo ?? '未填写证书编号'}</span>
+                          {qualification.fileUrl ? <span>{qualification.fileUrl}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-text">暂无资质</p>
+                  )}
+                </section>
+
+                <section className="review-detail-section">
+                  <h3>商品参数</h3>
+                  {selectedItem.parameters.length > 0 ? (
+                    <ul className="detail-list">
+                      {selectedItem.parameters.map((parameter) => (
+                        <li key={`${parameter.groupName}-${parameter.name}`}>
+                          <strong>{`${parameter.name}: ${parameter.value}`}</strong>
+                          <span>{parameter.groupName}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-text">暂无参数</p>
+                  )}
+                </section>
+
+                <section className="review-detail-section">
+                  <h3>详情图文</h3>
+                  {selectedItem.detailSections.length > 0 ? (
+                    <ul className="detail-list">
+                      {selectedItem.detailSections.map((section) => (
+                        <li key={`${section.type}-${section.sortOrder}`}>
+                          <strong>{section.title ?? detailSectionTypeLabel(section.type)}</strong>
+                          {section.content ? <span>{section.content}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-text">暂无详情图文</p>
+                  )}
+                </section>
+              </div>
             </>
           ) : (
             <p>暂无商品</p>
@@ -249,6 +328,28 @@ function statusActionLabel(action: string) {
   };
 
   return labels[action] ?? action;
+}
+
+function formatMoney(amount: number) {
+  return `¥${(amount / 100).toFixed(2)}`;
+}
+
+function mediaTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    main_image: '主图',
+    detail_image: '详情图'
+  };
+
+  return labels[type] ?? type;
+}
+
+function detailSectionTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    text: '文字',
+    image: '图片'
+  };
+
+  return labels[type] ?? type;
 }
 
 function fallbackImageUrl(name: string) {

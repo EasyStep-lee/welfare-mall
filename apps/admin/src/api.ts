@@ -28,6 +28,36 @@ export type ReviewQueueItem = {
   parameterCount: number;
   detailSectionCount: number;
   primaryImageUrl: string | null;
+  primarySku: {
+    code: string;
+    priceAmount: number;
+    marketPriceAmount: number;
+    specText: string;
+  } | null;
+  media: Array<{
+    type: string;
+    url: string;
+    sortOrder: number;
+  }>;
+  qualifications: Array<{
+    type: string;
+    title: string;
+    certificateNo: string | null;
+    fileUrl: string | null;
+  }>;
+  parameters: Array<{
+    groupName: string;
+    name: string;
+    value: string;
+    valueType: string;
+    sortOrder: number;
+  }>;
+  detailSections: Array<{
+    type: string;
+    title: string | null;
+    content: string | null;
+    sortOrder: number;
+  }>;
   latestReviewLog: {
     action: string;
     actorUserId: string | null;
