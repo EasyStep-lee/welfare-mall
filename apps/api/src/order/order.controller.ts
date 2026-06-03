@@ -1,13 +1,17 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
+import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
 import { OrderStatusCatalog } from './order-status';
 import { OrderStatusTransitionCatalog } from './order-status-transition';
 
 @ApiTags('orders')
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly orderAmountService: OrderAmountService) {}
+  constructor(
+    private readonly orderAmountService: OrderAmountService,
+    private readonly orderPaymentService: OrderPaymentService
+  ) {}
 
   @Get('statuses')
   @ApiOkResponse({
@@ -75,9 +79,78 @@ export class OrderController {
       welfareCardPaymentAmount: input.welfareCardPaymentAmount
     });
   }
+
+  @Post('payments')
+  @HttpCode(201)
+  @ApiCreatedResponse({
+    description: 'Create an idempotent order payment',
+    schema: {
+      example: {
+        idempotentReplay: false,
+        payment: {
+          paymentNo: 'PAY-20260603-001',
+          requestId: 'request-001',
+          orderNo: 'ORDER-20260603-001',
+          status: 'pending',
+          channel: 'wechat',
+          totalAmount: 13980,
+          welfareCardPayableAmount: 5000,
+          cashPayableAmount: 8980
+        }
+      }
+    }
+  })
+  async createPayment(@Body() input: CreateOrderPaymentRequest) {
+    assertCreateOrderPaymentRequest(input);
+
+    return this.orderPaymentService.createPayment({
+      requestId: input.requestId.trim(),
+      orderNo: input.orderNo.trim(),
+      channel: input.channel,
+      totalAmount: input.totalAmount,
+      welfareCardPayableAmount: input.welfareCardPayableAmount,
+      cashPayableAmount: input.cashPayableAmount
+    });
+  }
+
+  @Post('payments/callbacks')
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Process an idempotent payment provider callback',
+    schema: {
+      example: {
+        duplicate: false,
+        payment: {
+          paymentNo: 'PAY-20260603-001',
+          status: 'paid',
+          providerPaymentNo: 'wx-pay-001'
+        },
+        callback: {
+          providerEventId: 'event-001',
+          status: 'paid'
+        }
+      }
+    }
+  })
+  async processPaymentCallback(@Body() input: ProcessOrderPaymentCallbackRequest) {
+    assertProcessOrderPaymentCallbackRequest(input);
+
+    return this.orderPaymentService.processCallback({
+      providerEventId: input.providerEventId.trim(),
+      paymentNo: input.paymentNo.trim(),
+      providerPaymentNo: input.providerPaymentNo.trim(),
+      status: input.status,
+      paidAt: normalizeCallbackPaidAt(input.paidAt),
+      payload: input.payload ?? {}
+    });
+  }
 }
 
 type OrderAmountPreviewRequest = OrderAmountPreviewInput;
+type CreateOrderPaymentRequest = CreateOrderPaymentInput;
+type ProcessOrderPaymentCallbackRequest = Omit<ProcessOrderPaymentCallbackServiceInput, 'paidAt'> & {
+  paidAt?: string | Date | null;
+};
 
 function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | undefined): asserts input is OrderAmountPreviewRequest {
   const messages: string[] = [];
@@ -106,4 +179,98 @@ function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | unde
   if (messages.length > 0) {
     throw new BadRequestException(messages);
   }
+}
+
+function assertCreateOrderPaymentRequest(input: CreateOrderPaymentRequest | undefined): asserts input is CreateOrderPaymentRequest {
+  const messages: string[] = [];
+  const totalAmount = input?.totalAmount;
+  const welfareCardPayableAmount = input?.welfareCardPayableAmount;
+  const cashPayableAmount = input?.cashPayableAmount;
+
+  if (typeof input?.requestId !== 'string' || input.requestId.trim().length === 0) {
+    messages.push('requestId is required.');
+  }
+
+  if (typeof input?.orderNo !== 'string' || input.orderNo.trim().length === 0) {
+    messages.push('orderNo is required.');
+  }
+
+  if (!['wechat', 'alipay', 'cash'].includes(input?.channel ?? '')) {
+    messages.push('channel must be one of wechat, alipay, cash.');
+  }
+
+  if (!Number.isInteger(totalAmount) || (totalAmount ?? 0) <= 0) {
+    messages.push('totalAmount must be a positive integer.');
+  }
+
+  if (!Number.isInteger(welfareCardPayableAmount) || (welfareCardPayableAmount ?? -1) < 0) {
+    messages.push('welfareCardPayableAmount must be a non-negative integer.');
+  }
+
+  if (!Number.isInteger(cashPayableAmount) || (cashPayableAmount ?? -1) < 0) {
+    messages.push('cashPayableAmount must be a non-negative integer.');
+  }
+
+  if (
+    Number.isInteger(totalAmount) &&
+    Number.isInteger(welfareCardPayableAmount) &&
+    Number.isInteger(cashPayableAmount) &&
+    welfareCardPayableAmount! + cashPayableAmount! !== totalAmount
+  ) {
+    messages.push('welfareCardPayableAmount plus cashPayableAmount must equal totalAmount.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function assertProcessOrderPaymentCallbackRequest(
+  input: ProcessOrderPaymentCallbackRequest | undefined
+): asserts input is ProcessOrderPaymentCallbackRequest {
+  const messages: string[] = [];
+
+  if (typeof input?.providerEventId !== 'string' || input.providerEventId.trim().length === 0) {
+    messages.push('providerEventId is required.');
+  }
+
+  if (typeof input?.paymentNo !== 'string' || input.paymentNo.trim().length === 0) {
+    messages.push('paymentNo is required.');
+  }
+
+  if (typeof input?.providerPaymentNo !== 'string' || input.providerPaymentNo.trim().length === 0) {
+    messages.push('providerPaymentNo is required.');
+  }
+
+  if (!['paid', 'failed'].includes(input?.status ?? '')) {
+    messages.push('status must be paid or failed.');
+  }
+
+  if (input?.status === 'paid' && !isValidDateInput(input.paidAt)) {
+    messages.push('paidAt is required for paid callbacks.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function normalizeCallbackPaidAt(value: string | Date | null | undefined): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value instanceof Date ? value : new Date(value);
+}
+
+function isValidDateInput(value: string | Date | null | undefined): boolean {
+  if (value instanceof Date) {
+    return !Number.isNaN(value.getTime());
+  }
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return false;
+  }
+
+  return !Number.isNaN(new Date(value).getTime());
 }

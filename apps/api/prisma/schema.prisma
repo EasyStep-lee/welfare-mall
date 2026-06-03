@@ -365,6 +365,44 @@ model ProductPoolSnapshot {
   @@map("product_pool_snapshot")
 }
 
+model OrderPayment {
+  id                       String                 @id @default(cuid())
+  paymentNo                String                 @unique
+  requestId                String                 @unique
+  orderNo                  String
+  status                   String
+  channel                  String
+  totalAmount              Int
+  welfareCardPayableAmount Int
+  cashPayableAmount        Int
+  providerPaymentNo        String?
+  paidAt                   DateTime?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  callbacks                OrderPaymentCallback[]
+
+  @@index([orderNo])
+  @@index([status])
+  @@map("order_payment")
+}
+
+model OrderPaymentCallback {
+  id                String       @id @default(cuid())
+  paymentId         String
+  paymentNo         String
+  providerEventId   String       @unique
+  providerPaymentNo String?
+  status            String
+  payload           Json
+  createdAt         DateTime     @default(now())
+  payment           OrderPayment @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@index([paymentNo])
+  @@index([status])
+  @@map("order_payment_callback")
+}
+
 model IamUser {
   id        String        @id @default(cuid())
   username  String        @unique
