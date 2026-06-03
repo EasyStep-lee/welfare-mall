@@ -121,14 +121,16 @@ Expected: first callback marks payment `paid`; second callback returns duplicate
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run: `git add docs/superpowers/plans/2026-06-03-order-payment-idempotency-foundation.md apps/api/prisma/schema.prisma apps/api/src/order apps/api/test/order`
 
 Run: `git commit -m "feat: add order payment idempotency foundation"`
 
-- [ ] **Step 2: Push and open a draft PR**
+- [x] **Step 2: Push and open a draft PR**
 
 Run: `git push -u origin codex/order-payment-idempotency-foundation`
 
 Expected: branch is pushed and a draft PR is created against `main`.
+
+Result: PR #33 was opened, marked ready after verification, and squash-merged into `main` as `9c936d4`.
