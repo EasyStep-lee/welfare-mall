@@ -108,7 +108,7 @@ Start or reuse the Portal dev server on port `5175`, open `http://localhost:5175
 
 ## Task 5: GitHub
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit on `codex/portal-product-pool-catalog`, push to GitHub, create a PR to `main`, merge after it is mergeable, and fast-forward local `main`.
 
