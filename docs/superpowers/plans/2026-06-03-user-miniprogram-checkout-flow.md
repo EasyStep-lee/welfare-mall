@@ -29,7 +29,7 @@
 - Modify: `apps/user-miniprogram/utils/api.js`
 - Modify: `apps/user-miniprogram/utils/api.test.mjs`
 
-- [ ] **Step 1: Write failing API helper tests**
+- [x] **Step 1: Write failing API helper tests**
 
 Add assertions that:
 
@@ -48,11 +48,11 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- utils/api.test.mjs --ru
 
 Expected: FAIL because the helper functions are not exported.
 
-- [ ] **Step 2: Implement helper exports**
+- [x] **Step 2: Implement helper exports**
 
 Add `orderAmountPreviewUrl(baseUrl)` and `orderCheckoutUrl(baseUrl)` using the existing `apiUrl` function.
 
-- [ ] **Step 3: Re-run API helper tests**
+- [x] **Step 3: Re-run API helper tests**
 
 Run:
 
@@ -68,7 +68,7 @@ Expected: PASS.
 - Create: `apps/user-miniprogram/utils/checkout.js`
 - Create: `apps/user-miniprogram/utils/checkout.test.mjs`
 
-- [ ] **Step 1: Write failing checkout helper tests**
+- [x] **Step 1: Write failing checkout helper tests**
 
 Cover:
 
@@ -84,7 +84,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- utils/checkout.test.mjs
 
 Expected: FAIL because `utils/checkout.js` does not exist.
 
-- [ ] **Step 2: Implement pure checkout helpers**
+- [x] **Step 2: Implement pure checkout helpers**
 
 Implement:
 
@@ -95,7 +95,7 @@ Implement:
 
 Use integer fen values only. Default fulfillment type is `delivery`.
 
-- [ ] **Step 3: Re-run checkout helper tests**
+- [x] **Step 3: Re-run checkout helper tests**
 
 Run:
 
@@ -113,7 +113,7 @@ Expected: PASS.
 - Modify: `apps/user-miniprogram/pages/detail/index.wxss`
 - Create: `apps/user-miniprogram/pages/detail/index.test.mjs`
 
-- [ ] **Step 1: Write failing page-flow tests**
+- [x] **Step 1: Write failing page-flow tests**
 
 Mock `Page`, `getApp`, and `wx.request`. Assert the page:
 
@@ -130,7 +130,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- pages/detail/index.test
 
 Expected: FAIL because checkout page behavior does not exist.
 
-- [ ] **Step 2: Implement page checkout behavior and markup**
+- [x] **Step 2: Implement page checkout behavior and markup**
 
 Add page data fields:
 
@@ -157,7 +157,7 @@ Add methods:
 
 Use fixed `buyerUserId = 'local-user-001'` for the current no-login mini-program slice.
 
-- [ ] **Step 3: Re-run page-flow tests**
+- [x] **Step 3: Re-run page-flow tests**
 
 Run:
 
@@ -172,7 +172,7 @@ Expected: PASS.
 **Files:**
 - Verify all changed files.
 
-- [ ] **Step 1: Run focused mini-program tests**
+- [x] **Step 1: Run focused mini-program tests**
 
 Run:
 
@@ -182,7 +182,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- --run
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -198,7 +198,7 @@ Expected: PASS.
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -207,7 +207,7 @@ git add docs/superpowers/plans/2026-06-03-user-miniprogram-checkout-flow.md apps
 git commit -m "feat: connect user mini-program checkout flow"
 ```
 
-- [ ] **Step 2: Push and open a draft PR**
+- [x] **Step 2: Push and open a draft PR**
 
 Run:
 
