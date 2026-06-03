@@ -75,7 +75,7 @@ curl.exe -i --max-time 10 -H "Origin: http://localhost:5174" http://localhost:30
 
 Expected: Merchant shell returns 200 and API responds with `Access-Control-Allow-Origin: http://localhost:5174`.
 
-- [ ] **Step 3: Commit, push, PR, merge**
+- [x] **Step 3: Commit, push, PR, merge**
 
 Commit on `codex/merchant-product-draft-editor`, push, create a PR to `main`, merge after it is mergeable, and fast-forward local `main`.
 
