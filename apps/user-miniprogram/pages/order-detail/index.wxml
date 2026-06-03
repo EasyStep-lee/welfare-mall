@@ -23,6 +23,27 @@
       </view>
     </view>
 
+    <view wx:if="{{order.status === 'pending_payment'}}" class="section payment-action">
+      <button class="primary-button" loading="{{creatingPayment}}" disabled="{{creatingPayment}}" bindtap="submitPayment">
+        发起微信支付
+      </button>
+      <view wx:if="{{paymentDisplay}}" class="payment-result">
+        <view class="line">
+          <text>支付单号</text>
+          <text>{{paymentDisplay.paymentNo}}</text>
+        </view>
+        <view class="line">
+          <text>支付渠道</text>
+          <text>{{paymentDisplay.channelText}}</text>
+        </view>
+        <view class="line">
+          <text>支付状态</text>
+          <text>{{paymentDisplay.statusText}}</text>
+        </view>
+      </view>
+      <text wx:if="{{paymentError}}" class="error">{{paymentError}}</text>
+    </view>
+
     <view class="section">
       <text class="section-title">收货信息</text>
       <text class="muted">{{orderDisplay.receiverText}}</text>

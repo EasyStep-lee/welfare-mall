@@ -8,6 +8,7 @@ const {
   orderCheckoutUrl,
   orderDetailUrl,
   orderListUrl,
+  orderPaymentUrl,
   productPoolCatalogUrl,
   productPoolItemDetailUrl
 } = require('./api.js');
@@ -29,6 +30,7 @@ describe('user mini-program API helpers', () => {
       'https://api.example.com/api/orders/amount-preview'
     );
     expect(orderCheckoutUrl()).toBe('http://localhost:3000/api/orders');
+    expect(orderPaymentUrl()).toBe('http://localhost:3000/api/orders/payments');
   });
 
   it('builds buyer-scoped order read URLs', () => {
