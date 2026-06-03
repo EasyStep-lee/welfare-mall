@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type ProductReviewQueueStatus = 'pending_review' | 'approved' | 'rejected';
+export type ProductReviewQueueStatus = 'draft' | 'pending_review' | 'approved' | 'rejected';
 
 export type ProductReviewQueueQuery = {
   status: ProductReviewQueueStatus;

@@ -11,6 +11,7 @@ export type ProductReviewQueueListInput = {
 };
 
 const reviewQueueStatuses: ProductReviewQueueStatus[] = [
+  ProductStatuses.Draft,
   ProductStatuses.PendingReview,
   ProductStatuses.Approved,
   ProductStatuses.Rejected
