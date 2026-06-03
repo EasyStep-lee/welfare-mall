@@ -202,9 +202,65 @@ tbody tr:hover {
   min-width: 120px;
 }
 
-.submit-button {
+.submit-button,
+.primary-button {
   padding: 0 12px;
   white-space: nowrap;
+}
+
+.primary-button {
+  background: #24524d;
+  border-color: #24524d;
+  color: #ffffff;
+}
+
+.editor-panel {
+  background: #ffffff;
+  border: 1px solid #d9e4e1;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.editor-heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.editor-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.editor-grid label {
+  color: #637a76;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.editor-grid input,
+.editor-grid textarea {
+  border: 1px solid #cbd9d6;
+  border-radius: 8px;
+  color: #172421;
+  font: inherit;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.editor-grid textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.wide-field {
+  grid-column: span 2;
 }
 
 .detail-panel {
@@ -241,6 +297,14 @@ dd {
 
   .workbench {
     grid-template-columns: 1fr;
+  }
+
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field {
+    grid-column: auto;
   }
 
   .detail-panel {
