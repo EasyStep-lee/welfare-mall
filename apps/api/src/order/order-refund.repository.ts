@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrderStatuses } from './order-status';
 import { OrderRefundStatus, OrderRefundStatuses } from './order-refund-status';
 import { applySystemOrderTransition, OrderStateClient } from './order-state.repository';
 
@@ -64,6 +65,9 @@ type OrderRefundTransaction = {
     findUnique(args: unknown): Promise<(OrderRefundCallbackRecord & { refund: OrderRefundRecord }) | null>;
     create(args: unknown): Promise<OrderRefundCallbackRecord>;
   };
+  orderHeader: {
+    update(args: unknown): Promise<unknown>;
+  };
 } & OrderStateClient;
 
 @Injectable()
@@ -92,11 +96,17 @@ export class OrderRefundRepository {
       select: refundSelect()
     });
 
-    await applySystemOrderTransition(this.prisma, {
+    const orderState = await applySystemOrderTransition(this.prisma, {
       orderNo: input.orderNo,
       action: 'refund_request',
       refundRequestedAt: new Date()
     });
+    if (orderState?.status === OrderStatuses.RefundProcessing) {
+      await this.prisma.orderHeader.update({
+        where: { orderNo: input.orderNo },
+        data: { status: OrderStatuses.RefundProcessing }
+      });
+    }
 
     return refund;
   }
@@ -159,11 +169,17 @@ async function updateRefundFromCallback(
   input: ProcessOrderRefundCallbackInput
 ): Promise<OrderRefundRecord> {
   if (input.status === OrderRefundStatuses.Succeeded && refund.status !== OrderRefundStatuses.Succeeded) {
-    await applySystemOrderTransition(tx, {
+    const orderState = await applySystemOrderTransition(tx, {
       orderNo: refund.orderNo,
       action: 'refund_succeed',
       refundedAt: input.succeededAt
     });
+    if (orderState?.status === OrderStatuses.Refunded) {
+      await tx.orderHeader.update({
+        where: { orderNo: refund.orderNo },
+        data: { status: OrderStatuses.Refunded }
+      });
+    }
 
     return tx.orderRefund.update({
       where: { id: refund.id },
@@ -177,10 +193,16 @@ async function updateRefundFromCallback(
   }
 
   if (input.status === OrderRefundStatuses.Failed && refund.status === OrderRefundStatuses.Processing) {
-    await applySystemOrderTransition(tx, {
+    const orderState = await applySystemOrderTransition(tx, {
       orderNo: refund.orderNo,
       action: 'refund_fail'
     });
+    if (orderState?.status === OrderStatuses.Paid) {
+      await tx.orderHeader.update({
+        where: { orderNo: refund.orderNo },
+        data: { status: OrderStatuses.Paid }
+      });
+    }
 
     return tx.orderRefund.update({
       where: { id: refund.id },
