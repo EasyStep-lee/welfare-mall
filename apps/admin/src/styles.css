@@ -53,7 +53,8 @@ h2 {
 
 .icon-button,
 .status-tabs button,
-.actions button {
+.actions button,
+.order-actions button {
   align-items: center;
   border: 1px solid #cbd6dc;
   border-radius: 8px;
@@ -170,6 +171,15 @@ h2 {
   flex-wrap: wrap;
   font-size: 13px;
   gap: 8px;
+}
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.order-actions button {
+  padding: 0 10px;
 }
 
 .workbench {
