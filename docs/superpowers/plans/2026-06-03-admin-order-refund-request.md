@@ -21,7 +21,7 @@
 
 ### Task 1: Admin Refund Client and UI
 
-- [ ] **Step 1: Write failing Admin UI test**
+- [x] **Step 1: Write failing Admin UI test**
 
 Extend `apps/admin/src/App.test.tsx` to click `申请退款` on a paid order and assert:
 
@@ -38,11 +38,11 @@ pnpm --filter @welfare-mall/admin run test -- --run
 
 Expected: FAIL because the Admin refund client and button do not exist.
 
-- [ ] **Step 2: Implement Admin refund request behavior**
+- [x] **Step 2: Implement Admin refund request behavior**
 
 Add the API client, render `申请退款` only for orders with `status === "paid"` and a latest payment, call the refund API, show success, and reload orders.
 
-- [ ] **Step 3: Re-run Admin tests**
+- [x] **Step 3: Re-run Admin tests**
 
 Run:
 
@@ -54,7 +54,7 @@ Expected: PASS.
 
 ### Task 2: Verification
 
-- [ ] **Step 1: Run focused Admin and order refund tests**
+- [x] **Step 1: Run focused Admin and order refund tests**
 
 Run:
 
@@ -63,7 +63,7 @@ pnpm --filter @welfare-mall/admin run test -- --run
 pnpm --filter @welfare-mall/api run test -- test/order/order-refund --runInBand
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -76,7 +76,7 @@ Expected: PASS.
 
 ### Task 3: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -85,7 +85,7 @@ git add docs/superpowers/plans/2026-06-03-admin-order-refund-request.md apps/adm
 git commit -m "feat: add admin order refund request action"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
