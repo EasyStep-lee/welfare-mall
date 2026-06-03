@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderAmountRepository } from './order-amount.repository';
+import { splitOrderPaymentAmount } from './order-payment-split';
 
 export type OrderAmountPreviewInput = {
   items: Array<{
     productPoolItemId: string;
     quantity: number;
   }>;
+  welfareCardPaymentAmount?: number;
 };
 
 export type OrderAmountPreviewLine = {
@@ -66,14 +68,18 @@ export class OrderAmountService {
     const subtotalAmount = lines.reduce((sum, line) => sum + line.lineTotalAmount, 0);
     const discountAmount = 0;
     const totalAmount = subtotalAmount - discountAmount;
+    const paymentSplit = splitOrderPaymentAmount({
+      totalAmount,
+      welfareCardPaymentAmount: input.welfareCardPaymentAmount
+    });
 
     return {
       lines,
       subtotalAmount,
       discountAmount,
       totalAmount,
-      welfareCardPayableAmount: 0,
-      cashPayableAmount: totalAmount
+      welfareCardPayableAmount: paymentSplit.welfareCardPayableAmount,
+      cashPayableAmount: paymentSplit.cashPayableAmount
     };
   }
 }
@@ -93,6 +99,13 @@ function assertPreviewInput(input: OrderAmountPreviewInput): void {
     if (!Number.isInteger(item?.quantity) || item.quantity <= 0) {
       messages.push(`items[${index}].quantity must be a positive integer.`);
     }
+  }
+
+  if (
+    input.welfareCardPaymentAmount !== undefined &&
+    (!Number.isInteger(input.welfareCardPaymentAmount) || input.welfareCardPaymentAmount < 0)
+  ) {
+    messages.push('welfareCardPaymentAmount must be a non-negative integer.');
   }
 
   if (messages.length > 0) {

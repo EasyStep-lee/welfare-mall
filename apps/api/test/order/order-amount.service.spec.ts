@@ -50,6 +50,36 @@ describe('OrderAmountService', () => {
     });
   });
 
+  it('splits order amount into welfare-card payable and cash payable amounts', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderAmountService(repository as unknown as OrderAmountRepository);
+
+    const result = await service.previewAmount({
+      items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }],
+      welfareCardPaymentAmount: 5000
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
+      })
+    );
+  });
+
+  it('rejects welfare-card payment amount greater than total amount', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderAmountService(repository as unknown as OrderAmountRepository);
+
+    await expect(
+      service.previewAmount({
+        items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }],
+        welfareCardPaymentAmount: 14000
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects invalid item quantities before reading product pool prices', async () => {
     const repository = createRepositoryMock();
     const service = new OrderAmountService(repository as unknown as OrderAmountRepository);
