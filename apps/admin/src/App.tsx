@@ -190,6 +190,15 @@ export default function App() {
                   <dt>支付</dt>
                   <dd>{formatPayment(order)}</dd>
                 </div>
+                {order.latestRefund ? (
+                  <div>
+                    <dt>退款</dt>
+                    <dd>
+                      <span>{order.latestRefund.refundNo}</span>
+                      <span>{formatRefund(order)}</span>
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
               <div className="order-lines">
                 {order.lines.map((line) => (
@@ -446,6 +455,16 @@ function formatPayment(order: AdminOrder) {
   }`;
 }
 
+function formatRefund(order: AdminOrder) {
+  if (!order.latestRefund) {
+    return '无退款单';
+  }
+
+  return `${paymentChannelLabels[order.latestRefund.channel] ?? order.latestRefund.channel} ${
+    refundStatusLabels[order.latestRefund.status] ?? order.latestRefund.status
+  } ${formatMoney(order.latestRefund.refundAmount)}`;
+}
+
 function orderStatusLabel(status: string) {
   return orderStatusLabels[status] ?? status;
 }
@@ -476,6 +495,12 @@ const paymentStatusLabels: Record<string, string> = {
   failed: '支付失败',
   closed: '已关闭',
   refunded: '已退款'
+};
+
+const refundStatusLabels: Record<string, string> = {
+  processing: '退款处理中',
+  succeeded: '退款成功',
+  failed: '退款失败'
 };
 
 function mediaTypeLabel(type: string) {

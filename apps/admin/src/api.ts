@@ -88,6 +88,13 @@ export type AdminOrder = {
     status: string;
     channel: string;
   } | null;
+  latestRefund: {
+    refundNo: string;
+    status: string;
+    channel: string;
+    refundAmount: number;
+    reason: string;
+  } | null;
   lines: Array<{
     displayName: string;
     displaySkuCode: string | null;

@@ -47,6 +47,13 @@ describe('Order read API contract', () => {
             status: 'pending',
             channel: 'wechat'
           },
+          latestRefund: {
+            refundNo: 'REF-20260603-001',
+            status: 'processing',
+            channel: 'wechat',
+            refundAmount: 13980,
+            reason: 'after_sale'
+          },
           lines: [{ displayName: 'Local Rice', quantity: 2 }]
         }
       ]
@@ -61,6 +68,13 @@ describe('Order read API contract', () => {
       paymentNo: 'PAY-20260603-001',
       status: 'pending',
       channel: 'wechat'
+    });
+    expect(response.body.orders[0].latestRefund).toMatchObject({
+      refundNo: 'REF-20260603-001',
+      status: 'processing',
+      channel: 'wechat',
+      refundAmount: 13980,
+      reason: 'after_sale'
     });
   });
 
@@ -78,6 +92,13 @@ describe('Order read API contract', () => {
             paymentNo: 'PAY-20260603-001',
             status: 'paid',
             channel: 'wechat'
+          },
+          latestRefund: {
+            refundNo: 'REF-20260603-001',
+            status: 'processing',
+            channel: 'wechat',
+            refundAmount: 13980,
+            reason: 'after_sale'
           },
           lines: [{ displayName: 'Local Rice', quantity: 2 }]
         }
@@ -98,6 +119,13 @@ describe('Order read API contract', () => {
         paymentNo: 'PAY-20260603-001',
         status: 'paid',
         channel: 'wechat'
+      },
+      latestRefund: {
+        refundNo: 'REF-20260603-001',
+        status: 'processing',
+        channel: 'wechat',
+        refundAmount: 13980,
+        reason: 'after_sale'
       }
     });
   });
@@ -113,6 +141,13 @@ describe('Order read API contract', () => {
           paymentNo: 'PAY-20260603-001',
           status: 'pending',
           channel: 'wechat'
+        },
+        latestRefund: {
+          refundNo: 'REF-20260603-001',
+          status: 'processing',
+          channel: 'wechat',
+          refundAmount: 13980,
+          reason: 'after_sale'
         },
         lines: [{ displayName: 'Local Rice', quantity: 2 }]
       }
@@ -131,6 +166,13 @@ describe('Order read API contract', () => {
       paymentNo: 'PAY-20260603-001',
       status: 'pending',
       channel: 'wechat'
+    });
+    expect(response.body.order.latestRefund).toMatchObject({
+      refundNo: 'REF-20260603-001',
+      status: 'processing',
+      channel: 'wechat',
+      refundAmount: 13980,
+      reason: 'after_sale'
     });
   });
 

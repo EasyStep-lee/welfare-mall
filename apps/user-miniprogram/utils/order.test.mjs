@@ -15,6 +15,12 @@ const order = {
     status: 'pending',
     channel: 'wechat'
   },
+  latestRefund: {
+    refundNo: 'REF-20260603-001',
+    status: 'processing',
+    channel: 'wechat',
+    refundAmount: 13980
+  },
   receiverName: 'Li Lei',
   receiverPhone: '13800000000',
   receiverAddress: 'Pudong Avenue 1',
@@ -52,6 +58,12 @@ describe('user mini-program order display helpers', () => {
         paymentNo: 'PAY-20260603-001',
         statusText: '待支付',
         channelText: '微信支付'
+      },
+      latestRefundDisplay: {
+        refundNo: 'REF-20260603-001',
+        statusText: '退款处理中',
+        channelText: '微信支付',
+        refundAmountText: '¥139.80'
       },
       receiverText: 'Li Lei / 13800000000 / Pudong Avenue 1',
       lines: [

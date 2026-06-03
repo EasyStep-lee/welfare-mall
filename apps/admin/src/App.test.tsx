@@ -67,6 +67,13 @@ const adminOrdersResponse = {
         status: 'paid',
         channel: 'wechat'
       },
+      latestRefund: {
+        refundNo: 'REF-20260603-001',
+        status: 'processing',
+        channel: 'wechat',
+        refundAmount: 13980,
+        reason: 'after_sale'
+      },
       lines: [
         {
           displayName: 'Local Rice',
@@ -170,6 +177,8 @@ describe('Admin product review workbench', () => {
     expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
     expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
+    expect(screen.getByText('REF-20260603-001')).toBeInTheDocument();
+    expect(screen.getByText('微信支付 退款处理中 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
   });
 
