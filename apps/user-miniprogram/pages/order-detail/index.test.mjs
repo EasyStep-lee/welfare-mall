@@ -44,6 +44,15 @@ const paidOrder = {
   }
 };
 
+const refreshedPaidOrder = {
+  ...paidOrder,
+  latestPayment: {
+    paymentNo: 'PAY-20260603-REFRESHED',
+    status: 'paid',
+    channel: 'wechat'
+  }
+};
+
 const refund = {
   refundNo: 'REF-20260603-001',
   status: 'processing',
@@ -60,7 +69,7 @@ const orderWithRefund = {
 function mountPage(options = {}) {
   let pageDefinition;
   const requests = [];
-  const orderResponse = options.order || order;
+  const orderResponses = options.orderResponses ? [...options.orderResponses] : [options.order || order];
 
   global.Page = vi.fn((definition) => {
     pageDefinition = definition;
@@ -78,7 +87,7 @@ function mountPage(options = {}) {
         return;
       }
 
-      request.success({ statusCode: 200, data: { order: orderResponse } });
+      request.success({ statusCode: 200, data: { order: orderResponses.shift() || orderResponses[0] || order } });
     })
   };
 
@@ -156,6 +165,29 @@ describe('user mini-program order detail page', () => {
       statusText: '待支付',
       channelText: '微信支付'
     });
+  });
+
+  it('refreshes the current order detail from the latest order read state', async () => {
+    const { page, requests } = mountPage({ orderResponses: [order, refreshedPaidOrder] });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.refreshOrderDetail();
+
+    expect(requests[1]).toMatchObject({
+      method: 'GET',
+      url: 'http://localhost:3000/api/orders/ORDER-20260603-001?buyerUserId=local-user-001'
+    });
+    expect(page.data.order).toEqual(refreshedPaidOrder);
+    expect(page.data.orderDisplay).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      statusText: '已支付',
+      latestPaymentDisplay: {
+        paymentNo: 'PAY-20260603-REFRESHED',
+        statusText: '已支付',
+        channelText: '微信支付'
+      }
+    });
+    expect(page.data.canRequestRefund).toBe(true);
   });
 
   it('creates a full after-sale refund request from a paid order', async () => {

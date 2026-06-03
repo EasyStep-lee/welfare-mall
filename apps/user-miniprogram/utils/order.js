@@ -7,7 +7,8 @@ const OrderStatusText = {
   paid: '已支付',
   refund_processing: '退款处理中',
   cancelled: '已取消',
-  refunded: '已退款'
+  refunded: '已退款',
+  completed: '已完成'
 };
 
 function toOrderSummaryDisplay(order) {

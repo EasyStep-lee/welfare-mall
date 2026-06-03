@@ -77,4 +77,17 @@ describe('user mini-program order display helpers', () => {
       ]
     });
   });
+
+  it('formats completed orders with a business status label', () => {
+    const completedOrder = { ...order, status: 'completed' };
+
+    expect(toOrderSummaryDisplay(completedOrder)).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      statusText: '已完成'
+    });
+    expect(toOrderDetailDisplay(completedOrder)).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      statusText: '已完成'
+    });
+  });
 });
