@@ -126,14 +126,16 @@ Result: runtime order `ORDER-STATE-FLOW-1780467857510` progressed to final `refu
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run: `git add docs/superpowers/plans/2026-06-03-order-payment-refund-state-flow.md apps/api/prisma/schema.prisma apps/api/src/order apps/api/test/order`
 
 Run: `git commit -m "feat: drive order state from payment and refund events"`
 
-- [ ] **Step 2: Push and open a draft PR**
+- [x] **Step 2: Push and open a draft PR**
 
 Run: `git push -u origin codex/order-payment-refund-state-flow`
 
 Expected: branch is pushed and a draft PR is created against `main`.
+
+Result: PR #37 was opened, marked ready after verification, and squash-merged into `main` as `c45fe63`.
