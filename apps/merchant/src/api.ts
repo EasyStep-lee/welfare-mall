@@ -187,3 +187,17 @@ export async function fetchMerchantFulfillmentOrders(merchantId: string): Promis
 
   return response.json() as Promise<MerchantFulfillmentQueueResponse>;
 }
+
+export async function completeMerchantFulfillmentOrder(input: { merchantId: string; orderNo: string }) {
+  const response = await fetch(`${apiBaseUrl()}/orders/merchant/fulfillment/${input.orderNo}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchantId: input.merchantId })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to complete merchant fulfillment order: ${response.status}`);
+  }
+
+  return response.json();
+}

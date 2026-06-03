@@ -12,7 +12,8 @@ const fulfillmentOrder = {
 
 function createRepositoryMock() {
   return {
-    listPaidOrdersForMerchant: jest.fn().mockResolvedValue([fulfillmentOrder])
+    listPaidOrdersForMerchant: jest.fn().mockResolvedValue([fulfillmentOrder]),
+    completePaidOrderForMerchant: jest.fn().mockResolvedValue({ ...fulfillmentOrder, status: 'completed', latestPayment: null })
   };
 }
 
@@ -33,5 +34,34 @@ describe('OrderFulfillmentService', () => {
 
     await expect(service.listMerchantFulfillmentOrders({ merchantId: ' ' })).rejects.toBeInstanceOf(BadRequestException);
     expect(repository.listPaidOrdersForMerchant).not.toHaveBeenCalled();
+  });
+
+  it('completes a merchant fulfillment order', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderFulfillmentService(repository as unknown as OrderFulfillmentRepository);
+
+    const result = await service.completeMerchantFulfillmentOrder({
+      merchantId: ' merchant-001 ',
+      orderNo: ' ORDER-20260603-001 '
+    });
+
+    expect(repository.completePaidOrderForMerchant).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001'
+    });
+    expect(result).toEqual({ order: { ...fulfillmentOrder, status: 'completed', latestPayment: null } });
+  });
+
+  it('rejects blank order numbers when completing fulfillment', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderFulfillmentService(repository as unknown as OrderFulfillmentRepository);
+
+    await expect(
+      service.completeMerchantFulfillmentOrder({
+        merchantId: 'merchant-001',
+        orderNo: ' '
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.completePaidOrderForMerchant).not.toHaveBeenCalled();
   });
 });

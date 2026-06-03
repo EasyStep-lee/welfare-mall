@@ -58,14 +58,28 @@ const fulfillmentQueueResponse = {
 
 describe('Merchant product submission workbench', () => {
   beforeEach(() => {
+    let fulfillmentQueueLoads = 0;
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
-        if (url.includes('/orders/merchant/fulfillment')) {
+        if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-001/complete')) {
           return {
             ok: true,
-            json: async () => fulfillmentQueueResponse
+            json: async () => ({
+              order: {
+                orderNo: 'ORDER-20260603-001',
+                status: 'completed'
+              }
+            })
+          };
+        }
+
+        if (url.includes('/orders/merchant/fulfillment')) {
+          fulfillmentQueueLoads += 1;
+          return {
+            ok: true,
+            json: async () => (fulfillmentQueueLoads === 1 ? fulfillmentQueueResponse : { orders: [] })
           };
         }
 
@@ -105,6 +119,18 @@ describe('Merchant product submission workbench', () => {
     expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('现金 ¥89.80')).toBeInTheDocument();
     expect(screen.getByText('福利卡 ¥50.00')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '确认完成' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/merchant/fulfillment/ORDER-20260603-001/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId: 'merchant-001' })
+      });
+    });
+    expect(await screen.findByText('ORDER-20260603-001 已确认完成')).toBeInTheDocument();
+    expect(await screen.findByText('暂无待履约订单')).toBeInTheDocument();
 
     const row = await screen.findByRole('row', { name: /东北五常大米福利装/ });
     expect(within(row).getByText('草稿')).toBeInTheDocument();

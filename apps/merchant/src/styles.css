@@ -279,6 +279,11 @@ tbody tr:hover {
   gap: 8px;
 }
 
+.fulfillment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .editor-heading {
   align-items: center;
   display: flex;

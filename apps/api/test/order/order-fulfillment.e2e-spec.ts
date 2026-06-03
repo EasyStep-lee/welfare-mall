@@ -6,7 +6,8 @@ import { OrderFulfillmentService } from '../../src/order/order-fulfillment.servi
 
 function createOrderFulfillmentServiceMock() {
   return {
-    listMerchantFulfillmentOrders: jest.fn()
+    listMerchantFulfillmentOrders: jest.fn(),
+    completeMerchantFulfillmentOrder: jest.fn()
   };
 }
 
@@ -73,5 +74,39 @@ describe('Merchant fulfillment order API contract', () => {
     await request(app.getHttpServer()).get('/api/orders/merchant/fulfillment?merchantId=').expect(400);
 
     expect(orderFulfillmentService.listMerchantFulfillmentOrders).not.toHaveBeenCalled();
+  });
+
+  it('completes one merchant fulfillment order', async () => {
+    orderFulfillmentService.completeMerchantFulfillmentOrder.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'completed',
+        totalAmount: 13980,
+        lines: [{ displayName: 'Local Rice', quantity: 2 }]
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/orders/merchant/fulfillment/ORDER-20260603-001/complete')
+      .send({ merchantId: 'merchant-001' })
+      .expect(200);
+
+    expect(orderFulfillmentService.completeMerchantFulfillmentOrder).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001'
+    });
+    expect(response.body.order).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      status: 'completed'
+    });
+  });
+
+  it('rejects blank merchant ID before completing fulfillment', async () => {
+    await request(app.getHttpServer())
+      .post('/api/orders/merchant/fulfillment/ORDER-20260603-001/complete')
+      .send({ merchantId: ' ' })
+      .expect(400);
+
+    expect(orderFulfillmentService.completeMerchantFulfillmentOrder).not.toHaveBeenCalled();
   });
 });
