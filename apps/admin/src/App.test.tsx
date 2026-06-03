@@ -48,14 +48,60 @@ const reviewQueueResponse = {
   ]
 };
 
+const adminOrdersResponse = {
+  orders: [
+    {
+      orderNo: 'ORDER-20260603-001',
+      buyerUserId: 'user-001',
+      status: 'paid',
+      totalAmount: 13980,
+      welfareCardPayableAmount: 5000,
+      cashPayableAmount: 8980,
+      fulfillmentType: 'delivery',
+      receiverName: 'Li Lei',
+      receiverPhone: '13800000000',
+      receiverAddress: 'Pudong Avenue 1',
+      pickupStoreName: null,
+      latestPayment: {
+        paymentNo: 'PAY-20260603-001',
+        status: 'paid',
+        channel: 'wechat'
+      },
+      lines: [
+        {
+          displayName: 'Local Rice',
+          displaySkuCode: 'SKU-RICE-5KG',
+          quantity: 2,
+          lineTotalAmount: 13980
+        }
+      ]
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => reviewQueueResponse
-      }))
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.includes('/orders/admin')) {
+          return {
+            ok: true,
+            json: async () => adminOrdersResponse
+          };
+        }
+
+        if (url.includes('/products/review-queue')) {
+          return {
+            ok: true,
+            json: async () => reviewQueueResponse
+          };
+        }
+
+        throw new Error(`Unexpected request: ${url}`);
+      })
     );
   });
 
@@ -86,5 +132,19 @@ describe('Admin product review workbench', () => {
     expect(screen.getByText('净含量: 5kg')).toBeInTheDocument();
     expect(screen.getByText('福利说明')).toBeInTheDocument();
     expect(screen.getByText('适合企业福利发放')).toBeInTheDocument();
+  });
+
+  it('renders recent orders for Admin order management', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('订单管理')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin');
+    expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(screen.getByText('user-001')).toBeInTheDocument();
+    expect(screen.getByText('已支付')).toBeInTheDocument();
+    expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
+    expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
+    expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
+    expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
   });
 });

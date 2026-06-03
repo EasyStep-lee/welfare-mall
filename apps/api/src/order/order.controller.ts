@@ -94,6 +94,28 @@ export class OrderController {
     return this.orderFulfillmentService.listMerchantFulfillmentOrders({ merchantId: merchantId.trim() });
   }
 
+  @Get('admin')
+  @ApiOkResponse({
+    description: 'List recent orders for Admin order management',
+    schema: {
+      example: {
+        orders: [
+          {
+            orderNo: 'ORDER-20260603-001',
+            buyerUserId: 'user-001',
+            status: 'paid',
+            totalAmount: 13980,
+            latestPayment: { paymentNo: 'PAY-20260603-001', status: 'paid', channel: 'wechat' },
+            lines: [{ displayName: '东北五常大米福利装', quantity: 2 }]
+          }
+        ]
+      }
+    }
+  })
+  async listAdminOrders() {
+    return this.orderReadService.listAdminOrders();
+  }
+
   @Post('merchant/fulfillment/:orderNo/complete')
   @HttpCode(200)
   @ApiOkResponse({

@@ -21,6 +21,16 @@ export class OrderReadRepository {
     return this.attachLatestPayments(orders);
   }
 
+  async listRecentAdminOrders(): Promise<OrderCheckoutRecord[]> {
+    const orders = await this.prisma.orderHeader.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: orderReadSelect()
+    });
+
+    return this.attachLatestPayments(orders);
+  }
+
   async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<OrderCheckoutRecord | null> {
     const order = await this.prisma.orderHeader.findFirst({
       where: {

@@ -84,6 +84,25 @@ describe('OrderReadRepository', () => {
     expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord }]);
   });
 
+  it('lists recent admin orders newest first with latest payment', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    const result = await repository.listRecentAdminOrders();
+
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+    expect(prisma.orderPayment.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord }]);
+  });
+
   it('finds one order scoped to the buyer', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);
