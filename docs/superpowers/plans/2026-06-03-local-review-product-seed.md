@@ -117,7 +117,7 @@ The Admin queue row also shows the product code, so the local sample can be iden
 
 ## Task 4: GitHub
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit on `codex/local-review-product-seed`, push to GitHub, create a PR to `main`, merge after it is mergeable, and fast-forward local `main`.
 
