@@ -28,7 +28,7 @@
 
 ### Task 1: API Merchant Fulfillment Queue
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Add tests proving:
 
@@ -45,11 +45,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-fulfillment --runIn
 
 Expected: FAIL because the fulfillment read service, repository, and route do not exist.
 
-- [ ] **Step 2: Implement API read behavior**
+- [x] **Step 2: Implement API read behavior**
 
 Add repository/service and register them in `OrderModule`. Place the controller route before `GET /:orderNo` so it cannot be captured as an order number.
 
-- [ ] **Step 3: Re-run API tests**
+- [x] **Step 3: Re-run API tests**
 
 Run:
 
@@ -61,7 +61,7 @@ Expected: PASS.
 
 ### Task 2: Merchant Web Queue
 
-- [ ] **Step 1: Write failing merchant UI test**
+- [x] **Step 1: Write failing merchant UI test**
 
 Extend the merchant app test to mock `/orders/merchant/fulfillment`, assert the request uses `merchantId=merchant-001`, and assert the queue displays order number, receiver, paid amount, payment status, and merchant-owned line.
 
@@ -73,11 +73,11 @@ pnpm --filter @welfare-mall/merchant run test -- --run
 
 Expected: FAIL because the client and UI do not render fulfillment orders.
 
-- [ ] **Step 2: Implement merchant UI read panel**
+- [x] **Step 2: Implement merchant UI read panel**
 
 Add API client/types and render a compact paid-order fulfillment panel above or beside the existing product workbench.
 
-- [ ] **Step 3: Re-run merchant tests**
+- [x] **Step 3: Re-run merchant tests**
 
 Run:
 
@@ -89,7 +89,7 @@ Expected: PASS.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused order and merchant tests**
+- [x] **Step 1: Run focused order and merchant tests**
 
 Run:
 
@@ -98,7 +98,7 @@ pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 pnpm --filter @welfare-mall/merchant run test -- --run
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -111,7 +111,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -120,7 +120,7 @@ git add docs/superpowers/plans/2026-06-03-merchant-fulfillment-order-read.md app
 git commit -m "feat: add merchant fulfillment order queue"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
