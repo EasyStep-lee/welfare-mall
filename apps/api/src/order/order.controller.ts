@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
+import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
 import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
 import { CreateOrderRefundInput, OrderRefundService, ProcessOrderRefundCallbackServiceInput } from './order-refund.service';
 import { OrderStatusCatalog } from './order-status';
@@ -11,6 +12,7 @@ import { OrderStatusTransitionCatalog } from './order-status-transition';
 export class OrderController {
   constructor(
     private readonly orderAmountService: OrderAmountService,
+    private readonly orderCheckoutService: OrderCheckoutService,
     private readonly orderPaymentService: OrderPaymentService,
     private readonly orderRefundService: OrderRefundService
   ) {}
@@ -79,6 +81,46 @@ export class OrderController {
         quantity: item.quantity
       })),
       welfareCardPaymentAmount: input.welfareCardPaymentAmount
+    });
+  }
+
+  @Post()
+  @HttpCode(201)
+  @ApiCreatedResponse({
+    description: 'Create an order from product-pool checkout snapshot lines',
+    schema: {
+      example: {
+        idempotentReplay: false,
+        order: {
+          orderNo: 'ORDER-20260603-001',
+          requestId: 'checkout-request-001',
+          buyerUserId: 'user-001',
+          status: 'pending_payment',
+          totalAmount: 13980,
+          welfareCardPayableAmount: 5000,
+          cashPayableAmount: 8980
+        }
+      }
+    }
+  })
+  async createOrder(@Body() input: OrderCheckoutRequest) {
+    assertOrderCheckoutRequest(input);
+
+    return this.orderCheckoutService.createOrder({
+      requestId: input.requestId.trim(),
+      buyerUserId: input.buyerUserId.trim(),
+      items: input.items.map((item) => ({
+        productPoolItemId: item.productPoolItemId.trim(),
+        quantity: item.quantity
+      })),
+      welfareCardPaymentAmount: input.welfareCardPaymentAmount,
+      fulfillment: {
+        type: input.fulfillment.type,
+        receiverName: input.fulfillment.receiverName?.trim() ?? null,
+        receiverPhone: input.fulfillment.receiverPhone?.trim() ?? null,
+        receiverAddress: input.fulfillment.receiverAddress?.trim() ?? null,
+        pickupStoreName: input.fulfillment.pickupStoreName?.trim() ?? null
+      }
     });
   }
 
@@ -214,6 +256,7 @@ export class OrderController {
 }
 
 type OrderAmountPreviewRequest = OrderAmountPreviewInput;
+type OrderCheckoutRequest = OrderCheckoutInput;
 type CreateOrderPaymentRequest = CreateOrderPaymentInput;
 type ProcessOrderPaymentCallbackRequest = Omit<ProcessOrderPaymentCallbackServiceInput, 'paidAt'> & {
   paidAt?: string | Date | null;
@@ -245,6 +288,68 @@ function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | unde
     (!Number.isInteger(input.welfareCardPaymentAmount) || input.welfareCardPaymentAmount < 0)
   ) {
     messages.push('welfareCardPaymentAmount must be a non-negative integer.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function assertOrderCheckoutRequest(input: OrderCheckoutRequest | undefined): asserts input is OrderCheckoutRequest {
+  const messages: string[] = [];
+
+  if (typeof input?.requestId !== 'string' || input.requestId.trim().length === 0) {
+    messages.push('requestId is required.');
+  }
+
+  if (typeof input?.buyerUserId !== 'string' || input.buyerUserId.trim().length === 0) {
+    messages.push('buyerUserId is required.');
+  }
+
+  if (!Array.isArray(input?.items) || input.items.length === 0) {
+    messages.push('items must contain at least one product pool item.');
+  }
+
+  for (const [index, item] of (input?.items ?? []).entries()) {
+    if (typeof item?.productPoolItemId !== 'string' || item.productPoolItemId.trim().length === 0) {
+      messages.push(`items[${index}].productPoolItemId is required.`);
+    }
+
+    if (!Number.isInteger(item?.quantity) || item.quantity <= 0) {
+      messages.push(`items[${index}].quantity must be a positive integer.`);
+    }
+  }
+
+  if (
+    input?.welfareCardPaymentAmount !== undefined &&
+    (!Number.isInteger(input.welfareCardPaymentAmount) || input.welfareCardPaymentAmount < 0)
+  ) {
+    messages.push('welfareCardPaymentAmount must be a non-negative integer.');
+  }
+
+  if (input?.fulfillment?.type !== 'delivery' && input?.fulfillment?.type !== 'pickup') {
+    messages.push('fulfillment.type must be delivery or pickup.');
+  }
+
+  if (input?.fulfillment?.type === 'delivery') {
+    if (typeof input.fulfillment.receiverName !== 'string' || input.fulfillment.receiverName.trim().length === 0) {
+      messages.push('fulfillment.receiverName is required for delivery.');
+    }
+
+    if (typeof input.fulfillment.receiverPhone !== 'string' || input.fulfillment.receiverPhone.trim().length === 0) {
+      messages.push('fulfillment.receiverPhone is required for delivery.');
+    }
+
+    if (typeof input.fulfillment.receiverAddress !== 'string' || input.fulfillment.receiverAddress.trim().length === 0) {
+      messages.push('fulfillment.receiverAddress is required for delivery.');
+    }
+  }
+
+  if (
+    input?.fulfillment?.type === 'pickup' &&
+    (typeof input.fulfillment.pickupStoreName !== 'string' || input.fulfillment.pickupStoreName.trim().length === 0)
+  ) {
+    messages.push('fulfillment.pickupStoreName is required for pickup.');
   }
 
   if (messages.length > 0) {
