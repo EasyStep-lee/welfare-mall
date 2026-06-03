@@ -31,7 +31,7 @@
 - Create: `apps/user-miniprogram/utils/payment.js`
 - Create: `apps/user-miniprogram/utils/payment.test.mjs`
 
-- [ ] **Step 1: Write failing helper tests**
+- [x] **Step 1: Write failing helper tests**
 
 Add tests proving:
 
@@ -48,11 +48,11 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- utils/api.test.mjs util
 
 Expected: FAIL because the helper exports do not exist.
 
-- [ ] **Step 2: Implement payment helpers**
+- [x] **Step 2: Implement payment helpers**
 
 Add `orderPaymentUrl(baseUrl)` to `utils/api.js`. Add `buildPaymentPayload`, `createPaymentRequestId`, and `toPaymentDisplay` to `utils/payment.js`.
 
-- [ ] **Step 3: Re-run helper tests**
+- [x] **Step 3: Re-run helper tests**
 
 Run:
 
@@ -70,7 +70,7 @@ Expected: PASS.
 - Modify: `apps/user-miniprogram/pages/order-detail/index.wxss`
 - Modify: `apps/user-miniprogram/pages/order-detail/index.test.mjs`
 
-- [ ] **Step 1: Write failing page-flow test**
+- [x] **Step 1: Write failing page-flow test**
 
 Extend the order detail page test to assert:
 
@@ -86,7 +86,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- pages/order-detail/inde
 
 Expected: FAIL because the page payment action does not exist.
 
-- [ ] **Step 2: Implement payment page behavior and markup**
+- [x] **Step 2: Implement payment page behavior and markup**
 
 Add page data fields:
 
@@ -99,7 +99,7 @@ Add `submitPayment()` to call `requestJson('/orders/payments', { method: 'POST',
 
 Render a payment button for pending-payment orders and a payment result block after successful creation.
 
-- [ ] **Step 3: Re-run page-flow test**
+- [x] **Step 3: Re-run page-flow test**
 
 Run:
 
@@ -114,7 +114,7 @@ Expected: PASS.
 **Files:**
 - Verify all changed files.
 
-- [ ] **Step 1: Run focused mini-program tests**
+- [x] **Step 1: Run focused mini-program tests**
 
 Run:
 
@@ -124,7 +124,7 @@ pnpm --filter @welfare-mall/user-miniprogram run test -- --run
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -140,7 +140,7 @@ Expected: PASS.
 **Files:**
 - Commit all changed files.
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -149,7 +149,7 @@ git add docs/superpowers/plans/2026-06-03-user-miniprogram-payment-initiation.md
 git commit -m "feat: initiate user mini-program payments"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
