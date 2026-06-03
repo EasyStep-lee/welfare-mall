@@ -27,7 +27,7 @@
 
 ### Task 1: API Admin Order Read
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Add tests proving:
 
@@ -43,11 +43,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-read --runInBand
 
 Expected: FAIL because the admin listing method and route do not exist.
 
-- [ ] **Step 2: Implement API admin order read**
+- [x] **Step 2: Implement API admin order read**
 
 Add repository/service methods and the controller route. Keep `GET /admin` before `GET /:orderNo`.
 
-- [ ] **Step 3: Re-run API tests**
+- [x] **Step 3: Re-run API tests**
 
 Run:
 
@@ -59,7 +59,7 @@ Expected: PASS.
 
 ### Task 2: Admin Web Order Panel
 
-- [ ] **Step 1: Write failing Admin UI test**
+- [x] **Step 1: Write failing Admin UI test**
 
 Extend `apps/admin/src/App.test.tsx` to mock `/orders/admin`, assert the request is made, and verify the page renders order number, buyer, status, receiver, total amount, latest payment, and line snapshot.
 
@@ -71,11 +71,11 @@ pnpm --filter @welfare-mall/admin run test -- --run
 
 Expected: FAIL because the Admin order client and panel do not exist.
 
-- [ ] **Step 2: Implement Admin order panel**
+- [x] **Step 2: Implement Admin order panel**
 
 Add API client/types, load the order list on mount, render a compact read-only management panel, and show an empty state.
 
-- [ ] **Step 3: Re-run Admin tests**
+- [x] **Step 3: Re-run Admin tests**
 
 Run:
 
@@ -87,7 +87,7 @@ Expected: PASS.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused API and Admin tests**
+- [x] **Step 1: Run focused API and Admin tests**
 
 Run:
 
@@ -96,7 +96,7 @@ pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 pnpm --filter @welfare-mall/admin run test -- --run
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -109,7 +109,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -118,7 +118,7 @@ git add docs/superpowers/plans/2026-06-03-admin-order-management-read.md apps/ap
 git commit -m "feat: add admin order management read view"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
