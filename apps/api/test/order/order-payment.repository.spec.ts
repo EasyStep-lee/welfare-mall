@@ -39,12 +39,46 @@ function createPrismaMock() {
         payload: { event: 'paid' },
         createdAt: new Date('2026-06-03T00:05:00.000Z')
       })
+    },
+    orderState: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending_payment',
+        paidAt: null,
+        refundRequestedAt: null,
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:00:00.000Z')
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'paid',
+        paidAt: new Date('2026-06-03T00:05:00.000Z'),
+        refundRequestedAt: null,
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:05:00.000Z')
+      })
     }
   };
   const prisma = {
     orderPayment: {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(paymentRecord)
+    },
+    orderState: {
+      upsert: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending_payment',
+        paidAt: null,
+        refundRequestedAt: null,
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:00:00.000Z')
+      })
     },
     $transaction: jest.fn(async (callback) => callback(tx))
   };
@@ -78,6 +112,15 @@ describe('OrderPaymentRepository', () => {
         welfareCardPayableAmount: 5000,
         cashPayableAmount: 8980
       },
+      select: expect.any(Object)
+    });
+    expect(prisma.orderState.upsert).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      create: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending_payment'
+      },
+      update: {},
       select: expect.any(Object)
     });
     expect(result).toEqual(paymentRecord);
@@ -116,6 +159,14 @@ describe('OrderPaymentRepository', () => {
       },
       select: expect.any(Object)
     });
+    expect(tx.orderState.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: {
+        status: 'paid',
+        paidAt: new Date('2026-06-03T00:05:00.000Z')
+      },
+      select: expect.any(Object)
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -150,6 +201,7 @@ describe('OrderPaymentRepository', () => {
 
     expect(tx.orderPaymentCallback.create).not.toHaveBeenCalled();
     expect(tx.orderPayment.update).not.toHaveBeenCalled();
+    expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,

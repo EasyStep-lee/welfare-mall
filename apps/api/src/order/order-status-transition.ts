@@ -47,6 +47,27 @@ export const OrderStatusTransitionCatalog: OrderStatusTransition[] = [
   {
     actor: 'system',
     fromStatus: OrderStatuses.Paid,
+    action: 'refund_request',
+    toStatus: OrderStatuses.RefundProcessing,
+    requiresReason: false
+  },
+  {
+    actor: 'system',
+    fromStatus: OrderStatuses.RefundProcessing,
+    action: 'refund_succeed',
+    toStatus: OrderStatuses.Refunded,
+    requiresReason: false
+  },
+  {
+    actor: 'system',
+    fromStatus: OrderStatuses.RefundProcessing,
+    action: 'refund_fail',
+    toStatus: OrderStatuses.Paid,
+    requiresReason: false
+  },
+  {
+    actor: 'system',
+    fromStatus: OrderStatuses.Paid,
     action: 'complete',
     toStatus: OrderStatuses.Completed,
     requiresReason: false

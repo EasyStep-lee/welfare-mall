@@ -39,12 +39,56 @@ function createPrismaMock() {
         payload: { event: 'refund.succeeded' },
         createdAt: new Date('2026-06-03T00:15:00.000Z')
       })
+    },
+    orderState: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'refund_processing',
+        paidAt: new Date('2026-06-03T00:05:00.000Z'),
+        refundRequestedAt: new Date('2026-06-03T00:10:00.000Z'),
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:10:00.000Z')
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'refunded',
+        paidAt: new Date('2026-06-03T00:05:00.000Z'),
+        refundRequestedAt: new Date('2026-06-03T00:10:00.000Z'),
+        refundedAt: new Date('2026-06-03T00:15:00.000Z'),
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:15:00.000Z')
+      })
     }
   };
   const prisma = {
     orderRefund: {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(refundRecord)
+    },
+    orderState: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'paid',
+        paidAt: new Date('2026-06-03T00:05:00.000Z'),
+        refundRequestedAt: null,
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:05:00.000Z')
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'refund_processing',
+        paidAt: new Date('2026-06-03T00:05:00.000Z'),
+        refundRequestedAt: new Date('2026-06-03T00:10:00.000Z'),
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:10:00.000Z')
+      })
     },
     $transaction: jest.fn(async (callback) => callback(tx))
   };
@@ -77,6 +121,14 @@ describe('OrderRefundRepository', () => {
         channel: 'wechat',
         refundAmount: 5000,
         reason: 'user_cancel'
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.orderState.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: {
+        status: 'refund_processing',
+        refundRequestedAt: expect.any(Date)
       },
       select: expect.any(Object)
     });
@@ -116,6 +168,14 @@ describe('OrderRefundRepository', () => {
       },
       select: expect.any(Object)
     });
+    expect(tx.orderState.update).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      data: {
+        status: 'refunded',
+        refundedAt: new Date('2026-06-03T00:15:00.000Z')
+      },
+      select: expect.any(Object)
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -150,6 +210,7 @@ describe('OrderRefundRepository', () => {
 
     expect(tx.orderRefundCallback.create).not.toHaveBeenCalled();
     expect(tx.orderRefund.update).not.toHaveBeenCalled();
+    expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,

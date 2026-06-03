@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderRefundStatus, OrderRefundStatuses } from './order-refund-status';
+import { applySystemOrderTransition, OrderStateClient } from './order-state.repository';
 
 export type OrderRefundRecord = {
   id: string;
@@ -63,7 +64,7 @@ type OrderRefundTransaction = {
     findUnique(args: unknown): Promise<(OrderRefundCallbackRecord & { refund: OrderRefundRecord }) | null>;
     create(args: unknown): Promise<OrderRefundCallbackRecord>;
   };
-};
+} & OrderStateClient;
 
 @Injectable()
 export class OrderRefundRepository {
@@ -77,7 +78,7 @@ export class OrderRefundRepository {
   }
 
   async createRefund(input: CreateOrderRefundRecordInput): Promise<OrderRefundRecord> {
-    return this.prisma.orderRefund.create({
+    const refund = await this.prisma.orderRefund.create({
       data: {
         refundNo: input.refundNo,
         requestId: input.requestId,
@@ -90,6 +91,14 @@ export class OrderRefundRepository {
       },
       select: refundSelect()
     });
+
+    await applySystemOrderTransition(this.prisma, {
+      orderNo: input.orderNo,
+      action: 'refund_request',
+      refundRequestedAt: new Date()
+    });
+
+    return refund;
   }
 
   async processCallback(input: ProcessOrderRefundCallbackInput): Promise<ProcessOrderRefundCallbackResult | null> {
@@ -150,6 +159,12 @@ async function updateRefundFromCallback(
   input: ProcessOrderRefundCallbackInput
 ): Promise<OrderRefundRecord> {
   if (input.status === OrderRefundStatuses.Succeeded && refund.status !== OrderRefundStatuses.Succeeded) {
+    await applySystemOrderTransition(tx, {
+      orderNo: refund.orderNo,
+      action: 'refund_succeed',
+      refundedAt: input.succeededAt
+    });
+
     return tx.orderRefund.update({
       where: { id: refund.id },
       data: {
@@ -162,6 +177,11 @@ async function updateRefundFromCallback(
   }
 
   if (input.status === OrderRefundStatuses.Failed && refund.status === OrderRefundStatuses.Processing) {
+    await applySystemOrderTransition(tx, {
+      orderNo: refund.orderNo,
+      action: 'refund_fail'
+    });
+
     return tx.orderRefund.update({
       where: { id: refund.id },
       data: {

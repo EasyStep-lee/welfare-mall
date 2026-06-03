@@ -7,6 +7,7 @@ import { OrderPaymentRepository } from './order-payment.repository';
 import { OrderPaymentService } from './order-payment.service';
 import { OrderRefundRepository } from './order-refund.repository';
 import { OrderRefundService } from './order-refund.service';
+import { OrderStateRepository } from './order-state.repository';
 
 @Module({
   controllers: [OrderController],
@@ -17,7 +18,8 @@ import { OrderRefundService } from './order-refund.service';
     OrderPaymentRepository,
     OrderPaymentService,
     OrderRefundRepository,
-    OrderRefundService
+    OrderRefundService,
+    OrderStateRepository
   ],
   exports: [
     OrderAmountRepository,
@@ -25,7 +27,8 @@ import { OrderRefundService } from './order-refund.service';
     OrderPaymentRepository,
     OrderPaymentService,
     OrderRefundRepository,
-    OrderRefundService
+    OrderRefundService,
+    OrderStateRepository
   ]
 })
 export class OrderModule {}

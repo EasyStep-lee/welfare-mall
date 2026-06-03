@@ -365,6 +365,20 @@ model ProductPoolSnapshot {
   @@map("product_pool_snapshot")
 }
 
+model OrderState {
+  id                String    @id @default(cuid())
+  orderNo           String    @unique
+  status            String
+  paidAt            DateTime?
+  refundRequestedAt DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status])
+  @@map("order_state")
+}
+
 model OrderPayment {
   id                       String                 @id @default(cuid())
   paymentNo                String                 @unique
