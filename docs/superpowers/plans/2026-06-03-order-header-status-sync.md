@@ -21,7 +21,7 @@
 
 ### Task 1: Payment Header Status Sync
 
-- [ ] **Step 1: Write failing payment repository test**
+- [x] **Step 1: Write failing payment repository test**
 
 Extend `apps/api/test/order/order-payment.repository.spec.ts` so the first paid callback expects:
 
@@ -40,11 +40,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-payment.repository.
 
 Expected: FAIL because `tx.orderHeader` is missing or not called.
 
-- [ ] **Step 2: Implement payment header sync**
+- [x] **Step 2: Implement payment header sync**
 
 Add `orderHeader.update` to the payment transaction type and call it only when the first paid callback transitions the payment from `pending` to `paid`.
 
-- [ ] **Step 3: Re-run payment repository test**
+- [x] **Step 3: Re-run payment repository test**
 
 Run:
 
@@ -56,7 +56,7 @@ Expected: PASS.
 
 ### Task 2: Refund Header Status Sync
 
-- [ ] **Step 1: Write failing refund repository tests**
+- [x] **Step 1: Write failing refund repository tests**
 
 Extend `apps/api/test/order/order-refund.repository.spec.ts` so:
 
@@ -72,11 +72,11 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-refund.repository.s
 
 Expected: FAIL because header updates do not exist yet.
 
-- [ ] **Step 2: Implement refund header sync**
+- [x] **Step 2: Implement refund header sync**
 
 Add `orderHeader.update` to refund repository clients and synchronize status for refund request, refund success, and refund failure transitions.
 
-- [ ] **Step 3: Re-run refund repository test**
+- [x] **Step 3: Re-run refund repository test**
 
 Run:
 
@@ -88,7 +88,7 @@ Expected: PASS.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused order tests**
+- [x] **Step 1: Run focused order tests**
 
 Run:
 
@@ -96,7 +96,7 @@ Run:
 pnpm --filter @welfare-mall/api run test -- test/order --runInBand
 ```
 
-- [ ] **Step 2: Run full repository gate**
+- [x] **Step 2: Run full repository gate**
 
 Run:
 
@@ -109,7 +109,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -118,7 +118,7 @@ git add docs/superpowers/plans/2026-06-03-order-header-status-sync.md apps/api/s
 git commit -m "fix: sync order header status from payment and refund"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
