@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, HttpCode, Post } from '@nes
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
 import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
+import { CreateOrderRefundInput, OrderRefundService, ProcessOrderRefundCallbackServiceInput } from './order-refund.service';
 import { OrderStatusCatalog } from './order-status';
 import { OrderStatusTransitionCatalog } from './order-status-transition';
 
@@ -10,7 +11,8 @@ import { OrderStatusTransitionCatalog } from './order-status-transition';
 export class OrderController {
   constructor(
     private readonly orderAmountService: OrderAmountService,
-    private readonly orderPaymentService: OrderPaymentService
+    private readonly orderPaymentService: OrderPaymentService,
+    private readonly orderRefundService: OrderRefundService
   ) {}
 
   @Get('statuses')
@@ -144,12 +146,81 @@ export class OrderController {
       payload: input.payload ?? {}
     });
   }
+
+  @Post('refunds')
+  @HttpCode(201)
+  @ApiCreatedResponse({
+    description: 'Create an idempotent order refund',
+    schema: {
+      example: {
+        idempotentReplay: false,
+        refund: {
+          refundNo: 'REF-20260603-001',
+          requestId: 'refund-request-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          status: 'processing',
+          channel: 'wechat',
+          refundAmount: 5000,
+          reason: 'user_cancel'
+        }
+      }
+    }
+  })
+  async createRefund(@Body() input: CreateOrderRefundRequest) {
+    assertCreateOrderRefundRequest(input);
+
+    return this.orderRefundService.createRefund({
+      requestId: input.requestId.trim(),
+      paymentNo: input.paymentNo.trim(),
+      orderNo: input.orderNo.trim(),
+      channel: input.channel,
+      refundAmount: input.refundAmount,
+      reason: input.reason
+    });
+  }
+
+  @Post('refunds/callbacks')
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Process an idempotent refund provider callback',
+    schema: {
+      example: {
+        duplicate: false,
+        refund: {
+          refundNo: 'REF-20260603-001',
+          status: 'succeeded',
+          providerRefundNo: 'wx-refund-001'
+        },
+        callback: {
+          providerEventId: 'refund-event-001',
+          status: 'succeeded'
+        }
+      }
+    }
+  })
+  async processRefundCallback(@Body() input: ProcessOrderRefundCallbackRequest) {
+    assertProcessOrderRefundCallbackRequest(input);
+
+    return this.orderRefundService.processCallback({
+      providerEventId: input.providerEventId.trim(),
+      refundNo: input.refundNo.trim(),
+      providerRefundNo: input.providerRefundNo.trim(),
+      status: input.status,
+      succeededAt: normalizeCallbackSucceededAt(input.succeededAt),
+      payload: input.payload ?? {}
+    });
+  }
 }
 
 type OrderAmountPreviewRequest = OrderAmountPreviewInput;
 type CreateOrderPaymentRequest = CreateOrderPaymentInput;
 type ProcessOrderPaymentCallbackRequest = Omit<ProcessOrderPaymentCallbackServiceInput, 'paidAt'> & {
   paidAt?: string | Date | null;
+};
+type CreateOrderRefundRequest = CreateOrderRefundInput;
+type ProcessOrderRefundCallbackRequest = Omit<ProcessOrderRefundCallbackServiceInput, 'succeededAt'> & {
+  succeededAt?: string | Date | null;
 };
 
 function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | undefined): asserts input is OrderAmountPreviewRequest {
@@ -255,7 +326,78 @@ function assertProcessOrderPaymentCallbackRequest(
   }
 }
 
+function assertCreateOrderRefundRequest(input: CreateOrderRefundRequest | undefined): asserts input is CreateOrderRefundRequest {
+  const messages: string[] = [];
+  const refundAmount = input?.refundAmount;
+
+  if (typeof input?.requestId !== 'string' || input.requestId.trim().length === 0) {
+    messages.push('requestId is required.');
+  }
+
+  if (typeof input?.paymentNo !== 'string' || input.paymentNo.trim().length === 0) {
+    messages.push('paymentNo is required.');
+  }
+
+  if (typeof input?.orderNo !== 'string' || input.orderNo.trim().length === 0) {
+    messages.push('orderNo is required.');
+  }
+
+  if (!['wechat', 'alipay', 'cash'].includes(input?.channel ?? '')) {
+    messages.push('channel must be one of wechat, alipay, cash.');
+  }
+
+  if (!Number.isInteger(refundAmount) || (refundAmount ?? 0) <= 0) {
+    messages.push('refundAmount must be a positive integer.');
+  }
+
+  if (!['user_cancel', 'merchant_out_of_stock', 'after_sale'].includes(input?.reason ?? '')) {
+    messages.push('reason must be one of user_cancel, merchant_out_of_stock, after_sale.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
+function assertProcessOrderRefundCallbackRequest(
+  input: ProcessOrderRefundCallbackRequest | undefined
+): asserts input is ProcessOrderRefundCallbackRequest {
+  const messages: string[] = [];
+
+  if (typeof input?.providerEventId !== 'string' || input.providerEventId.trim().length === 0) {
+    messages.push('providerEventId is required.');
+  }
+
+  if (typeof input?.refundNo !== 'string' || input.refundNo.trim().length === 0) {
+    messages.push('refundNo is required.');
+  }
+
+  if (typeof input?.providerRefundNo !== 'string' || input.providerRefundNo.trim().length === 0) {
+    messages.push('providerRefundNo is required.');
+  }
+
+  if (!['succeeded', 'failed'].includes(input?.status ?? '')) {
+    messages.push('status must be succeeded or failed.');
+  }
+
+  if (input?.status === 'succeeded' && !isValidDateInput(input.succeededAt)) {
+    messages.push('succeededAt is required for succeeded callbacks.');
+  }
+
+  if (messages.length > 0) {
+    throw new BadRequestException(messages);
+  }
+}
+
 function normalizeCallbackPaidAt(value: string | Date | null | undefined): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value instanceof Date ? value : new Date(value);
+}
+
+function normalizeCallbackSucceededAt(value: string | Date | null | undefined): Date | null {
   if (value === null || value === undefined) {
     return null;
   }
