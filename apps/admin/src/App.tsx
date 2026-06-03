@@ -9,6 +9,7 @@ import {
   fetchAdminOrders,
   fetchReviewQueue,
   processOrderPaymentCallback,
+  processOrderRefundCallback,
   publishProductToPool,
   statusLabels
 } from './api';
@@ -141,6 +142,27 @@ export default function App() {
     });
   }
 
+  async function confirmRefund(order: AdminOrder) {
+    const refund = order.latestRefund;
+
+    if (!refund) {
+      return;
+    }
+
+    await runAction(async () => {
+      const result = await processOrderRefundCallback({
+        providerEventId: `admin-refund-${order.orderNo}-${Date.now()}`,
+        refundNo: refund.refundNo,
+        providerRefundNo: `admin-confirm-${refund.refundNo}`,
+        status: 'succeeded',
+        succeededAt: new Date().toISOString(),
+        payload: { source: 'admin-order-management' }
+      });
+      setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
+      await loadOrders();
+    });
+  }
+
   async function runAction(action: () => Promise<void>) {
     setError(null);
     setMessage(null);
@@ -229,7 +251,7 @@ export default function App() {
                   </span>
                 ))}
               </div>
-              {canConfirmPayment(order) || canRequestRefund(order) ? (
+              {canConfirmPayment(order) || canRequestRefund(order) || canConfirmRefund(order) ? (
                 <div className="order-actions">
                   {canConfirmPayment(order) ? (
                     <button type="button" onClick={() => void confirmPayment(order)}>
@@ -241,6 +263,12 @@ export default function App() {
                     <button type="button" onClick={() => void requestRefund(order)}>
                       <RotateCcw size={15} />
                       申请退款
+                    </button>
+                  ) : null}
+                  {canConfirmRefund(order) ? (
+                    <button type="button" onClick={() => void confirmRefund(order)}>
+                      <Check size={15} />
+                      确认退款成功
                     </button>
                   ) : null}
                 </div>
@@ -507,6 +535,10 @@ function canConfirmPayment(order: AdminOrder) {
   return (
     order.status === 'pending_payment' && order.latestPayment !== null && order.latestPayment.status === 'pending'
   );
+}
+
+function canConfirmRefund(order: AdminOrder) {
+  return order.latestRefund !== null && order.latestRefund.status === 'processing';
 }
 
 const orderStatusLabels: Record<string, string> = {

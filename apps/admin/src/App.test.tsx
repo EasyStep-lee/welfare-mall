@@ -124,6 +124,22 @@ const paidAfterCallbackOrdersResponse = {
   ]
 };
 
+const refundedAfterCallbackOrdersResponse = {
+  orders: [
+    {
+      ...refundProcessingOrdersResponse.orders[0],
+      status: 'refunded',
+      latestRefund: {
+        refundNo: 'REF-20260603-001',
+        status: 'succeeded',
+        channel: 'wechat',
+        refundAmount: 13980,
+        reason: 'after_sale'
+      }
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
     let adminOrderLoads = 0;
@@ -305,5 +321,77 @@ describe('Admin product review workbench', () => {
     expect(await screen.findByText('ORDER-20260603-001 已确认支付成功 PAY-20260603-PENDING')).toBeInTheDocument();
     expect(await screen.findByText('已支付')).toBeInTheDocument();
     expect(await screen.findByText('微信支付 已支付')).toBeInTheDocument();
+  });
+
+  it('confirms a processing refund callback for Admin order management', async () => {
+    let adminOrderLoads = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.includes('/orders/refunds/callbacks')) {
+          return {
+            ok: true,
+            json: async () => ({
+              duplicate: false,
+              refund: {
+                refundNo: 'REF-20260603-001',
+                status: 'succeeded',
+                providerRefundNo: 'admin-confirm-REF-20260603-001'
+              },
+              callback: {
+                providerEventId: 'admin-refund-ORDER-20260603-001-1717394400000',
+                status: 'succeeded'
+              }
+            })
+          };
+        }
+
+        if (url.includes('/orders/admin')) {
+          adminOrderLoads += 1;
+          return {
+            ok: true,
+            json: async () =>
+              adminOrderLoads === 1 ? refundProcessingOrdersResponse : refundedAfterCallbackOrdersResponse
+          };
+        }
+
+        if (url.includes('/products/review-queue')) {
+          return {
+            ok: true,
+            json: async () => reviewQueueResponse
+          };
+        }
+
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '确认退款成功' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/refunds/callbacks', expect.any(Object));
+    });
+    const callbackCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).includes('/orders/refunds/callbacks'));
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(callbackCall?.[1]?.body))).toMatchObject({
+      providerEventId: expect.stringMatching(/^admin-refund-ORDER-20260603-001-\d+$/),
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'admin-confirm-REF-20260603-001',
+      status: 'succeeded',
+      succeededAt: expect.any(String),
+      payload: { source: 'admin-order-management' }
+    });
+    expect(await screen.findByText('ORDER-20260603-001 已确认退款成功 REF-20260603-001')).toBeInTheDocument();
+    expect(await screen.findByText('已退款')).toBeInTheDocument();
+    expect(await screen.findByText('微信支付 退款成功 ¥139.80')).toBeInTheDocument();
   });
 });
