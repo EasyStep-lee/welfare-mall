@@ -52,6 +52,22 @@ const paymentRecord = {
   updatedAt: new Date('2026-06-03T00:05:00.000Z')
 };
 
+const refundRecord = {
+  id: 'refund-001',
+  refundNo: 'REF-20260603-001',
+  requestId: 'refund-request-001',
+  paymentNo: 'PAY-20260603-001',
+  orderNo: 'ORDER-20260603-001',
+  status: 'processing',
+  channel: 'wechat',
+  refundAmount: 13980,
+  reason: 'after_sale',
+  providerRefundNo: null,
+  succeededAt: null,
+  createdAt: new Date('2026-06-03T00:10:00.000Z'),
+  updatedAt: new Date('2026-06-03T00:10:00.000Z')
+};
+
 function createPrismaMock() {
   return {
     orderHeader: {
@@ -60,6 +76,9 @@ function createPrismaMock() {
     },
     orderPayment: {
       findMany: jest.fn().mockResolvedValue([paymentRecord])
+    },
+    orderRefund: {
+      findMany: jest.fn().mockResolvedValue([refundRecord])
     }
   };
 }
@@ -81,7 +100,12 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord }]);
+    expect(prisma.orderRefund.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
   });
 
   it('lists recent admin orders newest first with latest payment', async () => {
@@ -100,7 +124,12 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord }]);
+    expect(prisma.orderRefund.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
   });
 
   it('finds one order scoped to the buyer', async () => {
@@ -124,6 +153,11 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord });
+    expect(prisma.orderRefund.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord });
   });
 });

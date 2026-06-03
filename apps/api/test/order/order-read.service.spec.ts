@@ -26,6 +26,13 @@ const orderRecord = {
     status: 'pending',
     channel: 'wechat',
     totalAmount: 13980
+  },
+  latestRefund: {
+    refundNo: 'REF-20260603-001',
+    status: 'processing',
+    channel: 'wechat',
+    refundAmount: 13980,
+    reason: 'after_sale'
   }
 };
 
@@ -50,6 +57,13 @@ describe('OrderReadService', () => {
       paymentNo: 'PAY-20260603-001',
       status: 'pending',
       channel: 'wechat'
+    });
+    expect(result.orders[0]?.latestRefund).toMatchObject({
+      refundNo: 'REF-20260603-001',
+      status: 'processing',
+      channel: 'wechat',
+      refundAmount: 13980,
+      reason: 'after_sale'
     });
   });
 

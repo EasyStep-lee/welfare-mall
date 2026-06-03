@@ -35,6 +35,22 @@ export type OrderCheckoutPaymentRecord = {
   updatedAt: Date;
 };
 
+export type OrderCheckoutRefundRecord = {
+  id: string;
+  refundNo: string;
+  requestId: string;
+  paymentNo: string;
+  orderNo: string;
+  status: string;
+  channel: string;
+  refundAmount: number;
+  reason: string;
+  providerRefundNo: string | null;
+  succeededAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type OrderCheckoutRecord = {
   id: string;
   orderNo: string;
@@ -55,6 +71,7 @@ export type OrderCheckoutRecord = {
   updatedAt: Date;
   lines: OrderCheckoutLineRecord[];
   latestPayment?: OrderCheckoutPaymentRecord | null;
+  latestRefund?: OrderCheckoutRefundRecord | null;
 };
 
 export type CreateOrderCheckoutLineInput = {

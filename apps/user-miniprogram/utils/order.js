@@ -1,5 +1,6 @@
 const { formatMoney } = require('./format');
 const { toPaymentDisplay } = require('./payment');
+const { toRefundDisplay } = require('./refund');
 
 const OrderStatusText = {
   pending_payment: '待支付',
@@ -29,6 +30,7 @@ function toOrderDetailDisplay(order) {
     welfareCardText: formatMoney(order.welfareCardPayableAmount),
     cashText: formatMoney(order.cashPayableAmount),
     latestPaymentDisplay: order.latestPayment ? toPaymentDisplay(order.latestPayment) : null,
+    latestRefundDisplay: order.latestRefund ? toRefundDisplay(order.latestRefund) : null,
     receiverText: [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / '),
     lines: (order.lines || []).map((line) => ({
       ...line,

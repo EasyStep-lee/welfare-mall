@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrderCheckoutPaymentRecord, OrderCheckoutRecord } from './order-checkout.repository';
+import { OrderCheckoutPaymentRecord, OrderCheckoutRecord, OrderCheckoutRefundRecord } from './order-checkout.repository';
 
 export type FindOrderForBuyerInput = {
   buyerUserId: string;
@@ -18,7 +18,7 @@ export class OrderReadRepository {
       select: orderReadSelect()
     });
 
-    return this.attachLatestPayments(orders);
+    return this.attachLatestOrderFacts(orders);
   }
 
   async listRecentAdminOrders(): Promise<OrderCheckoutRecord[]> {
@@ -28,7 +28,7 @@ export class OrderReadRepository {
       select: orderReadSelect()
     });
 
-    return this.attachLatestPayments(orders);
+    return this.attachLatestOrderFacts(orders);
   }
 
   async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<OrderCheckoutRecord | null> {
@@ -44,12 +44,12 @@ export class OrderReadRepository {
       return null;
     }
 
-    const [orderWithPayment] = await this.attachLatestPayments([order]);
+    const [orderWithFacts] = await this.attachLatestOrderFacts([order]);
 
-    return orderWithPayment ?? null;
+    return orderWithFacts ?? null;
   }
 
-  private async attachLatestPayments(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]> {
+  private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]> {
     const orderNos = orders.map((order) => order.orderNo);
 
     if (orderNos.length === 0) {
@@ -62,6 +62,12 @@ export class OrderReadRepository {
       select: paymentReadSelect()
     });
     const latestPaymentByOrderNo = new Map<string, OrderCheckoutPaymentRecord>();
+    const refunds = await this.prisma.orderRefund.findMany({
+      where: { orderNo: { in: orderNos } },
+      orderBy: { createdAt: 'desc' },
+      select: refundReadSelect()
+    });
+    const latestRefundByOrderNo = new Map<string, OrderCheckoutRefundRecord>();
 
     for (const payment of payments) {
       if (!latestPaymentByOrderNo.has(payment.orderNo)) {
@@ -69,9 +75,16 @@ export class OrderReadRepository {
       }
     }
 
+    for (const refund of refunds) {
+      if (!latestRefundByOrderNo.has(refund.orderNo)) {
+        latestRefundByOrderNo.set(refund.orderNo, refund);
+      }
+    }
+
     return orders.map((order) => ({
       ...order,
-      latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null
+      latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
+      latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null
     }));
   }
 }
@@ -127,6 +140,24 @@ function paymentReadSelect() {
     cashPayableAmount: true,
     providerPaymentNo: true,
     paidAt: true,
+    createdAt: true,
+    updatedAt: true
+  } as const;
+}
+
+function refundReadSelect() {
+  return {
+    id: true,
+    refundNo: true,
+    requestId: true,
+    paymentNo: true,
+    orderNo: true,
+    status: true,
+    channel: true,
+    refundAmount: true,
+    reason: true,
+    providerRefundNo: true,
+    succeededAt: true,
     createdAt: true,
     updatedAt: true
   } as const;

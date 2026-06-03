@@ -51,6 +51,12 @@ const refund = {
   refundAmount: 13980
 };
 
+const orderWithRefund = {
+  ...order,
+  status: 'refund_processing',
+  latestRefund: refund
+};
+
 function mountPage(options = {}) {
   let pageDefinition;
   const requests = [];
@@ -179,5 +185,18 @@ describe('user mini-program order detail page', () => {
     });
     expect(page.data.order.status).toBe('refund_processing');
     expect(page.data.orderDisplay.statusText).toBe('退款处理中');
+  });
+
+  it('displays the latest refund returned by order detail', async () => {
+    const { page } = mountPage({ order: orderWithRefund });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+
+    expect(page.data.orderDisplay.latestRefundDisplay).toEqual({
+      refundNo: 'REF-20260603-001',
+      statusText: '退款处理中',
+      channelText: '微信支付',
+      refundAmountText: '¥139.80'
+    });
   });
 });
