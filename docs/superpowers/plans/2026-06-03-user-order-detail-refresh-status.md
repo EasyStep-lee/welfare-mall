@@ -99,7 +99,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -108,7 +108,7 @@ git add docs/superpowers/plans/2026-06-03-user-order-detail-refresh-status.md ap
 git commit -m "feat: refresh user order detail status"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
