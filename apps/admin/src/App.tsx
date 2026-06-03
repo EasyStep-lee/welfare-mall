@@ -1,4 +1,4 @@
-import { Check, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
+import { Check, CreditCard, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminOrder,
@@ -8,6 +8,7 @@ import {
   decideProductReview,
   fetchAdminOrders,
   fetchReviewQueue,
+  processOrderPaymentCallback,
   publishProductToPool,
   statusLabels
 } from './api';
@@ -119,6 +120,27 @@ export default function App() {
     });
   }
 
+  async function confirmPayment(order: AdminOrder) {
+    const payment = order.latestPayment;
+
+    if (!payment) {
+      return;
+    }
+
+    await runAction(async () => {
+      const result = await processOrderPaymentCallback({
+        providerEventId: `admin-payment-${order.orderNo}-${Date.now()}`,
+        paymentNo: payment.paymentNo,
+        providerPaymentNo: `admin-confirm-${payment.paymentNo}`,
+        status: 'paid',
+        paidAt: new Date().toISOString(),
+        payload: { source: 'admin-order-management' }
+      });
+      setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
+      await loadOrders();
+    });
+  }
+
   async function runAction(action: () => Promise<void>) {
     setError(null);
     setMessage(null);
@@ -207,12 +229,20 @@ export default function App() {
                   </span>
                 ))}
               </div>
-              {canRequestRefund(order) ? (
+              {canConfirmPayment(order) || canRequestRefund(order) ? (
                 <div className="order-actions">
-                  <button type="button" onClick={() => void requestRefund(order)}>
-                    <RotateCcw size={15} />
-                    申请退款
-                  </button>
+                  {canConfirmPayment(order) ? (
+                    <button type="button" onClick={() => void confirmPayment(order)}>
+                      <CreditCard size={15} />
+                      确认支付成功
+                    </button>
+                  ) : null}
+                  {canRequestRefund(order) ? (
+                    <button type="button" onClick={() => void requestRefund(order)}>
+                      <RotateCcw size={15} />
+                      申请退款
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </article>
@@ -471,6 +501,12 @@ function orderStatusLabel(status: string) {
 
 function canRequestRefund(order: AdminOrder) {
   return order.status === 'paid' && order.latestPayment !== null && order.latestPayment.status === 'paid';
+}
+
+function canConfirmPayment(order: AdminOrder) {
+  return (
+    order.status === 'pending_payment' && order.latestPayment !== null && order.latestPayment.status === 'pending'
+  );
 }
 
 const orderStatusLabels: Record<string, string> = {
