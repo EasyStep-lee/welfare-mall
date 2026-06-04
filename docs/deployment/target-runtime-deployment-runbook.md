@@ -6,6 +6,7 @@ Use this runbook only after the local gates below have passed on `main`:
 
 ```powershell
 pnpm run verify
+pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
 pnpm run docker:release:manifest
 pnpm run docker:runtime:smoke
@@ -40,7 +41,13 @@ pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --re
 ## Target Execution Steps
 
 1. Confirm the GitHub `main` commit to deploy and record it in `docs/deployment/target-runtime-deployment-result-template.md`.
-2. Re-run the local image build preflight for the exact source checkout being released:
+2. Run the target deployment preflight on a clean `main` checkout and record the JSON output:
+
+```powershell
+pnpm run target:deployment:preflight -- --require-main --require-clean
+```
+
+3. Re-run the local image build preflight for the exact source checkout being released:
 
 ```powershell
 pnpm run docker:image-build:preflight
@@ -48,34 +55,34 @@ pnpm run docker:image-build:preflight
 
 If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. Record the tag in the result template before target execution.
 
-3. Generate and record the Docker release manifest:
+4. Generate and record the Docker release manifest:
 
 ```powershell
 pnpm run docker:release:manifest
 ```
 
-4. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
-5. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
-6. Confirm database migrations or schema push steps are complete according to the target environment policy.
-7. Validate the prepared target runtime env file:
+5. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
+6. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
+7. Confirm database migrations or schema push steps are complete according to the target environment policy.
+8. Validate the prepared target runtime env file:
 
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-8. Run static smoke first:
+9. Run static smoke first:
 
 ```powershell
 pnpm run target:runtime:smoke
 ```
 
-9. Run live target smoke:
+10. Run live target smoke:
 
 ```powershell
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-10. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
+11. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
 
 ## Target Runtime Smoke Evidence
 
