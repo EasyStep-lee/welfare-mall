@@ -90,7 +90,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -99,7 +99,7 @@ git add tools/verify-target-deployment-handoff.cjs docs/deployment docs/superpow
 git commit -m "docs: require docker image build preflight in deployment handoff"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
