@@ -218,13 +218,23 @@ describe('Admin product review workbench', () => {
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin');
     expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
     expect(screen.getByText('user-001')).toBeInTheDocument();
-    expect(screen.getByText('已支付')).toBeInTheDocument();
+    expect(screen.getAllByText('已支付').length).toBeGreaterThan(0);
     expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
     expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
     expect(screen.getByText('REF-20260603-001')).toBeInTheDocument();
     expect(screen.getByText('微信支付 退款处理中 ¥139.80')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
+  });
+
+  it('filters Admin orders by status tab', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '退款中' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin?status=refund_processing');
+    });
   });
 
   it('creates a full refund request for a paid order', async () => {
@@ -249,7 +259,7 @@ describe('Admin product review workbench', () => {
       requestId: expect.stringMatching(/^admin-refund-ORDER-20260603-001-\d+$/)
     });
     expect(await screen.findByText('ORDER-20260603-001 已提交退款申请 REF-20260603-001')).toBeInTheDocument();
-    expect(await screen.findByText('退款处理中')).toBeInTheDocument();
+    expect((await screen.findAllByText('退款处理中')).length).toBeGreaterThan(0);
   });
 
   it('confirms a pending payment callback for Admin order management', async () => {
@@ -319,7 +329,7 @@ describe('Admin product review workbench', () => {
       payload: { source: 'admin-order-management' }
     });
     expect(await screen.findByText('ORDER-20260603-001 已确认支付成功 PAY-20260603-PENDING')).toBeInTheDocument();
-    expect(await screen.findByText('已支付')).toBeInTheDocument();
+    expect((await screen.findAllByText('已支付')).length).toBeGreaterThan(0);
     expect(await screen.findByText('微信支付 已支付')).toBeInTheDocument();
   });
 
@@ -391,7 +401,7 @@ describe('Admin product review workbench', () => {
       payload: { source: 'admin-order-management' }
     });
     expect(await screen.findByText('ORDER-20260603-001 已确认退款成功 REF-20260603-001')).toBeInTheDocument();
-    expect(await screen.findByText('已退款')).toBeInTheDocument();
+    expect((await screen.findAllByText('已退款')).length).toBeGreaterThan(0);
     expect(await screen.findByText('微信支付 退款成功 ¥139.80')).toBeInTheDocument();
   });
 });

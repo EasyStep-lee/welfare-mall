@@ -137,6 +137,22 @@ describe('OrderFulfillmentRepository', () => {
     ]);
   });
 
+  it('filters fulfillment orders by status for merchant-owned products', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderFulfillmentRepository(prisma as never);
+
+    await repository.listOrdersForMerchant({ merchantId: 'merchant-001', status: 'completed' });
+
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'completed',
+        lines: { some: { productId: { in: ['product-001'] } } }
+      },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+  });
+
   it('returns an empty queue when the merchant has no products', async () => {
     const prisma = createPrismaMock();
     prisma.product.findMany.mockResolvedValue([]);

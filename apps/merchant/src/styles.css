@@ -87,6 +87,10 @@ h2 {
   color: #ffffff;
 }
 
+.panel-status-tabs {
+  margin-top: 12px;
+}
+
 .notice {
   border-radius: 8px;
   margin-bottom: 16px;

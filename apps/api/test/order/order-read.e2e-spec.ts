@@ -107,7 +107,7 @@ describe('Order read API contract', () => {
 
     const response = await request(app.getHttpServer()).get('/api/orders/admin').expect(200);
 
-    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith();
+    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith({});
     expect(orderReadService.getOrderDetail).not.toHaveBeenCalled();
     expect(response.body.orders).toHaveLength(1);
     expect(response.body.orders[0]).toMatchObject({
@@ -127,6 +127,41 @@ describe('Order read API contract', () => {
         refundAmount: 13980,
         reason: 'after_sale'
       }
+    });
+  });
+
+  it('filters recent Admin orders by status', async () => {
+    orderReadService.listAdminOrders.mockResolvedValue({
+      orders: [
+        {
+          orderNo: 'ORDER-20260603-002',
+          buyerUserId: 'user-002',
+          status: 'refund_processing',
+          totalAmount: 6990,
+          latestPayment: {
+            paymentNo: 'PAY-20260603-002',
+            status: 'paid',
+            channel: 'wechat'
+          },
+          latestRefund: {
+            refundNo: 'REF-20260603-002',
+            status: 'processing',
+            channel: 'wechat',
+            refundAmount: 6990,
+            reason: 'after_sale'
+          },
+          lines: [{ displayName: 'Local Rice', quantity: 1 }]
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer()).get('/api/orders/admin?status=refund_processing').expect(200);
+
+    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith({ status: 'refund_processing' });
+    expect(response.body.orders).toHaveLength(1);
+    expect(response.body.orders[0]).toMatchObject({
+      orderNo: 'ORDER-20260603-002',
+      status: 'refund_processing'
     });
   });
 

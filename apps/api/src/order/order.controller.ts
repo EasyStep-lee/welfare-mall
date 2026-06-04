@@ -88,10 +88,13 @@ export class OrderController {
       }
     }
   })
-  async listMerchantFulfillmentOrders(@Query('merchantId') merchantId: string) {
+  async listMerchantFulfillmentOrders(@Query('merchantId') merchantId: string, @Query('status') status?: string) {
     assertRequiredText(merchantId, 'merchantId');
 
-    return this.orderFulfillmentService.listMerchantFulfillmentOrders({ merchantId: merchantId.trim() });
+    return this.orderFulfillmentService.listMerchantFulfillmentOrders({
+      merchantId: merchantId.trim(),
+      status: status?.trim() || 'paid'
+    });
   }
 
   @Get('admin')
@@ -112,8 +115,8 @@ export class OrderController {
       }
     }
   })
-  async listAdminOrders() {
-    return this.orderReadService.listAdminOrders();
+  async listAdminOrders(@Query('status') status?: string) {
+    return this.orderReadService.listAdminOrders({ status: status?.trim() });
   }
 
   @Post('merchant/fulfillment/:orderNo/complete')

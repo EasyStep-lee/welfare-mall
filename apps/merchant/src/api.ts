@@ -1,4 +1,5 @@
 export type SubmissionQueueStatus = 'draft' | 'rejected';
+export type MerchantFulfillmentStatusFilter = 'paid' | 'completed';
 
 export type BusinessParty = {
   id: string;
@@ -126,6 +127,11 @@ export const statusLabels: Record<SubmissionQueueStatus, string> = {
   rejected: '已驳回'
 };
 
+export const merchantFulfillmentStatusLabels: Record<MerchantFulfillmentStatusFilter, string> = {
+  paid: '待履约',
+  completed: '已完成'
+};
+
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 
 function apiBaseUrl() {
@@ -176,9 +182,13 @@ export async function saveProductDraft(input: { payload: ProductDraftPayload; ac
   return response.json();
 }
 
-export async function fetchMerchantFulfillmentOrders(merchantId: string): Promise<MerchantFulfillmentQueueResponse> {
+export async function fetchMerchantFulfillmentOrders(
+  merchantId: string,
+  status: MerchantFulfillmentStatusFilter = 'paid'
+): Promise<MerchantFulfillmentQueueResponse> {
   const url = new URL(`${apiBaseUrl()}/orders/merchant/fulfillment`);
   url.searchParams.set('merchantId', merchantId);
+  url.searchParams.set('status', status);
 
   const response = await fetch(url.toString());
   if (!response.ok) {
