@@ -67,6 +67,7 @@ model Merchant {
   franchise      Franchise @relation(fields: [franchiseId], references: [id])
   region         Region?   @relation(fields: [regionId], references: [id])
   products       Product[]
+  fulfillmentTasks FulfillmentTask[]
 
   @@index([franchiseId])
   @@index([regionId])
@@ -398,6 +399,7 @@ model OrderHeader {
   createdAt                DateTime    @default(now())
   updatedAt                DateTime    @updatedAt
   lines                    OrderLine[]
+  fulfillmentTasks         FulfillmentTask[]
 
   @@index([buyerUserId])
   @@index([status])
@@ -424,6 +426,52 @@ model OrderLine {
   @@index([productId])
   @@index([skuId])
   @@map("order_line")
+}
+
+model FulfillmentTask {
+  id              String                @id @default(cuid())
+  taskNo          String                @unique
+  orderNo         String
+  merchantId      String
+  status          String
+  fulfillmentType String
+  receiverName    String?
+  receiverPhone   String?
+  receiverAddress String?
+  pickupStoreName String?
+  completedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  order           OrderHeader           @relation(fields: [orderNo], references: [orderNo])
+  merchant        Merchant              @relation(fields: [merchantId], references: [id])
+  lines           FulfillmentTaskLine[]
+
+  @@unique([orderNo, merchantId])
+  @@index([merchantId, status])
+  @@index([orderNo, status])
+  @@map("fulfillment_task")
+}
+
+model FulfillmentTaskLine {
+  id                String          @id @default(cuid())
+  taskId            String
+  orderLineId       String
+  productId         String
+  skuId             String?
+  displayName       String
+  displaySkuCode    String?
+  displayImageUrl   String
+  unitPriceAmount   Int
+  quantity          Int
+  lineTotalAmount   Int
+  createdAt         DateTime        @default(now())
+  task              FulfillmentTask @relation(fields: [taskId], references: [id])
+
+  @@unique([taskId, orderLineId])
+  @@index([taskId])
+  @@index([productId])
+  @@index([skuId])
+  @@map("fulfillment_task_line")
 }
 
 model OrderPayment {

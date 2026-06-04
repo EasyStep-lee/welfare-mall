@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { OrderFulfillmentRepository } from '../../src/order/order-fulfillment.repository';
 
 const orderRecord = {
@@ -67,13 +66,51 @@ const paymentRecord = {
   updatedAt: new Date('2026-06-03T00:10:00.000Z')
 };
 
+const fulfillmentTaskRecord = {
+  id: 'fulfillment-task-001',
+  taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+  orderNo: 'ORDER-20260603-001',
+  merchantId: 'merchant-001',
+  status: 'pending',
+  fulfillmentType: 'delivery',
+  receiverName: 'Li Lei',
+  receiverPhone: '13800000000',
+  receiverAddress: 'Pudong Avenue 1',
+  pickupStoreName: null,
+  createdAt: new Date('2026-06-03T00:10:00.000Z'),
+  updatedAt: new Date('2026-06-03T00:10:00.000Z'),
+  completedAt: null,
+  order: {
+    id: orderRecord.id,
+    orderNo: orderRecord.orderNo,
+    requestId: orderRecord.requestId,
+    buyerUserId: orderRecord.buyerUserId,
+    status: orderRecord.status,
+    subtotalAmount: orderRecord.subtotalAmount,
+    discountAmount: orderRecord.discountAmount,
+    totalAmount: orderRecord.totalAmount,
+    welfareCardPayableAmount: orderRecord.welfareCardPayableAmount,
+    cashPayableAmount: orderRecord.cashPayableAmount,
+    fulfillmentType: orderRecord.fulfillmentType,
+    receiverName: orderRecord.receiverName,
+    receiverPhone: orderRecord.receiverPhone,
+    receiverAddress: orderRecord.receiverAddress,
+    pickupStoreName: orderRecord.pickupStoreName,
+    createdAt: orderRecord.createdAt,
+    updatedAt: orderRecord.updatedAt
+  },
+  lines: [orderRecord.lines[0]]
+};
+
 function createPrismaMock() {
   const tx = {
-    product: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'product-001' }])
+    fulfillmentTask: {
+      findFirst: jest.fn().mockResolvedValue(fulfillmentTaskRecord),
+      update: jest.fn().mockResolvedValue({ ...fulfillmentTaskRecord, status: 'completed', completedAt: new Date('2026-06-03T00:20:00.000Z') }),
+      count: jest.fn().mockResolvedValue(0)
     },
     orderHeader: {
-      findFirst: jest.fn().mockResolvedValue(orderRecord),
+      findUnique: jest.fn().mockResolvedValue(orderRecord),
       update: jest.fn().mockResolvedValue({ ...orderRecord, status: 'completed' })
     },
     orderState: {
@@ -90,11 +127,8 @@ function createPrismaMock() {
     }
   };
   return {
-    product: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'product-001' }])
-    },
-    orderHeader: {
-      findMany: jest.fn().mockResolvedValue([orderRecord])
+    fulfillmentTask: {
+      findMany: jest.fn().mockResolvedValue([fulfillmentTaskRecord])
     },
     orderPayment: {
       findMany: jest.fn().mockResolvedValue([paymentRecord])
@@ -105,20 +139,16 @@ function createPrismaMock() {
 }
 
 describe('OrderFulfillmentRepository', () => {
-  it('lists paid fulfillment orders for merchant-owned products', async () => {
+  it('lists pending fulfillment task orders for one merchant', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderFulfillmentRepository(prisma as never);
 
     const result = await repository.listPaidOrdersForMerchant('merchant-001');
 
-    expect(prisma.product.findMany).toHaveBeenCalledWith({
-      where: { merchantId: 'merchant-001' },
-      select: { id: true }
-    });
-    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
       where: {
-        status: 'paid',
-        lines: { some: { productId: { in: ['product-001'] } } }
+        status: 'pending',
+        merchantId: 'merchant-001'
       },
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
@@ -131,6 +161,15 @@ describe('OrderFulfillmentRepository', () => {
     expect(result).toEqual([
       {
         ...orderRecord,
+        id: fulfillmentTaskRecord.id,
+        status: 'paid',
+        fulfillmentType: fulfillmentTaskRecord.fulfillmentType,
+        receiverName: fulfillmentTaskRecord.receiverName,
+        receiverPhone: fulfillmentTaskRecord.receiverPhone,
+        receiverAddress: fulfillmentTaskRecord.receiverAddress,
+        pickupStoreName: fulfillmentTaskRecord.pickupStoreName,
+        createdAt: fulfillmentTaskRecord.createdAt,
+        updatedAt: fulfillmentTaskRecord.updatedAt,
         lines: [orderRecord.lines[0]],
         latestPayment: paymentRecord
       }
@@ -143,10 +182,10 @@ describe('OrderFulfillmentRepository', () => {
 
     await repository.listOrdersForMerchant({ merchantId: 'merchant-001', status: 'completed' });
 
-    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
       where: {
         status: 'completed',
-        lines: { some: { productId: { in: ['product-001'] } } }
+        merchantId: 'merchant-001'
       },
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
@@ -155,16 +194,16 @@ describe('OrderFulfillmentRepository', () => {
 
   it('returns an empty queue when the merchant has no products', async () => {
     const prisma = createPrismaMock();
-    prisma.product.findMany.mockResolvedValue([]);
+    prisma.fulfillmentTask.findMany.mockResolvedValue([]);
     const repository = new OrderFulfillmentRepository(prisma as never);
 
     const result = await repository.listPaidOrdersForMerchant('merchant-empty');
 
     expect(result).toEqual([]);
-    expect(prisma.orderHeader.findMany).not.toHaveBeenCalled();
+    expect(prisma.orderPayment.findMany).not.toHaveBeenCalled();
   });
 
-  it('completes a paid merchant fulfillment order', async () => {
+  it('completes a merchant fulfillment task and then completes the order when no tasks remain', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderFulfillmentRepository(prisma as never);
 
@@ -173,16 +212,27 @@ describe('OrderFulfillmentRepository', () => {
       orderNo: 'ORDER-20260603-001'
     });
 
-    expect(prisma.tx.product.findMany).toHaveBeenCalledWith({
-      where: { merchantId: 'merchant-001' },
-      select: { id: true }
-    });
-    expect(prisma.tx.orderHeader.findFirst).toHaveBeenCalledWith({
+    expect(prisma.tx.fulfillmentTask.findFirst).toHaveBeenCalledWith({
       where: {
         orderNo: 'ORDER-20260603-001',
-        lines: { some: { productId: { in: ['product-001'] } } }
+        merchantId: 'merchant-001',
+        status: 'pending'
       },
       select: expect.any(Object)
+    });
+    expect(prisma.tx.fulfillmentTask.update).toHaveBeenCalledWith({
+      where: { id: 'fulfillment-task-001' },
+      data: {
+        status: 'completed',
+        completedAt: expect.any(Date)
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.tx.fulfillmentTask.count).toHaveBeenCalledWith({
+      where: {
+        orderNo: 'ORDER-20260603-001',
+        status: { not: 'completed' }
+      }
     });
     expect(prisma.tx.orderHeader.update).toHaveBeenCalledWith({
       where: { orderNo: 'ORDER-20260603-001' },
@@ -194,12 +244,20 @@ describe('OrderFulfillmentRepository', () => {
       data: { status: 'completed' },
       select: expect.any(Object)
     });
-    expect(result).toEqual({ ...orderRecord, status: 'completed', latestPayment: null });
+    expect(result).toEqual({
+      ...orderRecord,
+      id: 'fulfillment-task-001',
+      status: 'completed',
+      createdAt: fulfillmentTaskRecord.createdAt,
+      updatedAt: fulfillmentTaskRecord.updatedAt,
+      lines: [orderRecord.lines[0]],
+      latestPayment: null
+    });
   });
 
   it('returns null when the order does not contain merchant-owned products', async () => {
     const prisma = createPrismaMock();
-    prisma.tx.orderHeader.findFirst.mockResolvedValue(null);
+    prisma.tx.fulfillmentTask.findFirst.mockResolvedValue(null);
     const repository = new OrderFulfillmentRepository(prisma as never);
 
     const result = await repository.completePaidOrderForMerchant({
@@ -208,22 +266,22 @@ describe('OrderFulfillmentRepository', () => {
     });
 
     expect(result).toBeNull();
+    expect(prisma.tx.fulfillmentTask.update).not.toHaveBeenCalled();
     expect(prisma.tx.orderHeader.update).not.toHaveBeenCalled();
     expect(prisma.tx.orderState.update).not.toHaveBeenCalled();
   });
 
-  it('rejects completion when the merchant order is not paid', async () => {
+  it('does not complete the order while another merchant task remains pending', async () => {
     const prisma = createPrismaMock();
-    prisma.tx.orderHeader.findFirst.mockResolvedValue({ ...orderRecord, status: 'refund_processing' });
+    prisma.tx.fulfillmentTask.count.mockResolvedValue(1);
     const repository = new OrderFulfillmentRepository(prisma as never);
 
-    await expect(
-      repository.completePaidOrderForMerchant({
-        merchantId: 'merchant-001',
-        orderNo: 'ORDER-20260603-001'
-      })
-    ).rejects.toBeInstanceOf(BadRequestException);
+    const result = await repository.completePaidOrderForMerchant({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001'
+    });
 
+    expect(result).toEqual(expect.objectContaining({ status: 'completed' }));
     expect(prisma.tx.orderHeader.update).not.toHaveBeenCalled();
     expect(prisma.tx.orderState.update).not.toHaveBeenCalled();
   });

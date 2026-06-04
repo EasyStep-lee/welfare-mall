@@ -57,6 +57,13 @@ export type ProcessOrderPaymentCallbackResult = {
 };
 
 type OrderPaymentTransaction = {
+  product: {
+    findMany(args: unknown): Promise<Array<{ id: string; merchantId: string }>>;
+  };
+  orderHeader: {
+    findUnique(args: unknown): Promise<PaidOrderForFulfillment | null>;
+    update(args: unknown): Promise<unknown>;
+  };
   orderPayment: {
     findUnique(args: unknown): Promise<(OrderPaymentRecord & { callbacks?: unknown[] }) | null>;
     update(args: unknown): Promise<OrderPaymentRecord>;
@@ -65,10 +72,31 @@ type OrderPaymentTransaction = {
     findUnique(args: unknown): Promise<(OrderPaymentCallbackRecord & { payment: OrderPaymentRecord }) | null>;
     create(args: unknown): Promise<OrderPaymentCallbackRecord>;
   };
-  orderHeader: {
-    update(args: unknown): Promise<unknown>;
+  fulfillmentTask: {
+    findUnique(args: unknown): Promise<unknown | null>;
+    create(args: unknown): Promise<unknown>;
   };
 } & OrderStateClient;
+
+type PaidOrderForFulfillment = {
+  orderNo: string;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  lines: Array<{
+    id: string;
+    productId: string;
+    skuId: string | null;
+    displayName: string;
+    displaySkuCode: string | null;
+    displayImageUrl: string;
+    unitPriceAmount: number;
+    quantity: number;
+    lineTotalAmount: number;
+  }>;
+};
 
 @Injectable()
 export class OrderPaymentRepository {
@@ -169,6 +197,7 @@ async function updatePaymentFromCallback(
         where: { orderNo: payment.orderNo },
         data: { status: OrderStatuses.Paid }
       });
+      await createFulfillmentTasksForPaidOrder(tx, payment.orderNo);
     }
 
     return tx.orderPayment.update({
@@ -194,6 +223,103 @@ async function updatePaymentFromCallback(
   }
 
   return payment;
+}
+
+async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, orderNo: string): Promise<void> {
+  const order = await tx.orderHeader.findUnique({
+    where: { orderNo },
+    select: {
+      orderNo: true,
+      fulfillmentType: true,
+      receiverName: true,
+      receiverPhone: true,
+      receiverAddress: true,
+      pickupStoreName: true,
+      lines: {
+        select: {
+          id: true,
+          productId: true,
+          skuId: true,
+          displayName: true,
+          displaySkuCode: true,
+          displayImageUrl: true,
+          unitPriceAmount: true,
+          quantity: true,
+          lineTotalAmount: true
+        }
+      }
+    }
+  });
+
+  if (!order || order.lines.length === 0) {
+    return;
+  }
+
+  const productIds = Array.from(new Set(order.lines.map((line) => line.productId)));
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, merchantId: true }
+  });
+  const merchantIdByProductId = new Map(products.map((product) => [product.id, product.merchantId]));
+  const linesByMerchantId = new Map<string, PaidOrderForFulfillment['lines']>();
+
+  for (const line of order.lines) {
+    const merchantId = merchantIdByProductId.get(line.productId);
+
+    if (!merchantId) {
+      continue;
+    }
+
+    const lines = linesByMerchantId.get(merchantId) ?? [];
+    lines.push(line);
+    linesByMerchantId.set(merchantId, lines);
+  }
+
+  for (const [merchantId, lines] of linesByMerchantId) {
+    const existingTask = await tx.fulfillmentTask.findUnique({
+      where: { orderNo_merchantId: { orderNo, merchantId } },
+      select: { id: true }
+    });
+
+    if (existingTask) {
+      continue;
+    }
+
+    await tx.fulfillmentTask.create({
+      data: {
+        taskNo: createFulfillmentTaskNo(orderNo, merchantId),
+        orderNo,
+        merchantId,
+        status: 'pending',
+        fulfillmentType: order.fulfillmentType,
+        receiverName: order.receiverName,
+        receiverPhone: order.receiverPhone,
+        receiverAddress: order.receiverAddress,
+        pickupStoreName: order.pickupStoreName,
+        lines: {
+          create: lines.map((line) => ({
+            orderLineId: line.id,
+            productId: line.productId,
+            skuId: line.skuId,
+            displayName: line.displayName,
+            displaySkuCode: line.displaySkuCode,
+            displayImageUrl: line.displayImageUrl,
+            unitPriceAmount: line.unitPriceAmount,
+            quantity: line.quantity,
+            lineTotalAmount: line.lineTotalAmount
+          }))
+        }
+      },
+      select: { id: true }
+    });
+  }
+}
+
+function createFulfillmentTaskNo(orderNo: string, merchantId: string): string {
+  const normalizedOrderNo = orderNo.replace(/[^A-Za-z0-9]+/g, '-').toUpperCase();
+  const normalizedMerchantId = merchantId.replace(/[^A-Za-z0-9]+/g, '-').toUpperCase();
+
+  return `FT-${normalizedOrderNo}-${normalizedMerchantId}-${Date.now()}`;
 }
 
 function paymentSelect() {
