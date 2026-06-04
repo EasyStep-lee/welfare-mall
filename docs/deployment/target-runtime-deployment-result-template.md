@@ -18,6 +18,7 @@ Record the latest local readiness evidence before target execution:
 
 ```powershell
 pnpm run verify
+pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
 pnpm run docker:release:manifest
 pnpm run docker:runtime:smoke
@@ -28,6 +29,7 @@ pnpm run target:runtime:smoke
 ```
 
 - Local verification timestamp:
+- Target deployment preflight result:
 - Docker image build preflight result:
 - Docker image tag:
 - Docker release manifest:
