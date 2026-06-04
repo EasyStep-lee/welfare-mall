@@ -65,6 +65,12 @@ The following are not closed by this handoff:
 - real payment/refund provider acceptance
 - formal business acceptance
 
+Acceptance can only be claimed after recording and verifying:
+
+```powershell
+pnpm run target:acceptance:result:verify -- --acceptance-file .\docs\deployment\target-runtime-acceptance-result.md --require-complete
+```
+
 ## Rollback Steps
 
 Rollback should use the target platform's previous known-good artifact, image, or deployment slot. After rollback, run:
@@ -77,4 +83,4 @@ Record both the failed deployment and rollback evidence in the result template.
 
 ## Forbidden Claims
 
-Do not report target deployment, target acceptance, real payment/refund acceptance, WeChat DevTools acceptance, true-device acceptance, or formal business acceptance until the matching target evidence has been recorded.
+Do not report target deployment, target acceptance, real payment/refund acceptance, WeChat DevTools acceptance, true-device acceptance, or formal business acceptance until the matching target evidence has been recorded and the acceptance result verifier has passed.
