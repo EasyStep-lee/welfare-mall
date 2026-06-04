@@ -99,7 +99,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -108,7 +108,7 @@ git add package.json docs/deployment tools/verify-target-deployment-handoff.cjs 
 git commit -m "docs: add target deployment handoff package"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
