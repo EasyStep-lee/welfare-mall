@@ -23,6 +23,7 @@ const requiredDocuments = [
       'pnpm run target:deployment:preflight',
       'pnpm run docker:image-build:preflight',
       'pnpm run docker:release:manifest',
+      'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'
@@ -46,6 +47,7 @@ const requiredDocuments = [
       'pnpm run target:deployment:preflight',
       'pnpm run docker:image-build:preflight',
       'pnpm run docker:release:manifest',
+      'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'
@@ -69,6 +71,7 @@ const requiredDocuments = [
       'pnpm run target:deployment:preflight',
       'pnpm run docker:image-build:preflight',
       'pnpm run docker:release:manifest',
+      'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'

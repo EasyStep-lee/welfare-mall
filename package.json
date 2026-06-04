@@ -15,6 +15,7 @@
     "docker:image-build:preflight": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify-docker-image-build.ps1",
     "docker:release:manifest": "node tools/print-docker-release-manifest.cjs",
     "docker:release:manifest:verify": "node tools/verify-docker-release-manifest.cjs",
+    "docker:registry:push-plan": "node tools/print-docker-registry-push-plan.cjs",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
     "target:deployment:handoff": "node tools/verify-target-deployment-handoff.cjs",

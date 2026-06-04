@@ -26,6 +26,7 @@ pnpm run verify
 pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
 pnpm run docker:release:manifest
+pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
@@ -40,6 +41,7 @@ pnpm run target:runtime:smoke
 - Docker image registry:
 - Docker full image refs:
 - Docker release manifest:
+- Docker registry push plan:
 - Docker order-flow smoke order number:
 - Notes:
 
