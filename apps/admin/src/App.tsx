@@ -1,10 +1,12 @@
 import { Check, CreditCard, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AdminFulfillmentStatusFilter,
   AdminOrder,
   AdminOrderStatusFilter,
   ReviewQueueItem,
   ReviewQueueStatus,
+  adminFulfillmentStatusLabels,
   adminOrderStatusLabels,
   createOrderRefund,
   decideProductReview,
@@ -27,10 +29,12 @@ const orderStatuses: AdminOrderStatusFilter[] = [
   'refunded',
   'completed'
 ];
+const fulfillmentStatuses: AdminFulfillmentStatusFilter[] = ['all', 'pending', 'completed'];
 
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
   const [activeOrderStatus, setActiveOrderStatus] = useState<AdminOrderStatusFilter>('all');
+  const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<AdminFulfillmentStatusFilter>('all');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -59,9 +63,12 @@ export default function App() {
     }
   }
 
-  async function loadOrders(status: AdminOrderStatusFilter = activeOrderStatus) {
+  async function loadOrders(
+    status: AdminOrderStatusFilter = activeOrderStatus,
+    fulfillmentStatus: AdminFulfillmentStatusFilter = activeFulfillmentStatus
+  ) {
     try {
-      const response = await fetchAdminOrders(status);
+      const response = await fetchAdminOrders(status, fulfillmentStatus);
       setOrders(response.orders);
     } catch (loadError) {
       setOrders([]);
@@ -74,8 +81,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadOrders(activeOrderStatus);
-  }, [activeOrderStatus]);
+    void loadOrders(activeOrderStatus, activeFulfillmentStatus);
+  }, [activeOrderStatus, activeFulfillmentStatus]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -229,6 +236,18 @@ export default function App() {
               onClick={() => setActiveOrderStatus(status)}
             >
               {adminOrderStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
+        <nav className="status-tabs panel-status-tabs" aria-label="履约状态">
+          {fulfillmentStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeFulfillmentStatus === status ? 'active' : ''}
+              onClick={() => setActiveFulfillmentStatus(status)}
+            >
+              {adminFulfillmentStatusLabels[status]}
             </button>
           ))}
         </nav>

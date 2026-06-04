@@ -115,8 +115,11 @@ export class OrderController {
       }
     }
   })
-  async listAdminOrders(@Query('status') status?: string) {
-    return this.orderReadService.listAdminOrders({ status: status?.trim() });
+  async listAdminOrders(@Query('status') status?: string, @Query('fulfillmentStatus') fulfillmentStatus?: string) {
+    return this.orderReadService.listAdminOrders({
+      status: status?.trim(),
+      fulfillmentStatus: fulfillmentStatus?.trim()
+    });
   }
 
   @Post('merchant/fulfillment/:orderNo/complete')
