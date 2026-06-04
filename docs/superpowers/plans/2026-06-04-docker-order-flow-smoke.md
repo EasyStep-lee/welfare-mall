@@ -87,7 +87,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -96,7 +96,7 @@ git add package.json tools/verify-docker-order-flow-smoke.cjs docs/superpowers/p
 git commit -m "test: add docker order flow smoke"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
