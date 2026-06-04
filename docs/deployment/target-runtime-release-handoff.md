@@ -5,6 +5,7 @@
 The current release line has local verification gates for:
 
 - source verification through `pnpm run verify`
+- Docker image build preflight through `pnpm run docker:image-build:preflight`
 - Docker service health through `pnpm run docker:runtime:smoke`
 - Docker-served frontend assets through `pnpm run docker:page-smoke`
 - Docker API order flow through `pnpm run docker:order-flow-smoke`
@@ -29,6 +30,7 @@ The target result must be recorded in `docs/deployment/target-runtime-deployment
 The smoke evidence must include:
 
 - deployed commit SHA
+- Docker image build preflight output
 - target runtime env-file check output
 - API health response
 - Admin built asset API base URL check

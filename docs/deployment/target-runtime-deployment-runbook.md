@@ -6,6 +6,7 @@ Use this runbook only after the local gates below have passed on `main`:
 
 ```powershell
 pnpm run verify
+pnpm run docker:image-build:preflight
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
@@ -13,7 +14,7 @@ pnpm run target:runtime:env-check
 pnpm run target:runtime:smoke
 ```
 
-Local readiness means the repository, local Docker runtime, frontend assets, and local order-flow smoke are ready for target deployment preparation. It does not mean the target environment has been deployed or accepted.
+Local readiness means the repository, local Docker images, local Docker runtime, frontend assets, and local order-flow smoke are ready for target deployment preparation. It does not mean the target environment has been deployed or accepted.
 
 ## Target Environment Inputs
 
@@ -38,28 +39,34 @@ pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --re
 ## Target Execution Steps
 
 1. Confirm the GitHub `main` commit to deploy and record it in `docs/deployment/target-runtime-deployment-result-template.md`.
-2. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process.
-3. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
-4. Confirm database migrations or schema push steps are complete according to the target environment policy.
-5. Validate the prepared target runtime env file:
+2. Re-run the local image build preflight for the exact source checkout being released:
+
+```powershell
+pnpm run docker:image-build:preflight
+```
+
+3. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process.
+4. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
+5. Confirm database migrations or schema push steps are complete according to the target environment policy.
+6. Validate the prepared target runtime env file:
 
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-6. Run static smoke first:
+7. Run static smoke first:
 
 ```powershell
 pnpm run target:runtime:smoke
 ```
 
-7. Run live target smoke:
+8. Run live target smoke:
 
 ```powershell
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-8. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
+9. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
 
 ## Target Runtime Smoke Evidence
 
