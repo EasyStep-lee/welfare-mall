@@ -11,6 +11,7 @@ export type FindOrderForBuyerInput = {
 export type ListRecentAdminOrdersInput = {
   status?: OrderStatus;
   fulfillmentStatus?: AdminFulfillmentStatusFilter;
+  merchantId?: string;
 };
 
 export type AdminFulfillmentStatusFilter = 'pending' | 'completed';
@@ -54,8 +55,11 @@ export class OrderReadRepository {
   }
 
   async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<AdminOrderReadRecord[]> {
-    const fulfillmentOrderNos = input.fulfillmentStatus
-      ? await this.findOrderNosByFulfillmentStatus(input.fulfillmentStatus)
+    const fulfillmentOrderNos = input.fulfillmentStatus || input.merchantId
+      ? await this.findOrderNosByFulfillmentFilters({
+          status: input.fulfillmentStatus,
+          merchantId: input.merchantId
+        })
       : undefined;
 
     if (fulfillmentOrderNos?.length === 0) {
@@ -90,18 +94,27 @@ export class OrderReadRepository {
     return orderWithFacts ?? null;
   }
 
-  private async findOrderNosByFulfillmentStatus(status: AdminFulfillmentStatusFilter): Promise<string[]> {
+  private async findOrderNosByFulfillmentFilters(input: {
+    status?: AdminFulfillmentStatusFilter;
+    merchantId?: string;
+  }): Promise<string[]> {
     const tasks = await this.prisma.fulfillmentTask.findMany({
+      where: fulfillmentTaskFilterWhere(input.status, input.merchantId),
       orderBy: { createdAt: 'asc' },
       select: fulfillmentTaskSummarySelect()
     });
     const orderNos = uniqueOrderNos(tasks);
+
+    if (input.merchantId) {
+      return orderNos;
+    }
+
     const summaries = summarizeFulfillmentTasks(orderNos, tasks);
 
     return orderNos.filter((orderNo) => {
       const summary = summaries.get(orderNo) ?? emptyFulfillmentSummary();
 
-      if (status === 'pending') {
+      if (input.status === 'pending') {
         return summary.pendingTasks > 0;
       }
 
@@ -272,6 +285,23 @@ function fulfillmentTaskSummarySelect() {
     createdAt: true,
     completedAt: true
   } as const;
+}
+
+function fulfillmentTaskFilterWhere(
+  status: AdminFulfillmentStatusFilter | undefined,
+  merchantId: string | undefined
+) {
+  const where: Record<string, string> = {};
+
+  if (merchantId) {
+    where.merchantId = merchantId;
+  }
+
+  if (merchantId && status) {
+    where.status = status;
+  }
+
+  return Object.keys(where).length > 0 ? where : undefined;
 }
 
 function summarizeFulfillmentTasks(

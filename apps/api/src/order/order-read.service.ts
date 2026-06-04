@@ -15,6 +15,7 @@ export type GetOrderDetailInput = {
 export type ListAdminOrdersInput = {
   status?: string;
   fulfillmentStatus?: string;
+  merchantId?: string;
 };
 
 @Injectable()
@@ -31,7 +32,8 @@ export class OrderReadService {
   async listAdminOrders(input: ListAdminOrdersInput = {}): Promise<{ orders: OrderCheckoutRecord[] }> {
     const status = optionalOrderStatus(input.status, 'status');
     const fulfillmentStatus = optionalFulfillmentStatus(input.fulfillmentStatus, 'fulfillmentStatus');
-    const orders = await this.orderReadRepository.listRecentAdminOrders({ status, fulfillmentStatus });
+    const merchantId = optionalText(input.merchantId);
+    const orders = await this.orderReadRepository.listRecentAdminOrders({ status, fulfillmentStatus, merchantId });
 
     return { orders };
   }
@@ -78,6 +80,14 @@ function optionalFulfillmentStatus(value: string | undefined, fieldName: string)
   }
 
   return normalized as AdminFulfillmentStatusFilter;
+}
+
+function optionalText(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value.trim();
 }
 
 function requireText(value: string | undefined, fieldName: string): string {

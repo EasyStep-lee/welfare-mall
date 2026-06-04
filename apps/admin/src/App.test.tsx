@@ -280,6 +280,25 @@ describe('Admin product review workbench', () => {
     });
   });
 
+  it('filters Admin orders by fulfillment merchant and keeps status filters composed', async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('履约商户'), { target: { value: ' merchant-001 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '筛选商户' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin?merchantId=merchant-001');
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: '待履约' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/admin?fulfillmentStatus=pending&merchantId=merchant-001'
+      );
+    });
+  });
+
   it('creates a full refund request for a paid order', async () => {
     render(<App />);
 
