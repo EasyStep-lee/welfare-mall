@@ -21,6 +21,7 @@ const requiredDocuments = [
       'pnpm run target:runtime:smoke',
       'node tools/verify-target-runtime-smoke.cjs --live --env-file',
       'pnpm run docker:image-build:preflight',
+      'pnpm run docker:release:manifest',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'
@@ -42,6 +43,7 @@ const requiredDocuments = [
       'pnpm run target:runtime:smoke',
       'node tools/verify-target-runtime-smoke.cjs --live --env-file',
       'pnpm run docker:image-build:preflight',
+      'pnpm run docker:release:manifest',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'
@@ -63,6 +65,7 @@ const requiredDocuments = [
       'pnpm run target:runtime:smoke',
       'node tools/verify-target-runtime-smoke.cjs --live --env-file',
       'pnpm run docker:image-build:preflight',
+      'pnpm run docker:release:manifest',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke'

@@ -7,6 +7,7 @@ Use this runbook only after the local gates below have passed on `main`:
 ```powershell
 pnpm run verify
 pnpm run docker:image-build:preflight
+pnpm run docker:release:manifest
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
@@ -47,28 +48,34 @@ pnpm run docker:image-build:preflight
 
 If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. Record the tag in the result template before target execution.
 
-3. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
-4. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
-5. Confirm database migrations or schema push steps are complete according to the target environment policy.
-6. Validate the prepared target runtime env file:
+3. Generate and record the Docker release manifest:
+
+```powershell
+pnpm run docker:release:manifest
+```
+
+4. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
+5. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
+6. Confirm database migrations or schema push steps are complete according to the target environment policy.
+7. Validate the prepared target runtime env file:
 
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-7. Run static smoke first:
+8. Run static smoke first:
 
 ```powershell
 pnpm run target:runtime:smoke
 ```
 
-8. Run live target smoke:
+9. Run live target smoke:
 
 ```powershell
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-9. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
+10. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
 
 ## Target Runtime Smoke Evidence
 
