@@ -8,6 +8,7 @@ The current release line has local verification gates for:
 - Docker service health through `pnpm run docker:runtime:smoke`
 - Docker-served frontend assets through `pnpm run docker:page-smoke`
 - Docker API order flow through `pnpm run docker:order-flow-smoke`
+- target runtime env file shape through `pnpm run target:runtime:env-check`
 - target smoke env contract through `pnpm run target:runtime:smoke`
 
 This is local readiness only.
@@ -17,7 +18,8 @@ This is local readiness only.
 Target deployment remains pending until a specific target environment is provided, configured, deployed, and checked with:
 
 ```powershell
-node tools/verify-target-runtime-smoke.cjs --live
+pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
+node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
 The target result must be recorded in `docs/deployment/target-runtime-deployment-result-template.md`.
@@ -27,6 +29,7 @@ The target result must be recorded in `docs/deployment/target-runtime-deployment
 The smoke evidence must include:
 
 - deployed commit SHA
+- target runtime env-file check output
 - API health response
 - Admin built asset API base URL check
 - Merchant built asset API base URL check
@@ -51,7 +54,7 @@ The following are not closed by this handoff:
 Rollback should use the target platform's previous known-good artifact, image, or deployment slot. After rollback, run:
 
 ```powershell
-node tools/verify-target-runtime-smoke.cjs --live
+node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
 Record both the failed deployment and rollback evidence in the result template.

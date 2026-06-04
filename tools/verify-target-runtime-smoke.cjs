@@ -2,16 +2,16 @@ const fs = require('node:fs');
 const http = require('node:http');
 const https = require('node:https');
 const path = require('node:path');
+const {
+  collectTargetRuntimeEnvFromProcess,
+  parseTargetRuntimeEnvFile,
+  readOption,
+  requiredTargetRuntimeEnvKeys,
+  validateTargetRuntimeEnv
+} = require('./target-runtime-env.cjs');
 
 const root = path.resolve(__dirname, '..');
 const envExamplePath = path.join(root, 'deploy', 'target-runtime.env.example');
-const requiredEnvKeys = [
-  'TARGET_API_BASE_URL',
-  'TARGET_ADMIN_URL',
-  'TARGET_MERCHANT_URL',
-  'TARGET_PORTAL_URL',
-  'TARGET_EXPECTED_API_SERVICE'
-];
 
 function assert(condition, message) {
   if (!condition) {
@@ -23,7 +23,7 @@ function verifyStaticEnvTemplate() {
   assert(fs.existsSync(envExamplePath), 'Missing deploy/target-runtime.env.example');
 
   const envExample = fs.readFileSync(envExamplePath, 'utf8');
-  for (const key of requiredEnvKeys) {
+  for (const key of requiredTargetRuntimeEnvKeys) {
     assert(envExample.includes(`${key}=`), `deploy/target-runtime.env.example is missing ${key}`);
   }
 
@@ -134,7 +134,30 @@ async function verifyLiveTarget() {
   console.log('Target runtime live smoke verified.');
 }
 
+function loadEnvFileIfProvided() {
+  const envFile = readOption(process.argv.slice(2), '--env-file');
+  if (!envFile) {
+    if (process.argv.includes('--require-real-values')) {
+      validateTargetRuntimeEnv(collectTargetRuntimeEnvFromProcess(), {
+        fileLabel: 'process environment',
+        requireRealValues: true
+      });
+    }
+    return;
+  }
+
+  const envFilePath = path.resolve(root, envFile);
+  const values = parseTargetRuntimeEnvFile(envFilePath);
+  validateTargetRuntimeEnv(values, {
+    fileLabel: path.relative(root, envFilePath) || envFilePath,
+    requireRealValues: process.argv.includes('--require-real-values')
+  });
+  Object.assign(process.env, values);
+  console.log(`Target runtime env file loaded: ${path.relative(root, envFilePath) || envFilePath}`);
+}
+
 async function main() {
+  loadEnvFileIfProvided();
   verifyStaticEnvTemplate();
 
   if (process.argv.includes('--live')) {

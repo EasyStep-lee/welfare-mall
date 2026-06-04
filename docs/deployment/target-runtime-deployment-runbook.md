@@ -9,6 +9,7 @@ pnpm run verify
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
+pnpm run target:runtime:env-check
 pnpm run target:runtime:smoke
 ```
 
@@ -28,13 +29,24 @@ TARGET_EXPECTED_API_SERVICE=welfare-mall-api
 
 The API base URL must include the `/api` prefix because the runtime smoke calls `{TARGET_API_BASE_URL}/health`.
 
+Validate the prepared env file before target deployment:
+
+```powershell
+pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
+```
+
 ## Target Execution Steps
 
 1. Confirm the GitHub `main` commit to deploy and record it in `docs/deployment/target-runtime-deployment-result-template.md`.
 2. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process.
 3. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
 4. Confirm database migrations or schema push steps are complete according to the target environment policy.
-5. Export the target runtime smoke variables or source the prepared env file in the shell.
+5. Validate the prepared target runtime env file:
+
+```powershell
+pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
+```
+
 6. Run static smoke first:
 
 ```powershell
@@ -44,7 +56,7 @@ pnpm run target:runtime:smoke
 7. Run live target smoke:
 
 ```powershell
-node tools/verify-target-runtime-smoke.cjs --live
+node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
 8. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
