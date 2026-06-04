@@ -26,7 +26,8 @@ const requiredDocuments = [
       'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
-      'pnpm run docker:order-flow-smoke'
+      'pnpm run docker:order-flow-smoke',
+      'pnpm run target:deployment:result:verify -- --result-file'
     ]
   },
   {
@@ -50,7 +51,8 @@ const requiredDocuments = [
       'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
-      'pnpm run docker:order-flow-smoke'
+      'pnpm run docker:order-flow-smoke',
+      'pnpm run target:deployment:result:verify -- --result-file'
     ]
   },
   {
@@ -74,7 +76,8 @@ const requiredDocuments = [
       'pnpm run docker:registry:push-plan -- --registry',
       'pnpm run docker:runtime:smoke',
       'pnpm run docker:page-smoke',
-      'pnpm run docker:order-flow-smoke'
+      'pnpm run docker:order-flow-smoke',
+      'pnpm run target:deployment:result:verify -- --result-file'
     ]
   }
 ];
