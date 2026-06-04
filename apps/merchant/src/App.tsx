@@ -186,10 +186,16 @@ export default function App() {
         <div className="fulfillment-list">
           {fulfillmentOrders.length === 0 ? <p className="empty-text">暂无待履约订单</p> : null}
           {fulfillmentOrders.map((order) => (
-            <article className="fulfillment-card" key={order.orderNo}>
+            <article className="fulfillment-card" key={order.taskNo}>
               <div className="fulfillment-card-header">
                 <strong>{order.orderNo}</strong>
                 <span>{formatPayment(order)}</span>
+              </div>
+              <div className="fulfillment-task-meta">
+                <span>任务 {order.taskNo}</span>
+                <span>任务状态 {formatFulfillmentTaskStatus(order)}</span>
+                <span>创建 {formatDateTime(order.createdAt)}</span>
+                {order.completedAt ? <span>完成 {formatDateTime(order.completedAt)}</span> : null}
               </div>
               <p>{formatReceiver(order)}</p>
               <div className="fulfillment-lines">
@@ -204,11 +210,13 @@ export default function App() {
                 <span>现金 {formatMoney(order.cashPayableAmount)}</span>
                 <span>福利卡 {formatMoney(order.welfareCardPayableAmount)}</span>
               </div>
-              <div className="fulfillment-actions">
-                <button type="button" className="submit-button" onClick={() => void completeFulfillmentOrder(order)}>
-                  确认完成
-                </button>
-              </div>
+              {order.status === 'paid' ? (
+                <div className="fulfillment-actions">
+                  <button type="button" className="submit-button" onClick={() => void completeFulfillmentOrder(order)}>
+                    确认完成
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>
@@ -407,6 +415,14 @@ function formatReceiver(order: MerchantFulfillmentOrder) {
 
 function formatMoney(amount: number) {
   return `¥${(amount / 100).toFixed(2)}`;
+}
+
+function formatFulfillmentTaskStatus(order: MerchantFulfillmentOrder) {
+  return merchantFulfillmentStatusLabels[order.status as MerchantFulfillmentStatusFilter] ?? order.status;
+}
+
+function formatDateTime(value: string) {
+  return value.slice(0, 16).replace('T', ' ');
 }
 
 const paymentChannelLabels: Record<string, string> = {

@@ -100,8 +100,13 @@ export type MerchantFulfillmentOrderLine = {
 };
 
 export type MerchantFulfillmentOrder = {
+  id: string;
+  taskNo: string;
   orderNo: string;
   status: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
   totalAmount: number;
   cashPayableAmount: number;
   welfareCardPayableAmount: number;

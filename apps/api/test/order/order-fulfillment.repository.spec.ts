@@ -162,6 +162,7 @@ describe('OrderFulfillmentRepository', () => {
       {
         ...orderRecord,
         id: fulfillmentTaskRecord.id,
+        taskNo: fulfillmentTaskRecord.taskNo,
         status: 'paid',
         fulfillmentType: fulfillmentTaskRecord.fulfillmentType,
         receiverName: fulfillmentTaskRecord.receiverName,
@@ -247,6 +248,7 @@ describe('OrderFulfillmentRepository', () => {
     expect(result).toEqual({
       ...orderRecord,
       id: 'fulfillment-task-001',
+      taskNo: fulfillmentTaskRecord.taskNo,
       status: 'completed',
       createdAt: fulfillmentTaskRecord.createdAt,
       updatedAt: fulfillmentTaskRecord.updatedAt,

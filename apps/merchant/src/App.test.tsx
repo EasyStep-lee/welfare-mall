@@ -30,8 +30,13 @@ const draftQueueResponse = {
 const fulfillmentQueueResponse = {
   orders: [
     {
+      id: 'fulfillment-task-001',
+      taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
       orderNo: 'ORDER-20260603-001',
       status: 'paid',
+      createdAt: '2026-06-03T08:10:00.000Z',
+      updatedAt: '2026-06-03T08:10:00.000Z',
+      completedAt: null,
       totalAmount: 13980,
       cashPayableAmount: 8980,
       welfareCardPayableAmount: 5000,
@@ -50,6 +55,41 @@ const fulfillmentQueueResponse = {
           displaySkuCode: 'SKU-RICE-5KG',
           quantity: 2,
           lineTotalAmount: 13980
+        }
+      ]
+    }
+  ]
+};
+
+const completedFulfillmentQueueResponse = {
+  orders: [
+    {
+      id: 'fulfillment-task-002',
+      taskNo: 'FT-ORDER-20260603-002-MERCHANT-001-001',
+      orderNo: 'ORDER-20260603-002',
+      status: 'completed',
+      createdAt: '2026-06-03T08:10:00.000Z',
+      updatedAt: '2026-06-03T08:45:00.000Z',
+      completedAt: '2026-06-03T08:45:00.000Z',
+      totalAmount: 6990,
+      cashPayableAmount: 6990,
+      welfareCardPayableAmount: 0,
+      fulfillmentType: 'pickup',
+      receiverName: null,
+      receiverPhone: null,
+      receiverAddress: null,
+      pickupStoreName: '浦东直营网点',
+      latestPayment: {
+        paymentNo: 'PAY-20260603-002',
+        status: 'paid',
+        channel: 'wechat'
+      },
+      lines: [
+        {
+          displayName: 'Pickup Rice',
+          displaySkuCode: 'SKU-RICE-2KG',
+          quantity: 1,
+          lineTotalAmount: 6990
         }
       ]
     }
@@ -77,6 +117,13 @@ describe('Merchant product submission workbench', () => {
 
         if (url.includes('/orders/merchant/fulfillment')) {
           fulfillmentQueueLoads += 1;
+          if (url.includes('status=completed')) {
+            return {
+              ok: true,
+              json: async () => completedFulfillmentQueueResponse
+            };
+          }
+
           return {
             ok: true,
             json: async () => (fulfillmentQueueLoads === 1 ? fulfillmentQueueResponse : { orders: [] })
@@ -115,6 +162,9 @@ describe('Merchant product submission workbench', () => {
       'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=paid'
     );
     expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(screen.getByText('任务 FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
+    expect(screen.getByText('任务状态 待履约')).toBeInTheDocument();
+    expect(screen.getByText('创建 2026-06-03 08:10')).toBeInTheDocument();
     expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
     expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
@@ -165,6 +215,20 @@ describe('Merchant product submission workbench', () => {
         'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=completed'
       );
     });
+  });
+
+  it('renders completed fulfillment tasks as read-only history', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '已完成' }));
+
+    expect(await screen.findByText('ORDER-20260603-002')).toBeInTheDocument();
+    expect(screen.getByText('任务 FT-ORDER-20260603-002-MERCHANT-001-001')).toBeInTheDocument();
+    expect(screen.getByText('任务状态 已完成')).toBeInTheDocument();
+    expect(screen.getByText('创建 2026-06-03 08:10')).toBeInTheDocument();
+    expect(screen.getByText('完成 2026-06-03 08:45')).toBeInTheDocument();
+    expect(screen.getByText('浦东直营网点')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '确认完成' })).not.toBeInTheDocument();
   });
 
   it('saves a complete product draft from merchant-facing fields', async () => {

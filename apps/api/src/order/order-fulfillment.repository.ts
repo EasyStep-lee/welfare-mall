@@ -6,6 +6,7 @@ import { orderStateSelect } from './order-state.repository';
 
 export type MerchantFulfillmentOrderRecord = {
   id: string;
+  taskNo: string;
   orderNo: string;
   requestId: string;
   buyerUserId: string;
@@ -187,6 +188,7 @@ function taskToFulfillmentOrder(
   return {
     ...task.order,
     id: task.id,
+    taskNo: task.taskNo,
     status: task.status === 'completed' ? OrderStatuses.Completed : OrderStatuses.Paid,
     fulfillmentType: task.fulfillmentType,
     receiverName: task.receiverName,

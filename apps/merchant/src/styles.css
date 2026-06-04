@@ -283,6 +283,20 @@ tbody tr:hover {
   gap: 8px;
 }
 
+.fulfillment-task-meta {
+  color: #637a76;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.fulfillment-task-meta span {
+  background: #f3f6f5;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
 .fulfillment-actions {
   display: flex;
   justify-content: flex-end;
