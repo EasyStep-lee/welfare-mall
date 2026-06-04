@@ -12,6 +12,7 @@
     "docker:runtime:smoke": "node tools/verify-docker-runtime.cjs --live",
     "docker:order-flow-smoke": "node tools/verify-docker-order-flow-smoke.cjs",
     "docker:page-smoke": "node tools/verify-docker-page-smoke.cjs",
+    "docker:image-build:preflight": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify-docker-image-build.ps1",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
     "target:deployment:handoff": "node tools/verify-target-deployment-handoff.cjs",
