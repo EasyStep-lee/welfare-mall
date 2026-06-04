@@ -1,0 +1,11 @@
+.git
+.github
+**/.dev-*.log
+**/coverage
+**/dist
+**/node_modules
+**/.turbo
+**/.vite
+*.log
+Dockerfile
+docker-compose*.yml
