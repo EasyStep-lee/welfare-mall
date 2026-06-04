@@ -79,7 +79,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -88,6 +88,13 @@ feat: filter admin fulfillment orders by merchant
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature PR: #113 `feat: filter admin fulfillment orders by merchant`
+- Feature branch commit: `813d22a`
+- Main squash merge commit: `4adcd00`
+- Remote CI: `docs-check` and `project-foundation-check` completed successfully.
 
 ## Acceptance Boundary
 
