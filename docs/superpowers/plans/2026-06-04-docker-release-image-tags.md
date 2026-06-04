@@ -97,7 +97,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -106,7 +106,7 @@ git add docker-compose.yml tools/verify-docker-runtime.cjs tools/verify-docker-i
 git commit -m "build: add docker release image tags"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
