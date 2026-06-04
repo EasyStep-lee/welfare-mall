@@ -15,6 +15,7 @@ const requiredDocuments = [
       '## Manual And True-Device Acceptance Pending',
       '## Rollback Steps',
       '## Forbidden Claims',
+      'pnpm run target:acceptance:result:verify -- --acceptance-file',
       'pnpm run target:runtime:env-check',
       'pnpm run target:runtime:env-check -- --env-file',
       '--require-real-values',
@@ -67,6 +68,7 @@ const requiredDocuments = [
       '## Manual And True-Device Acceptance Pending',
       '## Rollback Steps',
       '## Forbidden Claims',
+      'pnpm run target:acceptance:result:verify -- --acceptance-file',
       'pnpm run target:runtime:env-check',
       'pnpm run target:runtime:env-check -- --env-file',
       '--require-real-values',
@@ -81,6 +83,30 @@ const requiredDocuments = [
       'pnpm run docker:page-smoke',
       'pnpm run docker:order-flow-smoke',
       'pnpm run target:deployment:result:verify -- --result-file'
+    ]
+  },
+  {
+    path: 'docs/deployment/target-runtime-acceptance-result-template.md',
+    snippets: [
+      '# Target Runtime Acceptance Result Template',
+      '## Acceptance Metadata',
+      '## Browser Acceptance Evidence',
+      '## WeChat DevTools Evidence',
+      '## True-Device Mini-Program Evidence',
+      '## Real Payment And Refund Provider Evidence',
+      '## Business Signoff',
+      '## Verification Command',
+      '## Forbidden Claims',
+      'pnpm run target:acceptance:result:verify -- --acceptance-file',
+      '--require-complete',
+      'Admin browser accepted',
+      'Merchant browser accepted',
+      'Portal browser accepted',
+      'WeChat DevTools accepted',
+      'true-device accepted',
+      'real payment accepted',
+      'real refund accepted',
+      'formal business acceptance completed'
     ]
   }
 ];

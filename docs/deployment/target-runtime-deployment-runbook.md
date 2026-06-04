@@ -138,6 +138,12 @@ After live smoke passes, the following remain pending until separately executed 
 - real payment/refund provider execution where applicable
 - business signoff by the responsible operator
 
+Record completed acceptance evidence in `docs/deployment/target-runtime-acceptance-result-template.md`, then verify the copied result file:
+
+```powershell
+pnpm run target:acceptance:result:verify -- --acceptance-file .\docs\deployment\target-runtime-acceptance-result.md --require-complete
+```
+
 ## Rollback Steps
 
 If target smoke fails after deployment:
