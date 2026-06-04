@@ -92,7 +92,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -101,7 +101,7 @@ git add package.json docker-compose.yml tools docs/deployment docs/superpowers/p
 git commit -m "build: add docker release registry refs"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
