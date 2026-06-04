@@ -82,7 +82,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -91,6 +91,12 @@ feat: show merchant fulfillment task metadata
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/105
+- Feature commit: `6a1f0ff feat: show merchant fulfillment task metadata`
+- Main merge commit: `ddf1b95 Merge pull request #105 from EasyStep-lee/codex/merchant-fulfillment-task-workbench`
 
 ## Acceptance Boundary
 
