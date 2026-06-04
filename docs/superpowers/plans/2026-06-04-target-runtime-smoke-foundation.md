@@ -94,7 +94,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -103,7 +103,7 @@ git add package.json deploy/target-runtime.env.example tools/verify-target-runti
 git commit -m "test: add target runtime smoke foundation"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
