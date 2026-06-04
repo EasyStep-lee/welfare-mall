@@ -7,6 +7,11 @@
 - Deployed commit SHA:
 - Deployed by:
 - Release image tag:
+- Release image registry:
+- API image ref:
+- Admin image ref:
+- Merchant image ref:
+- Portal image ref:
 - API base URL:
 - Admin URL:
 - Merchant URL:
@@ -32,6 +37,8 @@ pnpm run target:runtime:smoke
 - Target deployment preflight result:
 - Docker image build preflight result:
 - Docker image tag:
+- Docker image registry:
+- Docker full image refs:
 - Docker release manifest:
 - Docker order-flow smoke order number:
 - Notes:

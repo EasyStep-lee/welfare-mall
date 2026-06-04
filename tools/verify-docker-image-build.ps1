@@ -23,6 +23,15 @@ if (-not $env:WELFARE_MALL_IMAGE_TAG) {
 
 Write-Host "Using Docker image tag: $env:WELFARE_MALL_IMAGE_TAG"
 
+if ($env:WELFARE_MALL_IMAGE_REGISTRY) {
+  $normalizedRegistry = $env:WELFARE_MALL_IMAGE_REGISTRY.Trim().TrimEnd('/')
+  $env:WELFARE_MALL_IMAGE_REGISTRY = $normalizedRegistry
+  $env:WELFARE_MALL_IMAGE_REGISTRY_PREFIX = "$normalizedRegistry/"
+  Write-Host "Using Docker image registry: $env:WELFARE_MALL_IMAGE_REGISTRY"
+} elseif (-not $env:WELFARE_MALL_IMAGE_REGISTRY_PREFIX) {
+  $env:WELFARE_MALL_IMAGE_REGISTRY_PREFIX = ''
+}
+
 Write-Host 'Verifying Docker Compose service set...'
 $configuredServices = docker compose config --services
 if ($LASTEXITCODE -ne 0) {
@@ -42,7 +51,7 @@ foreach ($service in $requiredServices) {
     throw "docker compose build failed for service: $service"
   }
 
-  $imageRef = "$($imageNames[$service]):$env:WELFARE_MALL_IMAGE_TAG"
+  $imageRef = "$env:WELFARE_MALL_IMAGE_REGISTRY_PREFIX$($imageNames[$service]):$env:WELFARE_MALL_IMAGE_TAG"
   docker image inspect $imageRef | Out-Null
   if ($LASTEXITCODE -ne 0) {
     throw "Expected Docker image was not found after build: $imageRef"

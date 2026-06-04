@@ -9,6 +9,7 @@ The current release line has local verification gates for:
 - Docker image build preflight through `pnpm run docker:image-build:preflight`
 - Docker release manifest through `pnpm run docker:release:manifest`
 - Docker release image tag through `WELFARE_MALL_IMAGE_TAG` or generated `git-<short-sha>`
+- optional Docker registry refs through `WELFARE_MALL_IMAGE_REGISTRY` or `pnpm run docker:release:manifest -- --registry <registry>`
 - Docker service health through `pnpm run docker:runtime:smoke`
 - Docker-served frontend assets through `pnpm run docker:page-smoke`
 - Docker API order flow through `pnpm run docker:order-flow-smoke`
@@ -37,6 +38,7 @@ The smoke evidence must include:
 - Docker image build preflight output
 - Docker release manifest output
 - Docker release image tag
+- Docker release registry and full image refs, when a registry is used
 - target runtime env-file check output
 - API health response
 - Admin built asset API base URL check
