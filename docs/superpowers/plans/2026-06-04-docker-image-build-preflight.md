@@ -85,7 +85,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -94,7 +94,7 @@ git add package.json tools/verify-docker-image-build.ps1 docs/superpowers/plans/
 git commit -m "build: add docker image build preflight"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
