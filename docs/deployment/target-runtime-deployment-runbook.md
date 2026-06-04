@@ -9,6 +9,7 @@ pnpm run verify
 pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
 pnpm run docker:release:manifest
+pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
@@ -68,28 +69,36 @@ For registry-aware image refs, run:
 pnpm run docker:release:manifest -- --registry registry.example.com/welfare-mall
 ```
 
-5. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded full image refs.
-6. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
-7. Confirm database migrations or schema push steps are complete according to the target environment policy.
-8. Validate the prepared target runtime env file:
+5. Generate and record the registry push plan:
+
+```powershell
+pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
+```
+
+The push plan prints `docker login`, image inspect, and `docker push` commands. It does not execute registry authentication or push images.
+
+6. Build, push, and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded full image refs.
+7. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
+8. Confirm database migrations or schema push steps are complete according to the target environment policy.
+9. Validate the prepared target runtime env file:
 
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-9. Run static smoke first:
+10. Run static smoke first:
 
 ```powershell
 pnpm run target:runtime:smoke
 ```
 
-10. Run live target smoke:
+11. Run live target smoke:
 
 ```powershell
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-11. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
+12. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
 
 ## Target Runtime Smoke Evidence
 
