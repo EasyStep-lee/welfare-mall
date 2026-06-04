@@ -83,7 +83,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -92,6 +92,8 @@ feat: add order workbench status filters
 ```
 
 Expected: PR targets `main` and includes focused/local verification evidence.
+
+Result: PR #101 merged into `main` as `296bce1 feat: add order workbench status filters`.
 
 ## Acceptance Boundary
 
