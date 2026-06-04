@@ -6,6 +6,7 @@
 - Deployment date:
 - Deployed commit SHA:
 - Deployed by:
+- Release image tag:
 - API base URL:
 - Admin URL:
 - Merchant URL:
@@ -27,6 +28,7 @@ pnpm run target:runtime:smoke
 
 - Local verification timestamp:
 - Docker image build preflight result:
+- Docker image tag:
 - Docker order-flow smoke order number:
 - Notes:
 
