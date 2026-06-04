@@ -28,6 +28,7 @@ TARGET_ADMIN_URL=https://admin.example.com/
 TARGET_MERCHANT_URL=https://merchant.example.com/
 TARGET_PORTAL_URL=https://portal.example.com/
 TARGET_EXPECTED_API_SERVICE=welfare-mall-api
+WELFARE_MALL_IMAGE_REGISTRY=registry.example.com/welfare-mall
 ```
 
 The API base URL must include the `/api` prefix because the runtime smoke calls `{TARGET_API_BASE_URL}/health`.
@@ -53,7 +54,7 @@ pnpm run target:deployment:preflight -- --require-main --require-clean
 pnpm run docker:image-build:preflight
 ```
 
-If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. Record the tag in the result template before target execution.
+If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. If a registry is required, set `WELFARE_MALL_IMAGE_REGISTRY` before the preflight. Record the tag, registry, and full image refs in the result template before target execution.
 
 4. Generate and record the Docker release manifest:
 
@@ -61,7 +62,13 @@ If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-s
 pnpm run docker:release:manifest
 ```
 
-5. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
+For registry-aware image refs, run:
+
+```powershell
+pnpm run docker:release:manifest -- --registry registry.example.com/welfare-mall
+```
+
+5. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded full image refs.
 6. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
 7. Confirm database migrations or schema push steps are complete according to the target environment policy.
 8. Validate the prepared target runtime env file:
