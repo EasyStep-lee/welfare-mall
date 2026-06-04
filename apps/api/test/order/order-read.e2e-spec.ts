@@ -204,6 +204,53 @@ describe('Order read API contract', () => {
     });
   });
 
+  it('filters recent Admin orders by status, fulfillment progress, and merchant', async () => {
+    orderReadService.listAdminOrders.mockResolvedValue({
+      orders: [
+        {
+          orderNo: 'ORDER-20260603-004',
+          buyerUserId: 'user-004',
+          status: 'paid',
+          totalAmount: 25990,
+          fulfillmentSummary: {
+            totalTasks: 1,
+            pendingTasks: 1,
+            completedTasks: 0,
+            taskNos: ['FT-ORDER-20260603-004-MERCHANT-001-001']
+          },
+          fulfillmentTasks: [
+            {
+              taskNo: 'FT-ORDER-20260603-004-MERCHANT-001-001',
+              merchantId: 'merchant-001',
+              status: 'pending'
+            }
+          ],
+          lines: [{ displayName: 'Local Rice', quantity: 1 }]
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/orders/admin?status=paid&fulfillmentStatus=pending&merchantId=merchant-001')
+      .expect(200);
+
+    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith({
+      status: 'paid',
+      fulfillmentStatus: 'pending',
+      merchantId: 'merchant-001'
+    });
+    expect(response.body.orders).toHaveLength(1);
+    expect(response.body.orders[0]).toMatchObject({
+      orderNo: 'ORDER-20260603-004',
+      fulfillmentTasks: [
+        {
+          merchantId: 'merchant-001',
+          status: 'pending'
+        }
+      ]
+    });
+  });
+
   it('gets one buyer-scoped order detail', async () => {
     orderReadService.getOrderDetail.mockResolvedValue({
       order: {

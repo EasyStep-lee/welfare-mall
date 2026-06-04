@@ -1,4 +1,4 @@
-import { Check, CreditCard, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
+import { Check, CreditCard, RefreshCw, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminFulfillmentStatusFilter,
@@ -35,6 +35,8 @@ export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
   const [activeOrderStatus, setActiveOrderStatus] = useState<AdminOrderStatusFilter>('all');
   const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<AdminFulfillmentStatusFilter>('all');
+  const [merchantFilterInput, setMerchantFilterInput] = useState('');
+  const [activeMerchantFilter, setActiveMerchantFilter] = useState('');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -65,10 +67,11 @@ export default function App() {
 
   async function loadOrders(
     status: AdminOrderStatusFilter = activeOrderStatus,
-    fulfillmentStatus: AdminFulfillmentStatusFilter = activeFulfillmentStatus
+    fulfillmentStatus: AdminFulfillmentStatusFilter = activeFulfillmentStatus,
+    merchantId: string = activeMerchantFilter
   ) {
     try {
-      const response = await fetchAdminOrders(status, fulfillmentStatus);
+      const response = await fetchAdminOrders(status, fulfillmentStatus, merchantId);
       setOrders(response.orders);
     } catch (loadError) {
       setOrders([]);
@@ -81,8 +84,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadOrders(activeOrderStatus, activeFulfillmentStatus);
-  }, [activeOrderStatus, activeFulfillmentStatus]);
+    void loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
+  }, [activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -135,7 +138,7 @@ export default function App() {
         reason: 'after_sale'
       });
       setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
-      await loadOrders(activeOrderStatus);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
     });
   }
 
@@ -156,7 +159,7 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
-      await loadOrders(activeOrderStatus);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
     });
   }
 
@@ -177,8 +180,17 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
-      await loadOrders(activeOrderStatus);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
     });
+  }
+
+  function applyMerchantFilter() {
+    setActiveMerchantFilter(merchantFilterInput.trim());
+  }
+
+  function clearMerchantFilter() {
+    setMerchantFilterInput('');
+    setActiveMerchantFilter('');
   }
 
   async function runAction(action: () => Promise<void>) {
@@ -251,6 +263,27 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="order-filter-row">
+          <label>
+            <span>履约商户</span>
+            <input
+              aria-label="履约商户"
+              value={merchantFilterInput}
+              placeholder="merchant-001"
+              onChange={(event) => setMerchantFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applyMerchantFilter}>
+            <Search size={15} />
+            筛选商户
+          </button>
+          {activeMerchantFilter ? (
+            <button type="button" onClick={clearMerchantFilter}>
+              <X size={15} />
+              清除商户
+            </button>
+          ) : null}
+        </div>
         <div className="order-list">
           {orders.length === 0 ? <p className="empty-text">暂无订单</p> : null}
           {orders.map((order) => (

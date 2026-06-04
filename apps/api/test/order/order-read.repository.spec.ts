@@ -264,6 +264,58 @@ describe('OrderReadRepository', () => {
     ]);
   });
 
+  it('filters recent admin orders by fulfillment merchant', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    await repository.listRecentAdminOrders({ merchantId: 'merchant-001' });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
+      where: { merchantId: 'merchant-001' },
+      orderBy: { createdAt: 'asc' },
+      select: expect.objectContaining({
+        orderNo: true,
+        merchantId: true,
+        status: true
+      })
+    });
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+  });
+
+  it('composes recent admin order filtering by status, fulfillment progress, and merchant', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    await repository.listRecentAdminOrders({
+      status: 'paid',
+      fulfillmentStatus: 'pending',
+      merchantId: 'merchant-001'
+    });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        merchantId: 'merchant-001',
+        status: 'pending'
+      },
+      orderBy: { createdAt: 'asc' },
+      select: expect.any(Object)
+    });
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'paid',
+        orderNo: { in: ['ORDER-20260603-001'] }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+  });
+
   it('finds one order scoped to the buyer', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);

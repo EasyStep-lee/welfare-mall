@@ -73,7 +73,11 @@ describe('OrderReadService', () => {
 
     const result = await service.listAdminOrders();
 
-    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({ status: undefined });
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({
+      status: undefined,
+      fulfillmentStatus: undefined,
+      merchantId: undefined
+    });
     expect(result).toEqual({ orders: [orderRecord] });
   });
 
@@ -83,7 +87,25 @@ describe('OrderReadService', () => {
 
     const result = await service.listAdminOrders({ status: ' refund_processing ' });
 
-    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({ status: 'refund_processing' });
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({
+      status: 'refund_processing',
+      fulfillmentStatus: undefined,
+      merchantId: undefined
+    });
+    expect(result).toEqual({ orders: [orderRecord] });
+  });
+
+  it('filters recent Admin orders by fulfillment merchant', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderReadService(repository as unknown as OrderReadRepository);
+
+    const result = await service.listAdminOrders({ merchantId: ' merchant-001 ' });
+
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({
+      status: undefined,
+      fulfillmentStatus: undefined,
+      merchantId: 'merchant-001'
+    });
     expect(result).toEqual({ orders: [orderRecord] });
   });
 

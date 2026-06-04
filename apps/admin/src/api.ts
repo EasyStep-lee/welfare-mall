@@ -236,7 +236,8 @@ export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<Revie
 
 export async function fetchAdminOrders(
   status: AdminOrderStatusFilter = 'all',
-  fulfillmentStatus: AdminFulfillmentStatusFilter = 'all'
+  fulfillmentStatus: AdminFulfillmentStatusFilter = 'all',
+  merchantId?: string
 ): Promise<AdminOrderResponse> {
   const url = new URL(`${apiBaseUrl()}/orders/admin`);
 
@@ -245,6 +246,9 @@ export async function fetchAdminOrders(
   }
   if (fulfillmentStatus !== 'all') {
     url.searchParams.set('fulfillmentStatus', fulfillmentStatus);
+  }
+  if (merchantId?.trim()) {
+    url.searchParams.set('merchantId', merchantId.trim());
   }
 
   const response = await fetch(url.toString());

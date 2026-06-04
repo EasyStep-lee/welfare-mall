@@ -115,10 +115,15 @@ export class OrderController {
       }
     }
   })
-  async listAdminOrders(@Query('status') status?: string, @Query('fulfillmentStatus') fulfillmentStatus?: string) {
+  async listAdminOrders(
+    @Query('status') status?: string,
+    @Query('fulfillmentStatus') fulfillmentStatus?: string,
+    @Query('merchantId') merchantId?: string
+  ) {
     return this.orderReadService.listAdminOrders({
       status: status?.trim(),
-      fulfillmentStatus: fulfillmentStatus?.trim()
+      fulfillmentStatus: fulfillmentStatus?.trim(),
+      merchantId: merchantId?.trim()
     });
   }
 

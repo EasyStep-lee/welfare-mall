@@ -54,7 +54,8 @@ h2 {
 .icon-button,
 .status-tabs button,
 .actions button,
-.order-actions button {
+.order-actions button,
+.order-filter-row button {
   align-items: center;
   border: 1px solid #cbd6dc;
   border-radius: 8px;
@@ -90,6 +91,38 @@ h2 {
 
 .panel-status-tabs {
   margin-top: 12px;
+}
+
+.order-filter-row {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+
+.order-filter-row label {
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.order-filter-row label span {
+  color: #56707f;
+  font-size: 13px;
+}
+
+.order-filter-row input {
+  border: 1px solid #cbd6dc;
+  border-radius: 8px;
+  color: #172026;
+  font: inherit;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.order-filter-row button {
+  padding: 0 10px;
 }
 
 .notice {
