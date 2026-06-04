@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderCheckoutPaymentRecord, OrderCheckoutRecord, OrderCheckoutRefundRecord } from './order-checkout.repository';
+import { OrderStatus } from './order-status';
 
 export type FindOrderForBuyerInput = {
   buyerUserId: string;
   orderNo: string;
+};
+
+export type ListRecentAdminOrdersInput = {
+  status?: OrderStatus;
 };
 
 @Injectable()
@@ -21,8 +26,9 @@ export class OrderReadRepository {
     return this.attachLatestOrderFacts(orders);
   }
 
-  async listRecentAdminOrders(): Promise<OrderCheckoutRecord[]> {
+  async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<OrderCheckoutRecord[]> {
     const orders = await this.prisma.orderHeader.findMany({
+      where: input.status ? { status: input.status } : undefined,
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: orderReadSelect()

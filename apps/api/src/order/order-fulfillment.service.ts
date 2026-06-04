@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MerchantFulfillmentOrderRecord, OrderFulfillmentRepository } from './order-fulfillment.repository';
+import { OrderStatuses } from './order-status';
 
 export type ListMerchantFulfillmentOrdersInput = {
   merchantId: string;
+  status?: string;
 };
+
+export type MerchantFulfillmentStatus = typeof OrderStatuses.Paid | typeof OrderStatuses.Completed;
 
 export type CompleteMerchantFulfillmentOrderInput = {
   merchantId: string;
@@ -18,7 +22,8 @@ export class OrderFulfillmentService {
     input: ListMerchantFulfillmentOrdersInput
   ): Promise<{ orders: MerchantFulfillmentOrderRecord[] }> {
     const merchantId = requireText(input.merchantId, 'merchantId');
-    const orders = await this.orderFulfillmentRepository.listPaidOrdersForMerchant(merchantId);
+    const status = optionalMerchantFulfillmentStatus(input.status);
+    const orders = await this.orderFulfillmentRepository.listOrdersForMerchant({ merchantId, status });
 
     return { orders };
   }
@@ -36,6 +41,22 @@ export class OrderFulfillmentService {
 
     return { order };
   }
+}
+
+const fulfillmentStatuses = new Set<string>([OrderStatuses.Paid, OrderStatuses.Completed]);
+
+function optionalMerchantFulfillmentStatus(value: string | undefined): MerchantFulfillmentStatus {
+  if (value === undefined || value.trim().length === 0) {
+    return OrderStatuses.Paid;
+  }
+
+  const normalized = value.trim();
+
+  if (!fulfillmentStatuses.has(normalized)) {
+    throw new BadRequestException('status must be paid or completed.');
+  }
+
+  return normalized as MerchantFulfillmentStatus;
 }
 
 function requireText(value: string | undefined, fieldName: string): string {

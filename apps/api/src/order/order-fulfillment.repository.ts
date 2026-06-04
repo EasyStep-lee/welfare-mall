@@ -5,7 +5,7 @@ import {
   OrderCheckoutRecord
 } from './order-checkout.repository';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrderStatuses } from './order-status';
+import { OrderStatus, OrderStatuses } from './order-status';
 import { orderStateSelect } from './order-state.repository';
 
 export type MerchantFulfillmentOrderRecord = OrderCheckoutRecord & {
@@ -16,6 +16,11 @@ export type MerchantFulfillmentOrderRecord = OrderCheckoutRecord & {
 export type CompletePaidOrderForMerchantInput = {
   merchantId: string;
   orderNo: string;
+};
+
+export type ListOrdersForMerchantInput = {
+  merchantId: string;
+  status: OrderStatus;
 };
 
 type OrderFulfillmentTransaction = {
@@ -36,8 +41,12 @@ export class OrderFulfillmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listPaidOrdersForMerchant(merchantId: string): Promise<MerchantFulfillmentOrderRecord[]> {
+    return this.listOrdersForMerchant({ merchantId, status: OrderStatuses.Paid });
+  }
+
+  async listOrdersForMerchant(input: ListOrdersForMerchantInput): Promise<MerchantFulfillmentOrderRecord[]> {
     const products = await this.prisma.product.findMany({
-      where: { merchantId },
+      where: { merchantId: input.merchantId },
       select: { id: true }
     });
     const productIds = products.map((product) => product.id);
@@ -48,7 +57,7 @@ export class OrderFulfillmentRepository {
 
     const orders = await this.prisma.orderHeader.findMany({
       where: {
-        status: 'paid',
+        status: input.status,
         lines: { some: { productId: { in: productIds } } }
       },
       orderBy: { createdAt: 'desc' },

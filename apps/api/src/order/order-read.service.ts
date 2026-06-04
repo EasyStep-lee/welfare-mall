@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderCheckoutRecord } from './order-checkout.repository';
 import { OrderReadRepository } from './order-read.repository';
+import { OrderStatus, OrderStatuses } from './order-status';
 
 export type ListOrdersInput = {
   buyerUserId: string;
@@ -9,6 +10,10 @@ export type ListOrdersInput = {
 export type GetOrderDetailInput = {
   buyerUserId: string;
   orderNo: string;
+};
+
+export type ListAdminOrdersInput = {
+  status?: string;
 };
 
 @Injectable()
@@ -22,8 +27,9 @@ export class OrderReadService {
     return { orders };
   }
 
-  async listAdminOrders(): Promise<{ orders: OrderCheckoutRecord[] }> {
-    const orders = await this.orderReadRepository.listRecentAdminOrders();
+  async listAdminOrders(input: ListAdminOrdersInput = {}): Promise<{ orders: OrderCheckoutRecord[] }> {
+    const status = optionalOrderStatus(input.status, 'status');
+    const orders = await this.orderReadRepository.listRecentAdminOrders({ status });
 
     return { orders };
   }
@@ -39,6 +45,22 @@ export class OrderReadService {
 
     return { order };
   }
+}
+
+const orderStatuses = new Set<string>(Object.values(OrderStatuses));
+
+function optionalOrderStatus(value: string | undefined, fieldName: string): OrderStatus | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+
+  if (!orderStatuses.has(normalized)) {
+    throw new BadRequestException(`${fieldName} must be a known order status.`);
+  }
+
+  return normalized as OrderStatus;
 }
 
 function requireText(value: string | undefined, fieldName: string): string {

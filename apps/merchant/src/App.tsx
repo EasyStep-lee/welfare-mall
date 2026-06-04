@@ -3,8 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   completeMerchantFulfillmentOrder,
   fetchMerchantFulfillmentOrders,
+  merchantFulfillmentStatusLabels,
   ProductDraftPayload,
   MerchantFulfillmentOrder,
+  MerchantFulfillmentStatusFilter,
   SubmissionQueueItem,
   SubmissionQueueStatus,
   fetchMerchantSubmissionQueue,
@@ -16,6 +18,7 @@ import './styles.css';
 
 const merchantActorUserId = 'merchant-user-001';
 const statuses: SubmissionQueueStatus[] = ['draft', 'rejected'];
+const fulfillmentStatuses: MerchantFulfillmentStatusFilter[] = ['paid', 'completed'];
 const fixedMerchantContext = {
   merchantId: 'merchant-001',
   franchiseId: 'franchise-001',
@@ -25,6 +28,7 @@ const fixedMerchantContext = {
 
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<SubmissionQueueStatus>('draft');
+  const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<MerchantFulfillmentStatusFilter>('paid');
   const [items, setItems] = useState<SubmissionQueueItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [fulfillmentOrders, setFulfillmentOrders] = useState<MerchantFulfillmentOrder[]>([]);
@@ -65,9 +69,9 @@ export default function App() {
     }
   }
 
-  async function loadFulfillmentOrders() {
+  async function loadFulfillmentOrders(status: MerchantFulfillmentStatusFilter = activeFulfillmentStatus) {
     try {
-      const response = await fetchMerchantFulfillmentOrders(fixedMerchantContext.merchantId);
+      const response = await fetchMerchantFulfillmentOrders(fixedMerchantContext.merchantId, status);
       setFulfillmentOrders(response.orders);
     } catch (loadError) {
       setFulfillmentOrders([]);
@@ -80,8 +84,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadFulfillmentOrders();
-  }, []);
+    void loadFulfillmentOrders(activeFulfillmentStatus);
+  }, [activeFulfillmentStatus]);
 
   async function submit(item: SubmissionQueueItem) {
     setError(null);
@@ -118,7 +122,7 @@ export default function App() {
         orderNo: order.orderNo
       });
       setMessage(`${order.orderNo} 已确认完成`);
-      await loadFulfillmentOrders();
+      await loadFulfillmentOrders(activeFulfillmentStatus);
     } catch (completeError) {
       setError(completeError instanceof Error ? completeError.message : '确认履约完成失败');
     }
@@ -167,6 +171,18 @@ export default function App() {
           </div>
           <span className="queue-count">{fulfillmentOrders.length} 单</span>
         </div>
+        <nav className="status-tabs panel-status-tabs" aria-label="履约状态">
+          {fulfillmentStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeFulfillmentStatus === status ? 'active' : ''}
+              onClick={() => setActiveFulfillmentStatus(status)}
+            >
+              {merchantFulfillmentStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
         <div className="fulfillment-list">
           {fulfillmentOrders.length === 0 ? <p className="empty-text">暂无待履约订单</p> : null}
           {fulfillmentOrders.map((order) => (

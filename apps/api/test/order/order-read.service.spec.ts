@@ -73,7 +73,17 @@ describe('OrderReadService', () => {
 
     const result = await service.listAdminOrders();
 
-    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith();
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({ status: undefined });
+    expect(result).toEqual({ orders: [orderRecord] });
+  });
+
+  it('filters recent Admin orders by status', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderReadService(repository as unknown as OrderReadRepository);
+
+    const result = await service.listAdminOrders({ status: ' refund_processing ' });
+
+    expect(repository.listRecentAdminOrders).toHaveBeenCalledWith({ status: 'refund_processing' });
     expect(result).toEqual({ orders: [orderRecord] });
   });
 

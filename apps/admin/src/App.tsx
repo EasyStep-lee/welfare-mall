@@ -2,8 +2,10 @@ import { Check, CreditCard, RefreshCw, RotateCcw, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminOrder,
+  AdminOrderStatusFilter,
   ReviewQueueItem,
   ReviewQueueStatus,
+  adminOrderStatusLabels,
   createOrderRefund,
   decideProductReview,
   fetchAdminOrders,
@@ -17,9 +19,18 @@ import './styles.css';
 
 const adminActorUserId = 'admin-user-001';
 const statuses: ReviewQueueStatus[] = ['pending_review', 'approved', 'rejected'];
+const orderStatuses: AdminOrderStatusFilter[] = [
+  'all',
+  'pending_payment',
+  'paid',
+  'refund_processing',
+  'refunded',
+  'completed'
+];
 
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
+  const [activeOrderStatus, setActiveOrderStatus] = useState<AdminOrderStatusFilter>('all');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -48,9 +59,9 @@ export default function App() {
     }
   }
 
-  async function loadOrders() {
+  async function loadOrders(status: AdminOrderStatusFilter = activeOrderStatus) {
     try {
-      const response = await fetchAdminOrders();
+      const response = await fetchAdminOrders(status);
       setOrders(response.orders);
     } catch (loadError) {
       setOrders([]);
@@ -63,8 +74,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadOrders();
-  }, []);
+    void loadOrders(activeOrderStatus);
+  }, [activeOrderStatus]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -117,7 +128,7 @@ export default function App() {
         reason: 'after_sale'
       });
       setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
-      await loadOrders();
+      await loadOrders(activeOrderStatus);
     });
   }
 
@@ -138,7 +149,7 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
-      await loadOrders();
+      await loadOrders(activeOrderStatus);
     });
   }
 
@@ -159,7 +170,7 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
-      await loadOrders();
+      await loadOrders(activeOrderStatus);
     });
   }
 
@@ -209,6 +220,18 @@ export default function App() {
           </div>
           <span className="queue-count">{orders.length} 单</span>
         </div>
+        <nav className="status-tabs panel-status-tabs" aria-label="订单状态">
+          {orderStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeOrderStatus === status ? 'active' : ''}
+              onClick={() => setActiveOrderStatus(status)}
+            >
+              {adminOrderStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
         <div className="order-list">
           {orders.length === 0 ? <p className="empty-text">暂无订单</p> : null}
           {orders.map((order) => (

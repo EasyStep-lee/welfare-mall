@@ -132,6 +132,20 @@ describe('OrderReadRepository', () => {
     expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
   });
 
+  it('filters recent admin orders by status', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    await repository.listRecentAdminOrders({ status: 'refund_processing' });
+
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: { status: 'refund_processing' },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+  });
+
   it('finds one order scoped to the buyer', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);

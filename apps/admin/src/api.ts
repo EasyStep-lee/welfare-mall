@@ -1,4 +1,11 @@
 export type ReviewQueueStatus = 'pending_review' | 'approved' | 'rejected';
+export type AdminOrderStatusFilter =
+  | 'all'
+  | 'pending_payment'
+  | 'paid'
+  | 'refund_processing'
+  | 'refunded'
+  | 'completed';
 
 export type BusinessParty = {
   id: string;
@@ -180,6 +187,15 @@ export const statusLabels: Record<ReviewQueueStatus, string> = {
   rejected: '已驳回'
 };
 
+export const adminOrderStatusLabels: Record<AdminOrderStatusFilter, string> = {
+  all: '全部',
+  pending_payment: '待支付',
+  paid: '已支付',
+  refund_processing: '退款中',
+  refunded: '已退款',
+  completed: '已完成'
+};
+
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 
 function apiBaseUrl() {
@@ -198,8 +214,14 @@ export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<Revie
   return response.json() as Promise<ReviewQueueResponse>;
 }
 
-export async function fetchAdminOrders(): Promise<AdminOrderResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/admin`);
+export async function fetchAdminOrders(status: AdminOrderStatusFilter = 'all'): Promise<AdminOrderResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders/admin`);
+
+  if (status !== 'all') {
+    url.searchParams.set('status', status);
+  }
+
+  const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load admin orders: ${response.status}`);
   }
