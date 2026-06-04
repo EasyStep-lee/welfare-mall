@@ -10,6 +10,7 @@
     "build": "pnpm --filter @welfare-mall/api run build && pnpm --filter @welfare-mall/admin run build && pnpm --filter @welfare-mall/merchant run build && pnpm --filter @welfare-mall/portal run build",
     "docker:runtime:up": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start-docker-runtime.ps1",
     "docker:runtime:smoke": "node tools/verify-docker-runtime.cjs --live",
+    "docker:order-flow-smoke": "node tools/verify-docker-order-flow-smoke.cjs",
     "docker:page-smoke": "node tools/verify-docker-page-smoke.cjs",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
