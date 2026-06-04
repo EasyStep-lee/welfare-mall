@@ -1,16 +1,43 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  OrderCheckoutLineRecord,
-  OrderCheckoutPaymentRecord,
-  OrderCheckoutRecord
-} from './order-checkout.repository';
+import { Injectable } from '@nestjs/common';
+import { OrderCheckoutPaymentRecord, OrderCheckoutRecord } from './order-checkout.repository';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderStatus, OrderStatuses } from './order-status';
 import { orderStateSelect } from './order-state.repository';
 
-export type MerchantFulfillmentOrderRecord = OrderCheckoutRecord & {
-  lines: OrderCheckoutLineRecord[];
+export type MerchantFulfillmentOrderRecord = {
+  id: string;
+  orderNo: string;
+  requestId: string;
+  buyerUserId: string;
+  status: string;
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  lines: MerchantFulfillmentOrderLineRecord[];
   latestPayment: OrderCheckoutPaymentRecord | null;
+};
+
+export type MerchantFulfillmentOrderLineRecord = {
+  id: string;
+  orderLineId?: string;
+  productId: string;
+  skuId: string | null;
+  displayName: string;
+  displaySkuCode: string | null;
+  displayImageUrl: string;
+  unitPriceAmount: number;
+  quantity: number;
+  lineTotalAmount: number;
+  createdAt: Date;
 };
 
 export type CompletePaidOrderForMerchantInput = {
@@ -24,16 +51,37 @@ export type ListOrdersForMerchantInput = {
 };
 
 type OrderFulfillmentTransaction = {
-  product: {
-    findMany(args: unknown): Promise<Array<{ id: string }>>;
+  fulfillmentTask: {
+    findFirst(args: unknown): Promise<FulfillmentTaskRecord | null>;
+    update(args: unknown): Promise<FulfillmentTaskRecord>;
+    count(args: unknown): Promise<number>;
   };
   orderHeader: {
-    findFirst(args: unknown): Promise<OrderCheckoutRecord | null>;
     update(args: unknown): Promise<OrderCheckoutRecord>;
   };
   orderState: {
     update(args: unknown): Promise<unknown>;
   };
+};
+
+type FulfillmentTaskStatus = 'pending' | 'completed';
+
+type FulfillmentTaskRecord = {
+  id: string;
+  taskNo: string;
+  orderNo: string;
+  merchantId: string;
+  status: FulfillmentTaskStatus;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  order: Omit<OrderCheckoutRecord, 'lines'>;
+  lines: MerchantFulfillmentOrderLineRecord[];
 };
 
 @Injectable()
@@ -45,25 +93,20 @@ export class OrderFulfillmentRepository {
   }
 
   async listOrdersForMerchant(input: ListOrdersForMerchantInput): Promise<MerchantFulfillmentOrderRecord[]> {
-    const products = await this.prisma.product.findMany({
-      where: { merchantId: input.merchantId },
-      select: { id: true }
+    const tasks = await this.prisma.fulfillmentTask.findMany({
+      where: {
+        merchantId: input.merchantId,
+        status: toFulfillmentTaskStatus(input.status)
+      },
+      orderBy: { createdAt: 'desc' },
+      select: fulfillmentTaskSelect()
     });
-    const productIds = products.map((product) => product.id);
+    const orderNos = tasks.map((task) => task.orderNo);
 
-    if (productIds.length === 0) {
+    if (orderNos.length === 0) {
       return [];
     }
 
-    const orders = await this.prisma.orderHeader.findMany({
-      where: {
-        status: input.status,
-        lines: { some: { productId: { in: productIds } } }
-      },
-      orderBy: { createdAt: 'desc' },
-      select: fulfillmentOrderSelect()
-    });
-    const orderNos = orders.map((order) => order.orderNo);
     const payments = await this.prisma.orderPayment.findMany({
       where: { orderNo: { in: orderNos } },
       orderBy: { createdAt: 'desc' },
@@ -77,64 +120,138 @@ export class OrderFulfillmentRepository {
       }
     }
 
-    return orders.map((order) => ({
-      ...order,
-      lines: order.lines.filter((line) => productIds.includes(line.productId)),
-      latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null
-    }));
+    return tasks.map((task) =>
+      taskToFulfillmentOrder(task as FulfillmentTaskRecord, latestPaymentByOrderNo.get(task.orderNo) ?? null)
+    );
   }
 
   async completePaidOrderForMerchant(input: CompletePaidOrderForMerchantInput): Promise<MerchantFulfillmentOrderRecord | null> {
     return this.prisma.$transaction(async (prismaTx) => {
       const tx = prismaTx as unknown as OrderFulfillmentTransaction;
-      const productIds = await findMerchantProductIds(tx, input.merchantId);
-
-      if (productIds.length === 0) {
-        return null;
-      }
-
-      const order = await tx.orderHeader.findFirst({
+      const task = await tx.fulfillmentTask.findFirst({
         where: {
           orderNo: input.orderNo,
-          lines: { some: { productId: { in: productIds } } }
+          merchantId: input.merchantId,
+          status: 'pending'
         },
-        select: fulfillmentOrderSelect()
+        select: fulfillmentTaskSelect()
       });
 
-      if (!order) {
+      if (!task) {
         return null;
       }
 
-      if (order.status !== OrderStatuses.Paid) {
-        throw new BadRequestException('Only paid orders can be completed by merchant fulfillment.');
+      const completedAt = new Date();
+      const completedTask = await tx.fulfillmentTask.update({
+        where: { id: task.id },
+        data: {
+          status: 'completed',
+          completedAt
+        },
+        select: fulfillmentTaskSelect()
+      });
+
+      const remainingTasks = await tx.fulfillmentTask.count({
+        where: {
+          orderNo: input.orderNo,
+          status: { not: 'completed' }
+        }
+      });
+
+      if (remainingTasks === 0) {
+        await tx.orderHeader.update({
+          where: { orderNo: input.orderNo },
+          data: { status: OrderStatuses.Completed },
+          select: fulfillmentOrderSelect()
+        });
+        await tx.orderState.update({
+          where: { orderNo: input.orderNo },
+          data: { status: OrderStatuses.Completed },
+          select: orderStateSelect()
+        });
       }
 
-      const completedOrder = await tx.orderHeader.update({
-        where: { orderNo: input.orderNo },
-        data: { status: OrderStatuses.Completed },
-        select: fulfillmentOrderSelect()
-      });
-      await tx.orderState.update({
-        where: { orderNo: input.orderNo },
-        data: { status: OrderStatuses.Completed },
-        select: orderStateSelect()
-      });
-
-      return {
-        ...completedOrder,
-        latestPayment: null
-      };
+      return taskToFulfillmentOrder(completedTask, null);
     });
   }
 }
 
-async function findMerchantProductIds(client: { product: { findMany(args: unknown): Promise<Array<{ id: string }>> } }, merchantId: string) {
-  const products = await client.product.findMany({
-    where: { merchantId },
-    select: { id: true }
-  });
+function toFulfillmentTaskStatus(status: OrderStatus): FulfillmentTaskStatus {
+  return status === OrderStatuses.Completed ? 'completed' : 'pending';
+}
 
-  return products.map((product) => product.id);
+function taskToFulfillmentOrder(
+  task: FulfillmentTaskRecord,
+  latestPayment: OrderCheckoutPaymentRecord | null
+): MerchantFulfillmentOrderRecord {
+  return {
+    ...task.order,
+    id: task.id,
+    status: task.status === 'completed' ? OrderStatuses.Completed : OrderStatuses.Paid,
+    fulfillmentType: task.fulfillmentType,
+    receiverName: task.receiverName,
+    receiverPhone: task.receiverPhone,
+    receiverAddress: task.receiverAddress,
+    pickupStoreName: task.pickupStoreName,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    lines: task.lines,
+    latestPayment
+  };
+}
+
+function fulfillmentTaskSelect() {
+  return {
+    id: true,
+    taskNo: true,
+    orderNo: true,
+    merchantId: true,
+    status: true,
+    fulfillmentType: true,
+    receiverName: true,
+    receiverPhone: true,
+    receiverAddress: true,
+    pickupStoreName: true,
+    completedAt: true,
+    createdAt: true,
+    updatedAt: true,
+    order: {
+      select: {
+        id: true,
+        orderNo: true,
+        requestId: true,
+        buyerUserId: true,
+        status: true,
+        subtotalAmount: true,
+        discountAmount: true,
+        totalAmount: true,
+        welfareCardPayableAmount: true,
+        cashPayableAmount: true,
+        fulfillmentType: true,
+        receiverName: true,
+        receiverPhone: true,
+        receiverAddress: true,
+        pickupStoreName: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    },
+    lines: {
+      select: {
+        id: true,
+        orderLineId: true,
+        productId: true,
+        skuId: true,
+        displayName: true,
+        displaySkuCode: true,
+        displayImageUrl: true,
+        unitPriceAmount: true,
+        quantity: true,
+        lineTotalAmount: true,
+        createdAt: true
+      }
+    }
+  } as const;
 }
 
 function fulfillmentOrderSelect() {

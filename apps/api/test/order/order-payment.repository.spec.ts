@@ -16,8 +16,40 @@ const paymentRecord = {
   updatedAt: new Date('2026-06-03T00:00:00.000Z')
 };
 
+const paidOrderRecord = {
+  orderNo: 'ORDER-20260603-001',
+  fulfillmentType: 'delivery',
+  receiverName: 'Li Lei',
+  receiverPhone: '13800000000',
+  receiverAddress: 'Pudong Avenue 1',
+  pickupStoreName: null,
+  lines: [
+    {
+      id: 'order-line-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      displayName: 'Local Rice',
+      displaySkuCode: 'SKU-RICE-5KG',
+      displayImageUrl: 'https://cdn.example.com/rice.jpg',
+      unitPriceAmount: 6990,
+      quantity: 2,
+      lineTotalAmount: 13980
+    }
+  ]
+};
+
 function createPrismaMock() {
   const tx = {
+    product: {
+      findMany: jest.fn().mockResolvedValue([{ id: 'product-001', merchantId: 'merchant-001' }])
+    },
+    orderHeader: {
+      findUnique: jest.fn().mockResolvedValue(paidOrderRecord),
+      update: jest.fn().mockResolvedValue({
+        orderNo: 'ORDER-20260603-001',
+        status: 'paid'
+      })
+    },
     orderPayment: {
       findUnique: jest.fn().mockResolvedValue(paymentRecord),
       update: jest.fn().mockResolvedValue({
@@ -62,10 +94,14 @@ function createPrismaMock() {
         updatedAt: new Date('2026-06-03T00:05:00.000Z')
       })
     },
-    orderHeader: {
-      update: jest.fn().mockResolvedValue({
+    fulfillmentTask: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({
+        id: 'fulfillment-task-001',
+        taskNo: 'FT-ORDER-20260603-001-MERCHANT-001',
         orderNo: 'ORDER-20260603-001',
-        status: 'paid'
+        merchantId: 'merchant-001',
+        status: 'pending'
       })
     }
   };
@@ -177,6 +213,35 @@ describe('OrderPaymentRepository', () => {
       where: { orderNo: 'ORDER-20260603-001' },
       data: { status: 'paid' }
     });
+    expect(tx.fulfillmentTask.create).toHaveBeenCalledWith({
+      data: {
+        taskNo: expect.stringMatching(/^FT-ORDER-20260603-001-MERCHANT-001-\d+$/),
+        orderNo: 'ORDER-20260603-001',
+        merchantId: 'merchant-001',
+        status: 'pending',
+        fulfillmentType: 'delivery',
+        receiverName: 'Li Lei',
+        receiverPhone: '13800000000',
+        receiverAddress: 'Pudong Avenue 1',
+        pickupStoreName: null,
+        lines: {
+          create: [
+            {
+              orderLineId: 'order-line-001',
+              productId: 'product-001',
+              skuId: 'sku-001',
+              displayName: 'Local Rice',
+              displaySkuCode: 'SKU-RICE-5KG',
+              displayImageUrl: 'https://cdn.example.com/rice.jpg',
+              unitPriceAmount: 6990,
+              quantity: 2,
+              lineTotalAmount: 13980
+            }
+          ]
+        }
+      },
+      select: expect.any(Object)
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -213,6 +278,7 @@ describe('OrderPaymentRepository', () => {
     expect(tx.orderPayment.update).not.toHaveBeenCalled();
     expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(tx.fulfillmentTask.create).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
