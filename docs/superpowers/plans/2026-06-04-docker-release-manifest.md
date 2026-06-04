@@ -103,7 +103,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -112,7 +112,7 @@ git add package.json tools/print-docker-release-manifest.cjs tools/verify-target
 git commit -m "build: add docker release manifest"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
