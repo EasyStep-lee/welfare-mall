@@ -80,6 +80,22 @@ const adminOrdersResponse = {
         completedTasks: 1,
         taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
       },
+      fulfillmentTasks: [
+        {
+          taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+          merchantId: 'merchant-001',
+          status: 'pending',
+          createdAt: '2026-06-03T00:15:00.000Z',
+          completedAt: null
+        },
+        {
+          taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+          merchantId: 'merchant-002',
+          status: 'completed',
+          createdAt: '2026-06-03T00:16:00.000Z',
+          completedAt: '2026-06-03T00:30:00.000Z'
+        }
+      ],
       lines: [
         {
           displayName: 'Local Rice',
@@ -235,6 +251,12 @@ describe('Admin product review workbench', () => {
     expect(screen.getByText('已完成 1')).toBeInTheDocument();
     expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
     expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-002-001')).toBeInTheDocument();
+    expect(screen.getByText('商户 merchant-001')).toBeInTheDocument();
+    expect(screen.getByText('任务状态 待履约')).toBeInTheDocument();
+    expect(screen.getByText('创建 2026-06-03 00:15')).toBeInTheDocument();
+    expect(screen.getByText('商户 merchant-002')).toBeInTheDocument();
+    expect(screen.getByText('任务状态 履约完成')).toBeInTheDocument();
+    expect(screen.getByText('完成 2026-06-03 00:30')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
   });
 

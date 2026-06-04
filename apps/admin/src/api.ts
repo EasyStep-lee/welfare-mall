@@ -109,6 +109,13 @@ export type AdminOrder = {
     completedTasks: number;
     taskNos: string[];
   };
+  fulfillmentTasks: Array<{
+    taskNo: string;
+    merchantId: string;
+    status: string;
+    createdAt: string;
+    completedAt: string | null;
+  }>;
   lines: Array<{
     displayName: string;
     displaySkuCode: string | null;
