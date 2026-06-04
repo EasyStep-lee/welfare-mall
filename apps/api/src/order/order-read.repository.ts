@@ -10,7 +10,10 @@ export type FindOrderForBuyerInput = {
 
 export type ListRecentAdminOrdersInput = {
   status?: OrderStatus;
+  fulfillmentStatus?: AdminFulfillmentStatusFilter;
 };
+
+export type AdminFulfillmentStatusFilter = 'pending' | 'completed';
 
 export type AdminOrderFulfillmentSummary = {
   totalTasks: number;
@@ -44,8 +47,16 @@ export class OrderReadRepository {
   }
 
   async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<AdminOrderReadRecord[]> {
+    const fulfillmentOrderNos = input.fulfillmentStatus
+      ? await this.findOrderNosByFulfillmentStatus(input.fulfillmentStatus)
+      : undefined;
+
+    if (fulfillmentOrderNos?.length === 0) {
+      return [];
+    }
+
     const orders = await this.prisma.orderHeader.findMany({
-      where: input.status ? { status: input.status } : undefined,
+      where: adminOrderWhere(input.status, fulfillmentOrderNos),
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: orderReadSelect()
@@ -70,6 +81,25 @@ export class OrderReadRepository {
     const [orderWithFacts] = await this.attachLatestOrderFacts([order]);
 
     return orderWithFacts ?? null;
+  }
+
+  private async findOrderNosByFulfillmentStatus(status: AdminFulfillmentStatusFilter): Promise<string[]> {
+    const tasks = await this.prisma.fulfillmentTask.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: fulfillmentTaskSummarySelect()
+    });
+    const orderNos = uniqueOrderNos(tasks);
+    const summaries = summarizeFulfillmentTasks(orderNos, tasks);
+
+    return orderNos.filter((orderNo) => {
+      const summary = summaries.get(orderNo) ?? emptyFulfillmentSummary();
+
+      if (status === 'pending') {
+        return summary.pendingTasks > 0;
+      }
+
+      return summary.totalTasks > 0 && summary.pendingTasks === 0;
+    });
   }
 
   private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]>;
@@ -174,6 +204,20 @@ function orderReadSelect() {
   } as const;
 }
 
+function adminOrderWhere(status: OrderStatus | undefined, orderNos: string[] | undefined) {
+  const where: Record<string, unknown> = {};
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (orderNos) {
+    where.orderNo = { in: orderNos };
+  }
+
+  return Object.keys(where).length > 0 ? where : undefined;
+}
+
 function paymentReadSelect() {
   return {
     id: true,
@@ -243,6 +287,10 @@ function summarizeFulfillmentTasks(
   }
 
   return summaryByOrderNo;
+}
+
+function uniqueOrderNos(tasks: FulfillmentTaskSummaryRecord[]): string[] {
+  return [...new Set(tasks.map((task) => task.orderNo))];
 }
 
 function emptyFulfillmentSummary(): AdminOrderFulfillmentSummary {

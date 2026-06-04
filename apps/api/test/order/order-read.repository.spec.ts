@@ -185,6 +185,40 @@ describe('OrderReadRepository', () => {
     });
   });
 
+  it('filters recent admin orders by pending fulfillment progress', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    const result = await repository.listRecentAdminOrders({ fulfillmentStatus: 'pending' });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
+      orderBy: { createdAt: 'asc' },
+      select: expect.any(Object)
+    });
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(2, {
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'asc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([
+      expect.objectContaining({
+        orderNo: 'ORDER-20260603-001',
+        fulfillmentSummary: {
+          totalTasks: 2,
+          pendingTasks: 1,
+          completedTasks: 1,
+          taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
+        }
+      })
+    ]);
+  });
+
   it('finds one order scoped to the buyer', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);

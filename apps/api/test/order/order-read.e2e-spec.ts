@@ -165,6 +165,45 @@ describe('Order read API contract', () => {
     });
   });
 
+  it('filters recent Admin orders by status and fulfillment progress', async () => {
+    orderReadService.listAdminOrders.mockResolvedValue({
+      orders: [
+        {
+          orderNo: 'ORDER-20260603-003',
+          buyerUserId: 'user-003',
+          status: 'paid',
+          totalAmount: 15990,
+          fulfillmentSummary: {
+            totalTasks: 2,
+            pendingTasks: 1,
+            completedTasks: 1,
+            taskNos: ['FT-ORDER-20260603-003-MERCHANT-001-001', 'FT-ORDER-20260603-003-MERCHANT-002-001']
+          },
+          lines: [{ displayName: 'Local Rice', quantity: 1 }]
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/orders/admin?status=paid&fulfillmentStatus=pending')
+      .expect(200);
+
+    expect(orderReadService.listAdminOrders).toHaveBeenCalledWith({
+      status: 'paid',
+      fulfillmentStatus: 'pending'
+    });
+    expect(response.body.orders).toHaveLength(1);
+    expect(response.body.orders[0]).toMatchObject({
+      orderNo: 'ORDER-20260603-003',
+      status: 'paid',
+      fulfillmentSummary: {
+        totalTasks: 2,
+        pendingTasks: 1,
+        completedTasks: 1
+      }
+    });
+  });
+
   it('gets one buyer-scoped order detail', async () => {
     orderReadService.getOrderDetail.mockResolvedValue({
       order: {

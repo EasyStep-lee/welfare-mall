@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderCheckoutRecord } from './order-checkout.repository';
-import { OrderReadRepository } from './order-read.repository';
+import { AdminFulfillmentStatusFilter, OrderReadRepository } from './order-read.repository';
 import { OrderStatus, OrderStatuses } from './order-status';
 
 export type ListOrdersInput = {
@@ -14,6 +14,7 @@ export type GetOrderDetailInput = {
 
 export type ListAdminOrdersInput = {
   status?: string;
+  fulfillmentStatus?: string;
 };
 
 @Injectable()
@@ -29,7 +30,8 @@ export class OrderReadService {
 
   async listAdminOrders(input: ListAdminOrdersInput = {}): Promise<{ orders: OrderCheckoutRecord[] }> {
     const status = optionalOrderStatus(input.status, 'status');
-    const orders = await this.orderReadRepository.listRecentAdminOrders({ status });
+    const fulfillmentStatus = optionalFulfillmentStatus(input.fulfillmentStatus, 'fulfillmentStatus');
+    const orders = await this.orderReadRepository.listRecentAdminOrders({ status, fulfillmentStatus });
 
     return { orders };
   }
@@ -48,6 +50,7 @@ export class OrderReadService {
 }
 
 const orderStatuses = new Set<string>(Object.values(OrderStatuses));
+const fulfillmentStatuses = new Set<string>(['pending', 'completed']);
 
 function optionalOrderStatus(value: string | undefined, fieldName: string): OrderStatus | undefined {
   if (value === undefined || value.trim().length === 0) {
@@ -61,6 +64,20 @@ function optionalOrderStatus(value: string | undefined, fieldName: string): Orde
   }
 
   return normalized as OrderStatus;
+}
+
+function optionalFulfillmentStatus(value: string | undefined, fieldName: string): AdminFulfillmentStatusFilter | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+
+  if (!fulfillmentStatuses.has(normalized)) {
+    throw new BadRequestException(`${fieldName} must be pending or completed.`);
+  }
+
+  return normalized as AdminFulfillmentStatusFilter;
 }
 
 function requireText(value: string | undefined, fieldName: string): string {

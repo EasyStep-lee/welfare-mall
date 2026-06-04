@@ -6,6 +6,7 @@ export type AdminOrderStatusFilter =
   | 'refund_processing'
   | 'refunded'
   | 'completed';
+export type AdminFulfillmentStatusFilter = 'all' | 'pending' | 'completed';
 
 export type BusinessParty = {
   id: string;
@@ -202,6 +203,12 @@ export const adminOrderStatusLabels: Record<AdminOrderStatusFilter, string> = {
   completed: '已完成'
 };
 
+export const adminFulfillmentStatusLabels: Record<AdminFulfillmentStatusFilter, string> = {
+  all: '全部履约',
+  pending: '待履约',
+  completed: '履约完成'
+};
+
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 
 function apiBaseUrl() {
@@ -220,11 +227,17 @@ export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<Revie
   return response.json() as Promise<ReviewQueueResponse>;
 }
 
-export async function fetchAdminOrders(status: AdminOrderStatusFilter = 'all'): Promise<AdminOrderResponse> {
+export async function fetchAdminOrders(
+  status: AdminOrderStatusFilter = 'all',
+  fulfillmentStatus: AdminFulfillmentStatusFilter = 'all'
+): Promise<AdminOrderResponse> {
   const url = new URL(`${apiBaseUrl()}/orders/admin`);
 
   if (status !== 'all') {
     url.searchParams.set('status', status);
+  }
+  if (fulfillmentStatus !== 'all') {
+    url.searchParams.set('fulfillmentStatus', fulfillmentStatus);
   }
 
   const response = await fetch(url.toString());

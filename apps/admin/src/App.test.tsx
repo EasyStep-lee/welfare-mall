@@ -248,6 +248,16 @@ describe('Admin product review workbench', () => {
     });
   });
 
+  it('filters Admin orders by fulfillment progress tab', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '待履约' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin?fulfillmentStatus=pending');
+    });
+  });
+
   it('creates a full refund request for a paid order', async () => {
     render(<App />);
 
