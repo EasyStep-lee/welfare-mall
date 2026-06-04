@@ -8,8 +8,11 @@
     "typecheck": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/admin run typecheck && pnpm --filter @welfare-mall/merchant run typecheck && pnpm --filter @welfare-mall/portal run typecheck",
     "test": "pnpm --filter @welfare-mall/api run test --runInBand && pnpm --filter @welfare-mall/admin run test --run && pnpm --filter @welfare-mall/merchant run test --run && pnpm --filter @welfare-mall/portal run test --run && pnpm --filter @welfare-mall/user-miniprogram run test --run",
     "build": "pnpm --filter @welfare-mall/api run build && pnpm --filter @welfare-mall/admin run build && pnpm --filter @welfare-mall/merchant run build && pnpm --filter @welfare-mall/portal run build",
+    "docker:runtime:up": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start-docker-runtime.ps1",
+    "docker:runtime:smoke": "node tools/verify-docker-runtime.cjs --live",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
+    "verify:docker-runtime": "node tools/verify-docker-runtime.cjs",
     "verify:api": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run prisma:validate && pnpm --filter @welfare-mall/api run openapi:generate",
     "verify:product-save-db": "pnpm --filter @welfare-mall/api run test:db:product-save"
   },
