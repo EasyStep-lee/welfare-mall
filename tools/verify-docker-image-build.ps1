@@ -5,6 +5,23 @@ $ErrorActionPreference = 'Stop'
 $env:COMPOSE_BAKE = 'false'
 
 $requiredServices = @('api', 'admin', 'merchant', 'portal')
+$imageNames = @{
+  api = 'welfare-mall-v2-api'
+  admin = 'welfare-mall-v2-admin'
+  merchant = 'welfare-mall-v2-merchant'
+  portal = 'welfare-mall-v2-portal'
+}
+
+if (-not $env:WELFARE_MALL_IMAGE_TAG) {
+  $shortSha = git rev-parse --short=12 HEAD
+  if ($LASTEXITCODE -ne 0) {
+    throw 'git rev-parse --short=12 HEAD failed.'
+  }
+
+  $env:WELFARE_MALL_IMAGE_TAG = "git-$shortSha"
+}
+
+Write-Host "Using Docker image tag: $env:WELFARE_MALL_IMAGE_TAG"
 
 Write-Host 'Verifying Docker Compose service set...'
 $configuredServices = docker compose config --services
@@ -23,6 +40,12 @@ foreach ($service in $requiredServices) {
   docker compose build $service
   if ($LASTEXITCODE -ne 0) {
     throw "docker compose build failed for service: $service"
+  }
+
+  $imageRef = "$($imageNames[$service]):$env:WELFARE_MALL_IMAGE_TAG"
+  docker image inspect $imageRef | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Expected Docker image was not found after build: $imageRef"
   }
 }
 

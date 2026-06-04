@@ -31,6 +31,7 @@ services:
       retries: 10
 
   api:
+    image: welfare-mall-v2-api:${WELFARE_MALL_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -54,6 +55,7 @@ services:
       retries: 10
 
   admin:
+    image: welfare-mall-v2-admin:${WELFARE_MALL_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
@@ -74,6 +76,7 @@ services:
       retries: 10
 
   merchant:
+    image: welfare-mall-v2-merchant:${WELFARE_MALL_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/merchant/Dockerfile
@@ -94,6 +97,7 @@ services:
       retries: 10
 
   portal:
+    image: welfare-mall-v2-portal:${WELFARE_MALL_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/portal/Dockerfile

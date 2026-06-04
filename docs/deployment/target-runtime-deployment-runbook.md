@@ -45,7 +45,9 @@ pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --re
 pnpm run docker:image-build:preflight
 ```
 
-3. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process.
+If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. Record the tag in the result template before target execution.
+
+3. Build and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded image tag.
 4. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
 5. Confirm database migrations or schema push steps are complete according to the target environment policy.
 6. Validate the prepared target runtime env file:
