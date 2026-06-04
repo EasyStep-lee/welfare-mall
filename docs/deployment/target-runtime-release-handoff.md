@@ -7,6 +7,7 @@ The current release line has local verification gates for:
 - source verification through `pnpm run verify`
 - target deployment preflight through `pnpm run target:deployment:preflight`
 - Docker image build preflight through `pnpm run docker:image-build:preflight`
+- target deployment package through `pnpm run target:deployment:package -- --registry <registry>`
 - Docker release manifest through `pnpm run docker:release:manifest`
 - Docker release image tag through `WELFARE_MALL_IMAGE_TAG` or generated `git-<short-sha>`
 - optional Docker registry refs through `WELFARE_MALL_IMAGE_REGISTRY` or `pnpm run docker:release:manifest -- --registry <registry>`
@@ -38,6 +39,7 @@ The smoke evidence must include:
 - deployed commit SHA
 - target deployment preflight output
 - Docker image build preflight output
+- target deployment package output
 - Docker release manifest output
 - Docker release image tag
 - Docker release registry and full image refs, when a registry is used

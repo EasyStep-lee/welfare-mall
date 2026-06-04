@@ -25,6 +25,7 @@ Record the latest local readiness evidence before target execution:
 pnpm run verify
 pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
+pnpm run target:deployment:package -- --registry registry.example.com/welfare-mall
 pnpm run docker:release:manifest
 pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
 pnpm run docker:runtime:smoke
@@ -38,6 +39,7 @@ pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\targ
 - Local verification timestamp:
 - Target deployment preflight result:
 - Docker image build preflight result:
+- Target deployment package:
 - Docker image tag:
 - Docker image registry:
 - Docker full image refs:

@@ -19,6 +19,7 @@
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
     "target:deployment:handoff": "node tools/verify-target-deployment-handoff.cjs",
+    "target:deployment:package": "node tools/print-target-deployment-package.cjs",
     "target:deployment:preflight": "node tools/verify-target-deployment-preflight.cjs",
     "target:deployment:result:verify": "node tools/verify-target-deployment-result.cjs",
     "target:runtime:env-check": "node tools/verify-target-runtime-env.cjs",

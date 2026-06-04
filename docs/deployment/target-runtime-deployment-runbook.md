@@ -8,6 +8,7 @@ Use this runbook only after the local gates below have passed on `main`:
 pnpm run verify
 pnpm run target:deployment:preflight
 pnpm run docker:image-build:preflight
+pnpm run target:deployment:package -- --registry registry.example.com/welfare-mall
 pnpm run docker:release:manifest
 pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
 pnpm run docker:runtime:smoke
@@ -58,7 +59,15 @@ pnpm run docker:image-build:preflight
 
 If `WELFARE_MALL_IMAGE_TAG` is not already set, the preflight uses `git-<short-sha>` from the current commit. If a registry is required, set `WELFARE_MALL_IMAGE_REGISTRY` before the preflight. Record the tag, registry, and full image refs in the result template before target execution.
 
-4. Generate and record the Docker release manifest:
+4. Generate and record the target deployment package:
+
+```powershell
+pnpm run target:deployment:package -- --registry registry.example.com/welfare-mall
+```
+
+This package collects the current commit, release image refs, dry-run push plan, target commands, and evidence file paths. It does not execute registry authentication, push images, or deploy the target environment.
+
+5. Generate and record the Docker release manifest:
 
 ```powershell
 pnpm run docker:release:manifest
@@ -70,7 +79,7 @@ For registry-aware image refs, run:
 pnpm run docker:release:manifest -- --registry registry.example.com/welfare-mall
 ```
 
-5. Generate and record the registry push plan:
+6. Generate and record the registry push plan:
 
 ```powershell
 pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-mall
@@ -78,29 +87,29 @@ pnpm run docker:registry:push-plan -- --registry registry.example.com/welfare-ma
 
 The push plan prints `docker login`, image inspect, and `docker push` commands. It does not execute registry authentication or push images.
 
-6. Build, push, and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded full image refs.
-7. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
-8. Confirm database migrations or schema push steps are complete according to the target environment policy.
-9. Validate the prepared target runtime env file:
+7. Build, push, and deploy API, Admin, Merchant, and Portal to the target environment using the target platform's approved release process and the recorded full image refs.
+8. Configure target environment variables so each frontend build embeds the same `TARGET_API_BASE_URL`.
+9. Confirm database migrations or schema push steps are complete according to the target environment policy.
+10. Validate the prepared target runtime env file:
 
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-10. Run static smoke first:
+11. Run static smoke first:
 
 ```powershell
 pnpm run target:runtime:smoke
 ```
 
-11. Run live target smoke:
+12. Run live target smoke:
 
 ```powershell
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-12. Record output, URLs, timestamps, commit SHA, and any deviations in a copied result file based on the result template.
-13. Verify the recorded result file before claiming target deployment evidence is complete:
+13. Record output, URLs, timestamps, commit SHA, and any deviations in a copied result file based on the result template.
+14. Verify the recorded result file before claiming target deployment evidence is complete:
 
 ```powershell
 pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
