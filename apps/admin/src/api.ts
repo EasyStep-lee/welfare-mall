@@ -102,6 +102,12 @@ export type AdminOrder = {
     refundAmount: number;
     reason: string;
   } | null;
+  fulfillmentSummary: {
+    totalTasks: number;
+    pendingTasks: number;
+    completedTasks: number;
+    taskNos: string[];
+  };
   lines: Array<{
     displayName: string;
     displaySkuCode: string | null;

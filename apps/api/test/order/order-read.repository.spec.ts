@@ -68,6 +68,24 @@ const refundRecord = {
   updatedAt: new Date('2026-06-03T00:10:00.000Z')
 };
 
+const pendingFulfillmentTaskRecord = {
+  id: 'fulfillment-task-001',
+  taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+  orderNo: 'ORDER-20260603-001',
+  status: 'pending',
+  createdAt: new Date('2026-06-03T00:15:00.000Z'),
+  completedAt: null
+};
+
+const completedFulfillmentTaskRecord = {
+  id: 'fulfillment-task-002',
+  taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+  orderNo: 'ORDER-20260603-001',
+  status: 'completed',
+  createdAt: new Date('2026-06-03T00:16:00.000Z'),
+  completedAt: new Date('2026-06-03T00:30:00.000Z')
+};
+
 function createPrismaMock() {
   return {
     orderHeader: {
@@ -79,6 +97,9 @@ function createPrismaMock() {
     },
     orderRefund: {
       findMany: jest.fn().mockResolvedValue([refundRecord])
+    },
+    fulfillmentTask: {
+      findMany: jest.fn().mockResolvedValue([pendingFulfillmentTaskRecord, completedFulfillmentTaskRecord])
     }
   };
 }
@@ -105,10 +126,11 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
+    expect(prisma.fulfillmentTask.findMany).not.toHaveBeenCalled();
     expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
   });
 
-  it('lists recent admin orders newest first with latest payment', async () => {
+  it('lists recent admin orders newest first with latest payment and fulfillment summary', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);
 
@@ -129,7 +151,24 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'asc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual([
+      {
+        ...orderRecord,
+        latestPayment: paymentRecord,
+        latestRefund: refundRecord,
+        fulfillmentSummary: {
+          totalTasks: 2,
+          pendingTasks: 1,
+          completedTasks: 1,
+          taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
+        }
+      }
+    ]);
   });
 
   it('filters recent admin orders by status', async () => {
@@ -172,6 +211,7 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
+    expect(prisma.fulfillmentTask.findMany).not.toHaveBeenCalled();
     expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord });
   });
 });

@@ -12,6 +12,23 @@ export type ListRecentAdminOrdersInput = {
   status?: OrderStatus;
 };
 
+export type AdminOrderFulfillmentSummary = {
+  totalTasks: number;
+  pendingTasks: number;
+  completedTasks: number;
+  taskNos: string[];
+};
+
+export type AdminOrderReadRecord = OrderCheckoutRecord & {
+  fulfillmentSummary: AdminOrderFulfillmentSummary;
+};
+
+type FulfillmentTaskSummaryRecord = {
+  orderNo: string;
+  taskNo: string;
+  status: string;
+};
+
 @Injectable()
 export class OrderReadRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,7 +43,7 @@ export class OrderReadRepository {
     return this.attachLatestOrderFacts(orders);
   }
 
-  async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<OrderCheckoutRecord[]> {
+  async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<AdminOrderReadRecord[]> {
     const orders = await this.prisma.orderHeader.findMany({
       where: input.status ? { status: input.status } : undefined,
       orderBy: { createdAt: 'desc' },
@@ -34,7 +51,7 @@ export class OrderReadRepository {
       select: orderReadSelect()
     });
 
-    return this.attachLatestOrderFacts(orders);
+    return this.attachLatestOrderFacts(orders, { includeFulfillmentSummary: true });
   }
 
   async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<OrderCheckoutRecord | null> {
@@ -55,7 +72,15 @@ export class OrderReadRepository {
     return orderWithFacts ?? null;
   }
 
-  private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]> {
+  private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]>;
+  private async attachLatestOrderFacts(
+    orders: OrderCheckoutRecord[],
+    options: { includeFulfillmentSummary: true }
+  ): Promise<AdminOrderReadRecord[]>;
+  private async attachLatestOrderFacts(
+    orders: OrderCheckoutRecord[],
+    options: { includeFulfillmentSummary?: boolean } = {}
+  ): Promise<OrderCheckoutRecord[] | AdminOrderReadRecord[]> {
     const orderNos = orders.map((order) => order.orderNo);
 
     if (orderNos.length === 0) {
@@ -85,6 +110,22 @@ export class OrderReadRepository {
       if (!latestRefundByOrderNo.has(refund.orderNo)) {
         latestRefundByOrderNo.set(refund.orderNo, refund);
       }
+    }
+
+    if (options.includeFulfillmentSummary) {
+      const tasks = await this.prisma.fulfillmentTask.findMany({
+        where: { orderNo: { in: orderNos } },
+        orderBy: { createdAt: 'asc' },
+        select: fulfillmentTaskSummarySelect()
+      });
+      const fulfillmentSummaryByOrderNo = summarizeFulfillmentTasks(orderNos, tasks);
+
+      return orders.map((order) => ({
+        ...order,
+        latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
+        latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
+        fulfillmentSummary: fulfillmentSummaryByOrderNo.get(order.orderNo) ?? emptyFulfillmentSummary()
+      }));
     }
 
     return orders.map((order) => ({
@@ -167,4 +208,48 @@ function refundReadSelect() {
     createdAt: true,
     updatedAt: true
   } as const;
+}
+
+function fulfillmentTaskSummarySelect() {
+  return {
+    orderNo: true,
+    taskNo: true,
+    status: true
+  } as const;
+}
+
+function summarizeFulfillmentTasks(
+  orderNos: string[],
+  tasks: FulfillmentTaskSummaryRecord[]
+): Map<string, AdminOrderFulfillmentSummary> {
+  const summaryByOrderNo = new Map<string, AdminOrderFulfillmentSummary>();
+
+  for (const orderNo of orderNos) {
+    summaryByOrderNo.set(orderNo, emptyFulfillmentSummary());
+  }
+
+  for (const task of tasks) {
+    const summary = summaryByOrderNo.get(task.orderNo) ?? emptyFulfillmentSummary();
+    summary.totalTasks += 1;
+    summary.taskNos.push(task.taskNo);
+
+    if (task.status === 'completed') {
+      summary.completedTasks += 1;
+    } else {
+      summary.pendingTasks += 1;
+    }
+
+    summaryByOrderNo.set(task.orderNo, summary);
+  }
+
+  return summaryByOrderNo;
+}
+
+function emptyFulfillmentSummary(): AdminOrderFulfillmentSummary {
+  return {
+    totalTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0,
+    taskNos: []
+  };
 }
