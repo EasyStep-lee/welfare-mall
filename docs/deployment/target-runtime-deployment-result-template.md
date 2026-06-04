@@ -17,6 +17,7 @@ Record the latest local readiness evidence before target execution:
 
 ```powershell
 pnpm run verify
+pnpm run docker:image-build:preflight
 pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
@@ -25,6 +26,7 @@ pnpm run target:runtime:smoke
 ```
 
 - Local verification timestamp:
+- Docker image build preflight result:
 - Docker order-flow smoke order number:
 - Notes:
 
