@@ -111,7 +111,7 @@ Expected: PASS.
 
 ### Task 5: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -120,7 +120,7 @@ git add .dockerignore docker-compose.yml package.json tools/verify-docker-runtim
 git commit -m "build: add docker runtime foundation"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
