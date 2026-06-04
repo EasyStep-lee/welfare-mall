@@ -77,7 +77,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -86,6 +86,12 @@ feat: add admin fulfillment progress filters
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/109
+- Feature branch commit: `5af84da feat: add admin fulfillment progress filters`
+- Main squash merge commit: `8cc7c0c feat: add admin fulfillment progress filters`
 
 ## Acceptance Boundary
 
