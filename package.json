@@ -20,6 +20,7 @@
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
     "target:deployment:handoff": "node tools/verify-target-deployment-handoff.cjs",
     "target:deployment:preflight": "node tools/verify-target-deployment-preflight.cjs",
+    "target:deployment:result:verify": "node tools/verify-target-deployment-result.cjs",
     "target:runtime:env-check": "node tools/verify-target-runtime-env.cjs",
     "target:runtime:smoke": "node tools/verify-target-runtime-smoke.cjs",
     "verify:docker-runtime": "node tools/verify-docker-runtime.cjs",

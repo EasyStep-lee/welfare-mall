@@ -32,6 +32,7 @@ pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
 pnpm run target:runtime:env-check
 pnpm run target:runtime:smoke
+pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
 ```
 
 - Local verification timestamp:
@@ -52,6 +53,7 @@ Run and paste the relevant output:
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
+pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
 ```
 
 - Env-file check result:

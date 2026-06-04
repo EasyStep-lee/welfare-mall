@@ -15,6 +15,7 @@ pnpm run docker:page-smoke
 pnpm run docker:order-flow-smoke
 pnpm run target:runtime:env-check
 pnpm run target:runtime:smoke
+pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
 ```
 
 Local readiness means the repository, local Docker images, local Docker runtime, frontend assets, and local order-flow smoke are ready for target deployment preparation. It does not mean the target environment has been deployed or accepted.
@@ -98,7 +99,12 @@ pnpm run target:runtime:smoke
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
 ```
 
-12. Record output, URLs, timestamps, commit SHA, and any deviations in the result template.
+12. Record output, URLs, timestamps, commit SHA, and any deviations in a copied result file based on the result template.
+13. Verify the recorded result file before claiming target deployment evidence is complete:
+
+```powershell
+pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
+```
 
 ## Target Runtime Smoke Evidence
 

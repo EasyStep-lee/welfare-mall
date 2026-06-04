@@ -26,6 +26,7 @@ Target deployment remains pending until a specific target environment is provide
 ```powershell
 pnpm run target:runtime:env-check -- --env-file .\deploy\target-runtime.env --require-real-values
 node tools/verify-target-runtime-smoke.cjs --live --env-file .\deploy\target-runtime.env --require-real-values
+pnpm run target:deployment:result:verify -- --result-file .\docs\deployment\target-runtime-deployment-result.md --require-real-values
 ```
 
 The target result must be recorded in `docs/deployment/target-runtime-deployment-result-template.md`.
@@ -48,6 +49,7 @@ The smoke evidence must include:
 - Portal built asset API base URL check
 - exact command output
 - timestamp and operator
+- target deployment result verifier output
 
 ## Manual And True-Device Acceptance Pending
 
