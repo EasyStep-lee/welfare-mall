@@ -101,7 +101,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -110,7 +110,7 @@ git add package.json tools docs/deployment docs/superpowers/plans/2026-06-04-doc
 git commit -m "build: add docker registry push plan"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
