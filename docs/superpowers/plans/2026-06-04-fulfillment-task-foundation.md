@@ -88,7 +88,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -97,6 +97,12 @@ feat: add fulfillment task foundation
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/103
+- Feature commit: `6c6ed38 feat: add fulfillment task foundation`
+- Main merge commit: `d9c70fa Merge pull request #103 from EasyStep-lee/codex/fulfillment-task-foundation`
 
 ## Acceptance Boundary
 
