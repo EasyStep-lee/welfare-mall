@@ -14,6 +14,7 @@
     "docker:page-smoke": "node tools/verify-docker-page-smoke.cjs",
     "openapi:generate": "pnpm --filter @welfare-mall/api run openapi:generate",
     "seed:local-review-product": "pnpm --filter @welfare-mall/api run seed:local-review-product",
+    "target:runtime:smoke": "node tools/verify-target-runtime-smoke.cjs",
     "verify:docker-runtime": "node tools/verify-docker-runtime.cjs",
     "verify:api": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run prisma:validate && pnpm --filter @welfare-mall/api run openapi:generate",
     "verify:product-save-db": "pnpm --filter @welfare-mall/api run test:db:product-save"
