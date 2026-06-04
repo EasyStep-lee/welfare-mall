@@ -294,10 +294,16 @@ export default function App() {
                   </div>
                 ) : null}
               </dl>
-              {order.fulfillmentSummary.taskNos.length > 0 ? (
+              {formatFulfillmentTasks(order).length > 0 ? (
                 <div className="order-fulfillment-tasks">
-                  {order.fulfillmentSummary.taskNos.map((taskNo) => (
-                    <span key={`${order.orderNo}-${taskNo}`}>{taskNo}</span>
+                  {formatFulfillmentTasks(order).map((task) => (
+                    <div className="order-fulfillment-task" key={`${order.orderNo}-${task.taskNo}`}>
+                      <strong>{task.taskNo}</strong>
+                      {task.merchantId ? <span>商户 {task.merchantId}</span> : null}
+                      {task.status ? <span>任务状态 {fulfillmentTaskStatusLabel(task.status)}</span> : null}
+                      {task.createdAt ? <span>创建 {formatDateTime(task.createdAt)}</span> : null}
+                      {task.completedAt ? <span>完成 {formatDateTime(task.completedAt)}</span> : null}
+                    </div>
                   ))}
                 </div>
               ) : null}
@@ -582,6 +588,34 @@ function formatRefund(order: AdminOrder) {
 
 function formatFulfillmentTotal(order: AdminOrder) {
   return `履约 ${order.fulfillmentSummary.totalTasks} 项`;
+}
+
+function formatFulfillmentTasks(order: AdminOrder) {
+  if (order.fulfillmentTasks.length > 0) {
+    return order.fulfillmentTasks;
+  }
+
+  return order.fulfillmentSummary.taskNos.map((taskNo) => ({
+    taskNo,
+    merchantId: '',
+    status: '',
+    createdAt: '',
+    completedAt: null
+  }));
+}
+
+function fulfillmentTaskStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending: '待履约',
+    completed: '履约完成'
+  };
+
+  return labels[status] ?? status;
+}
+
+function formatDateTime(value: string) {
+  const normalized = value.includes('T') ? value : new Date(value).toISOString();
+  return normalized.replace('T', ' ').slice(0, 16);
 }
 
 function orderStatusLabel(status: string) {

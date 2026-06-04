@@ -179,18 +179,29 @@ h2 {
 
 .order-fulfillment-tasks {
   color: #365160;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   font-size: 12px;
   gap: 6px;
   overflow-wrap: anywhere;
 }
 
-.order-fulfillment-tasks span {
+.order-fulfillment-task {
+  align-items: center;
   background: #f4f8f6;
   border: 1px solid #d9e7df;
   border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   padding: 3px 6px;
+}
+
+.order-fulfillment-task strong {
+  color: #223a46;
+}
+
+.order-fulfillment-task span {
+  color: #637885;
 }
 
 .order-actions {

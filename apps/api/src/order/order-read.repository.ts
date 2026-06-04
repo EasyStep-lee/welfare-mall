@@ -22,14 +22,21 @@ export type AdminOrderFulfillmentSummary = {
   taskNos: string[];
 };
 
-export type AdminOrderReadRecord = OrderCheckoutRecord & {
-  fulfillmentSummary: AdminOrderFulfillmentSummary;
+export type AdminOrderFulfillmentTask = {
+  taskNo: string;
+  merchantId: string;
+  status: string;
+  createdAt: Date;
+  completedAt: Date | null;
 };
 
-type FulfillmentTaskSummaryRecord = {
+export type AdminOrderReadRecord = OrderCheckoutRecord & {
+  fulfillmentSummary: AdminOrderFulfillmentSummary;
+  fulfillmentTasks: AdminOrderFulfillmentTask[];
+};
+
+type FulfillmentTaskSummaryRecord = AdminOrderFulfillmentTask & {
   orderNo: string;
-  taskNo: string;
-  status: string;
 };
 
 @Injectable()
@@ -149,12 +156,14 @@ export class OrderReadRepository {
         select: fulfillmentTaskSummarySelect()
       });
       const fulfillmentSummaryByOrderNo = summarizeFulfillmentTasks(orderNos, tasks);
+      const fulfillmentTasksByOrderNo = groupFulfillmentTasksByOrderNo(orderNos, tasks);
 
       return orders.map((order) => ({
         ...order,
         latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
         latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
-        fulfillmentSummary: fulfillmentSummaryByOrderNo.get(order.orderNo) ?? emptyFulfillmentSummary()
+        fulfillmentSummary: fulfillmentSummaryByOrderNo.get(order.orderNo) ?? emptyFulfillmentSummary(),
+        fulfillmentTasks: fulfillmentTasksByOrderNo.get(order.orderNo) ?? []
       }));
     }
 
@@ -258,7 +267,10 @@ function fulfillmentTaskSummarySelect() {
   return {
     orderNo: true,
     taskNo: true,
-    status: true
+    merchantId: true,
+    status: true,
+    createdAt: true,
+    completedAt: true
   } as const;
 }
 
@@ -287,6 +299,31 @@ function summarizeFulfillmentTasks(
   }
 
   return summaryByOrderNo;
+}
+
+function groupFulfillmentTasksByOrderNo(
+  orderNos: string[],
+  tasks: FulfillmentTaskSummaryRecord[]
+): Map<string, AdminOrderFulfillmentTask[]> {
+  const tasksByOrderNo = new Map<string, AdminOrderFulfillmentTask[]>();
+
+  for (const orderNo of orderNos) {
+    tasksByOrderNo.set(orderNo, []);
+  }
+
+  for (const task of tasks) {
+    const orderTasks = tasksByOrderNo.get(task.orderNo) ?? [];
+    orderTasks.push({
+      taskNo: task.taskNo,
+      merchantId: task.merchantId,
+      status: task.status,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt
+    });
+    tasksByOrderNo.set(task.orderNo, orderTasks);
+  }
+
+  return tasksByOrderNo;
 }
 
 function uniqueOrderNos(tasks: FulfillmentTaskSummaryRecord[]): string[] {

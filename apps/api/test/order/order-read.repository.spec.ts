@@ -72,6 +72,7 @@ const pendingFulfillmentTaskRecord = {
   id: 'fulfillment-task-001',
   taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
   orderNo: 'ORDER-20260603-001',
+  merchantId: 'merchant-001',
   status: 'pending',
   createdAt: new Date('2026-06-03T00:15:00.000Z'),
   completedAt: null
@@ -81,6 +82,7 @@ const completedFulfillmentTaskRecord = {
   id: 'fulfillment-task-002',
   taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
   orderNo: 'ORDER-20260603-001',
+  merchantId: 'merchant-002',
   status: 'completed',
   createdAt: new Date('2026-06-03T00:16:00.000Z'),
   completedAt: new Date('2026-06-03T00:30:00.000Z')
@@ -154,7 +156,14 @@ describe('OrderReadRepository', () => {
     expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
       where: { orderNo: { in: ['ORDER-20260603-001'] } },
       orderBy: { createdAt: 'asc' },
-      select: expect.any(Object)
+      select: expect.objectContaining({
+        orderNo: true,
+        taskNo: true,
+        merchantId: true,
+        status: true,
+        createdAt: true,
+        completedAt: true
+      })
     });
     expect(result).toEqual([
       {
@@ -166,7 +175,23 @@ describe('OrderReadRepository', () => {
           pendingTasks: 1,
           completedTasks: 1,
           taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
-        }
+        },
+        fulfillmentTasks: [
+          {
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+            merchantId: 'merchant-001',
+            status: 'pending',
+            createdAt: new Date('2026-06-03T00:15:00.000Z'),
+            completedAt: null
+          },
+          {
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+            merchantId: 'merchant-002',
+            status: 'completed',
+            createdAt: new Date('2026-06-03T00:16:00.000Z'),
+            completedAt: new Date('2026-06-03T00:30:00.000Z')
+          }
+        ]
       }
     ]);
   });
@@ -204,7 +229,14 @@ describe('OrderReadRepository', () => {
     expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(2, {
       where: { orderNo: { in: ['ORDER-20260603-001'] } },
       orderBy: { createdAt: 'asc' },
-      select: expect.any(Object)
+      select: expect.objectContaining({
+        orderNo: true,
+        taskNo: true,
+        merchantId: true,
+        status: true,
+        createdAt: true,
+        completedAt: true
+      })
     });
     expect(result).toEqual([
       expect.objectContaining({
@@ -214,7 +246,20 @@ describe('OrderReadRepository', () => {
           pendingTasks: 1,
           completedTasks: 1,
           taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
-        }
+        },
+        fulfillmentTasks: expect.arrayContaining([
+          expect.objectContaining({
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+            merchantId: 'merchant-001',
+            status: 'pending'
+          }),
+          expect.objectContaining({
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+            merchantId: 'merchant-002',
+            status: 'completed',
+            completedAt: new Date('2026-06-03T00:30:00.000Z')
+          })
+        ])
       })
     ]);
   });
