@@ -69,7 +69,7 @@ Expected: PASS.
 
 ### Task 3: GitHub Integration
 
-- [ ] **Step 1: Commit the slice**
+- [x] **Step 1: Commit the slice**
 
 Run:
 
@@ -78,7 +78,7 @@ git add package.json tools/verify-docker-page-smoke.cjs docs/superpowers/plans/2
 git commit -m "test: add docker page smoke gate"
 ```
 
-- [ ] **Step 2: Push and open PR**
+- [x] **Step 2: Push and open PR**
 
 Run:
 
