@@ -257,6 +257,14 @@ export default function App() {
                   <dt>支付</dt>
                   <dd>{formatPayment(order)}</dd>
                 </div>
+                <div>
+                  <dt>履约</dt>
+                  <dd>
+                    <span>{formatFulfillmentTotal(order)}</span>
+                    <span>待履约 {order.fulfillmentSummary.pendingTasks}</span>
+                    <span>已完成 {order.fulfillmentSummary.completedTasks}</span>
+                  </dd>
+                </div>
                 {order.latestRefund ? (
                   <div>
                     <dt>退款</dt>
@@ -267,6 +275,13 @@ export default function App() {
                   </div>
                 ) : null}
               </dl>
+              {order.fulfillmentSummary.taskNos.length > 0 ? (
+                <div className="order-fulfillment-tasks">
+                  {order.fulfillmentSummary.taskNos.map((taskNo) => (
+                    <span key={`${order.orderNo}-${taskNo}`}>{taskNo}</span>
+                  ))}
+                </div>
+              ) : null}
               <div className="order-lines">
                 {order.lines.map((line) => (
                   <span key={`${order.orderNo}-${line.displayName}-${line.displaySkuCode ?? 'default'}`}>
@@ -544,6 +559,10 @@ function formatRefund(order: AdminOrder) {
   return `${paymentChannelLabels[order.latestRefund.channel] ?? order.latestRefund.channel} ${
     refundStatusLabels[order.latestRefund.status] ?? order.latestRefund.status
   } ${formatMoney(order.latestRefund.refundAmount)}`;
+}
+
+function formatFulfillmentTotal(order: AdminOrder) {
+  return `履约 ${order.fulfillmentSummary.totalTasks} 项`;
 }
 
 function orderStatusLabel(status: string) {

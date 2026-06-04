@@ -74,6 +74,12 @@ const adminOrdersResponse = {
         refundAmount: 13980,
         reason: 'after_sale'
       },
+      fulfillmentSummary: {
+        totalTasks: 2,
+        pendingTasks: 1,
+        completedTasks: 1,
+        taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
+      },
       lines: [
         {
           displayName: 'Local Rice',
@@ -224,6 +230,11 @@ describe('Admin product review workbench', () => {
     expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
     expect(screen.getByText('REF-20260603-001')).toBeInTheDocument();
     expect(screen.getByText('微信支付 退款处理中 ¥139.80')).toBeInTheDocument();
+    expect(screen.getByText('履约 2 项')).toBeInTheDocument();
+    expect(screen.getByText('待履约 1')).toBeInTheDocument();
+    expect(screen.getByText('已完成 1')).toBeInTheDocument();
+    expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
+    expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-002-001')).toBeInTheDocument();
     expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
   });
 
