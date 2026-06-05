@@ -27,7 +27,7 @@
 
 ### Task 1: RED Checkout Stock Tests
 
-- [ ] **Step 1: Add repository stock reservation test**
+- [x] **Step 1: Add repository stock reservation test**
 
 Extend `apps/api/test/order/order-checkout.repository.spec.ts` with a test proving `createOrder`:
 
@@ -37,15 +37,15 @@ Extend `apps/api/test/order/order-checkout.repository.spec.ts` with a test provi
 - increments `reservedQuantity`,
 - writes `InventoryReservation` rows with `source: "order_checkout"`.
 
-- [ ] **Step 2: Add repository insufficient stock test**
+- [x] **Step 2: Add repository insufficient stock test**
 
 Extend `apps/api/test/order/order-checkout.repository.spec.ts` with a test proving `createOrder` throws `InsufficientInventoryError` when any conditional stock update returns `{ count: 0 }`.
 
-- [ ] **Step 3: Add service conflict mapping test**
+- [x] **Step 3: Add service conflict mapping test**
 
 Extend `apps/api/test/order/order-checkout.service.spec.ts` with a test proving `InsufficientInventoryError` is mapped to `ConflictException` and the message includes `insufficient inventory`.
 
-- [ ] **Step 4: Run focused RED checkout tests**
+- [x] **Step 4: Run focused RED checkout tests**
 
 Run:
 
@@ -57,7 +57,7 @@ Expected: FAIL because the repository has no `InventoryStock` client calls, no c
 
 ### Task 2: RED Refund Stock Release Tests
 
-- [ ] **Step 1: Add refund stock restore test**
+- [x] **Step 1: Add refund stock restore test**
 
 Extend `apps/api/test/order/order-refund.repository.spec.ts` so the first succeeded callback test expects the transaction to:
 
@@ -66,11 +66,11 @@ Extend `apps/api/test/order/order-refund.repository.spec.ts` so the first succee
 - increment `availableQuantity`,
 - decrement `reservedQuantity`.
 
-- [ ] **Step 2: Preserve duplicate and failed callback no-op expectations**
+- [x] **Step 2: Preserve duplicate and failed callback no-op expectations**
 
 Keep duplicate and failed callback tests asserting no stock mutation happens.
 
-- [ ] **Step 3: Run focused RED refund tests**
+- [x] **Step 3: Run focused RED refund tests**
 
 Run:
 
@@ -82,11 +82,11 @@ Expected: FAIL because refund success currently only updates reservation rows an
 
 ### Task 3: RED Local Seed Stock Test
 
-- [ ] **Step 1: Add seed stock expectation**
+- [x] **Step 1: Add seed stock expectation**
 
 Extend `apps/api/test/dev/seed-local-review-product.spec.ts` so the local review seed creates deterministic SKU id `sku-local-review-5kg` and upserts stock for `product-local-review:sku-local-review-5kg` with a positive available balance and zero reserved balance.
 
-- [ ] **Step 2: Run focused RED seed test**
+- [x] **Step 2: Run focused RED seed test**
 
 Run:
 
@@ -98,29 +98,29 @@ Expected: FAIL because the seed transaction has no `inventoryStock.upsert`.
 
 ### Task 4: Implementation
 
-- [ ] **Step 1: Add `InventoryStock` schema**
+- [x] **Step 1: Add `InventoryStock` schema**
 
 Add an `InventoryStock` Prisma model with `stockKey`, `productId`, `skuId`, `merchantId`, `availableQuantity`, `reservedQuantity`, timestamps, and indexes for product, sku, merchant.
 
-- [ ] **Step 2: Implement checkout stock reservation**
+- [x] **Step 2: Implement checkout stock reservation**
 
 Update `OrderCheckoutRepository.createOrder` to reserve stock in the existing transaction after order creation. Use a conditional `inventoryStock.updateMany` for each order line and throw `InsufficientInventoryError` if the count is not `1`. Create `InventoryReservation` rows using the returned order line IDs and `source: "order_checkout"`.
 
-- [ ] **Step 3: Map checkout stock conflict**
+- [x] **Step 3: Map checkout stock conflict**
 
 Update `OrderCheckoutService.createOrder` to catch `InsufficientInventoryError` from the repository and throw `ConflictException`.
 
-- [ ] **Step 4: Restore stock on refund release**
+- [x] **Step 4: Restore stock on refund release**
 
 Update `OrderRefundRepository.processCallback` to read reserved rows before releasing them and restore each row's quantity to `InventoryStock`.
 
-- [ ] **Step 5: Seed local stock**
+- [x] **Step 5: Seed local stock**
 
 Update the local review product seed so Docker order-flow smoke has available stock for the local published product item.
 
 ### Task 5: Verification
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -130,7 +130,7 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-checkout.repository
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full local verification**
+- [x] **Step 2: Run full local verification**
 
 Run:
 
@@ -141,7 +141,7 @@ git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 3: Run Docker runtime and order flow smoke**
+- [x] **Step 3: Run Docker runtime and order flow smoke**
 
 Run:
 
@@ -157,9 +157,22 @@ pnpm run docker:order-flow-smoke
 
 Expected: PASS.
 
-- [ ] **Step 4: Run live DB smoke**
+- [x] **Step 4: Run live DB smoke**
 
 Query Docker MySQL for the local review stock row and confirm `availableQuantity` decreased and `reservedQuantity` increased after the order-flow smoke.
+
+## Completion Evidence
+
+- Feature PR: #131
+- Merged main commit: `012c9a2 feat: enforce checkout inventory stock gate (#131)`
+- RED focused tests: `pnpm --filter @welfare-mall/api run test -- test/order/order-checkout.repository.spec.ts test/order/order-checkout.service.spec.ts test/order/order-refund.repository.spec.ts test/dev/seed-local-review-product.spec.ts --runInBand` failed before implementation on missing checkout stock reservation, missing refund stock restore, missing `InsufficientInventoryError`, and missing seed stock upsert.
+- GREEN focused tests: same focused command passed, 4 suites / 14 tests.
+- Full verification: `pnpm run verify` passed, including API 56 suites / 205 tests, Admin 12 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 29 tests.
+- Whitespace check: `git diff --check` reported no whitespace errors; only Git CRLF conversion warnings.
+- Docker runtime: `pnpm run docker:runtime:up` passed and refreshed the API image/schema, then `pnpm run docker:runtime:smoke`, `pnpm run docker:page-smoke`, and `pnpm run docker:order-flow-smoke` passed.
+- Local runtime data setup: `pnpm --filter @welfare-mall/api run seed:local-review-product`, `POST /api/products/product-local-review/review-decisions`, and `POST /api/product-pools/items/publish` prepared the local catalog item with fixed SKU `sku-local-review-5kg`.
+- Docker order-flow smoke order: `ORDER-20260605051844193-RN09N4`.
+- Live DB smoke: `inventory_stock` row `product-local-review:sku-local-review-5kg` had `availableQuantity=99` and `reservedQuantity=1`; `inventory_reservation` for the smoke order had `status=reserved` and `source=order_checkout`.
 
 ## Boundaries
 
