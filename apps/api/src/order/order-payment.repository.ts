@@ -76,6 +76,9 @@ type OrderPaymentTransaction = {
     findUnique(args: unknown): Promise<unknown | null>;
     create(args: unknown): Promise<unknown>;
   };
+  inventoryReservation: {
+    createMany(args: unknown): Promise<unknown>;
+  };
 } & OrderStateClient;
 
 type PaidOrderForFulfillment = {
@@ -317,6 +320,36 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, o
       select: { id: true }
     });
   }
+
+  await createInventoryReservationsForPaidOrder(order.orderNo, linesByMerchantId, tx);
+}
+
+async function createInventoryReservationsForPaidOrder(
+  orderNo: string,
+  linesByMerchantId: Map<string, PaidOrderForFulfillment['lines']>,
+  tx: OrderPaymentTransaction
+): Promise<void> {
+  const reservations = Array.from(linesByMerchantId.entries()).flatMap(([merchantId, lines]) =>
+    lines.map((line) => ({
+      orderNo,
+      orderLineId: line.id,
+      productId: line.productId,
+      skuId: line.skuId,
+      merchantId,
+      quantity: line.quantity,
+      status: 'reserved',
+      source: 'order_paid'
+    }))
+  );
+
+  if (reservations.length === 0) {
+    return;
+  }
+
+  await tx.inventoryReservation.createMany({
+    data: reservations,
+    skipDuplicates: true
+  });
 }
 
 function createPickupCode(fulfillmentType: string, taskNo: string): string | null {

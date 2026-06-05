@@ -112,6 +112,9 @@ function createPrismaMock() {
         merchantId: 'merchant-001',
         status: 'pending'
       })
+    },
+    inventoryReservation: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 })
     }
   };
   const prisma = {
@@ -252,6 +255,21 @@ describe('OrderPaymentRepository', () => {
       },
       select: expect.any(Object)
     });
+    expect(tx.inventoryReservation.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          orderNo: 'ORDER-20260603-001',
+          orderLineId: 'order-line-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          quantity: 2,
+          status: 'reserved',
+          source: 'order_paid'
+        }
+      ],
+      skipDuplicates: true
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -316,6 +334,7 @@ describe('OrderPaymentRepository', () => {
     expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(tx.orderHeader.update).not.toHaveBeenCalled();
     expect(tx.fulfillmentTask.create).not.toHaveBeenCalled();
+    expect(tx.inventoryReservation.createMany).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
