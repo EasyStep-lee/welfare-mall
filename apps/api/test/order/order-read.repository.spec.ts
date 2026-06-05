@@ -36,6 +36,15 @@ const orderRecord = {
   ]
 };
 
+const pickupOrderRecord = {
+  ...orderRecord,
+  fulfillmentType: 'pickup',
+  receiverName: null,
+  receiverPhone: null,
+  receiverAddress: null,
+  pickupStoreName: '浦东直营网点'
+};
+
 const paymentRecord = {
   id: 'payment-001',
   paymentNo: 'PAY-20260603-001',
@@ -74,6 +83,7 @@ const pendingFulfillmentTaskRecord = {
   orderNo: 'ORDER-20260603-001',
   merchantId: 'merchant-001',
   status: 'pending',
+  pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
   createdAt: new Date('2026-06-03T00:15:00.000Z'),
   completedAt: null
 };
@@ -84,6 +94,7 @@ const completedFulfillmentTaskRecord = {
   orderNo: 'ORDER-20260603-001',
   merchantId: 'merchant-002',
   status: 'completed',
+  pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-002-001',
   createdAt: new Date('2026-06-03T00:16:00.000Z'),
   completedAt: new Date('2026-06-03T00:30:00.000Z')
 };
@@ -398,5 +409,33 @@ describe('OrderReadRepository', () => {
     });
     expect(prisma.fulfillmentTask.findMany).not.toHaveBeenCalled();
     expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord });
+  });
+
+  it('finds pickup order details with the buyer-visible pickup code', async () => {
+    const prisma = createPrismaMock();
+    prisma.orderHeader.findFirst.mockResolvedValue(pickupOrderRecord);
+    prisma.fulfillmentTask.findMany.mockResolvedValue([pendingFulfillmentTaskRecord]);
+    const repository = new OrderReadRepository(prisma as never);
+
+    const result = await repository.findOrderForBuyer({
+      buyerUserId: 'user-001',
+      orderNo: 'ORDER-20260603-001'
+    });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'asc' },
+      select: expect.objectContaining({
+        orderNo: true,
+        pickupCode: true,
+        createdAt: true
+      })
+    });
+    expect(result).toEqual({
+      ...pickupOrderRecord,
+      latestPayment: paymentRecord,
+      latestRefund: refundRecord,
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
   });
 });

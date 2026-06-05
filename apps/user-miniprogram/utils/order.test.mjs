@@ -35,6 +35,16 @@ const order = {
   ]
 };
 
+const pickupOrder = {
+  ...order,
+  fulfillmentType: 'pickup',
+  receiverName: null,
+  receiverPhone: null,
+  receiverAddress: null,
+  pickupStoreName: '浦东直营网点',
+  pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+};
+
 describe('user mini-program order display helpers', () => {
   it('formats order summaries', () => {
     expect(toOrderSummaryDisplay(order)).toEqual({
@@ -88,6 +98,14 @@ describe('user mini-program order display helpers', () => {
     expect(toOrderDetailDisplay(completedOrder)).toMatchObject({
       orderNo: 'ORDER-20260603-001',
       statusText: '已完成'
+    });
+  });
+
+  it('formats pickup order details with store and pickup code display data', () => {
+    expect(toOrderDetailDisplay(pickupOrder)).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      receiverText: '浦东直营网点',
+      pickupCodeText: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
     });
   });
 });

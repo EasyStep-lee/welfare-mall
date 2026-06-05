@@ -44,6 +44,16 @@ const paidOrder = {
   }
 };
 
+const pickupPaidOrder = {
+  ...paidOrder,
+  fulfillmentType: 'pickup',
+  receiverName: null,
+  receiverPhone: null,
+  receiverAddress: null,
+  pickupStoreName: '浦东直营网点',
+  pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+};
+
 const refreshedPaidOrder = {
   ...paidOrder,
   latestPayment: {
@@ -229,6 +239,19 @@ describe('user mini-program order detail page', () => {
       statusText: '退款处理中',
       channelText: '微信支付',
       refundAmountText: '¥139.80'
+    });
+  });
+
+  it('loads pickup order detail with buyer-visible pickup code display data', async () => {
+    const { page } = mountPage({ order: pickupPaidOrder });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+
+    expect(page.data.orderDisplay).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      statusText: '已支付',
+      receiverText: '浦东直营网点',
+      pickupCodeText: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
     });
   });
 });

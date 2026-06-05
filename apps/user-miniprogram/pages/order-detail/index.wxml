@@ -109,6 +109,10 @@
     <view class="section">
       <text class="section-title">收货信息</text>
       <text class="muted">{{orderDisplay.receiverText}}</text>
+      <view wx:if="{{orderDisplay.pickupCodeText}}" class="line pickup-code-line">
+        <text>取货码</text>
+        <text class="pickup-code">{{orderDisplay.pickupCodeText}}</text>
+      </view>
     </view>
 
     <view class="section">

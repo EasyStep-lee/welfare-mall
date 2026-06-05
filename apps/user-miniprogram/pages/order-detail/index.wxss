@@ -90,6 +90,19 @@
   padding: 18rpx;
 }
 
+.pickup-code-line {
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.pickup-code {
+  color: #172026;
+  flex: 1;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .error {
   color: #9c2d20;
 }

@@ -25,6 +25,8 @@ function toOrderSummaryDisplay(order) {
 }
 
 function toOrderDetailDisplay(order) {
+  const isPickupOrder = order.fulfillmentType === 'pickup';
+
   return {
     ...toOrderSummaryDisplay(order),
     totalText: formatMoney(order.totalAmount),
@@ -32,7 +34,10 @@ function toOrderDetailDisplay(order) {
     cashText: formatMoney(order.cashPayableAmount),
     latestPaymentDisplay: order.latestPayment ? toPaymentDisplay(order.latestPayment) : null,
     latestRefundDisplay: order.latestRefund ? toRefundDisplay(order.latestRefund) : null,
-    receiverText: [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / '),
+    receiverText: isPickupOrder
+      ? order.pickupStoreName || '到店自提'
+      : [order.receiverName, order.receiverPhone, order.receiverAddress].filter(Boolean).join(' / '),
+    pickupCodeText: isPickupOrder && order.pickupCode ? order.pickupCode : '',
     lines: (order.lines || []).map((line) => ({
       ...line,
       skuText: line.displaySkuCode || '默认规格',
