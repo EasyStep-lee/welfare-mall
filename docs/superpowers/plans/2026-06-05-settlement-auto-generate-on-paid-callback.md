@@ -105,3 +105,14 @@ Actual: PASS.
 - This slice only auto-generates initial `order_paid` pending settlement bill items on successful paid callbacks.
 - This slice keeps the manual generation endpoint for idempotent repair/backfill.
 - This slice does not implement refund offsets, adjustments, statement locking, payout confirmation, franchise settlement, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion Evidence
+
+- Feature PR: [#143](https://github.com/EasyStep-lee/welfare-mall/pull/143) `feat: auto generate settlement bills on paid callback`.
+- Merge commit: `7638b538a39545fe1b480adf7cb4f2a8c002d595`.
+- Local RED verification: `pnpm --filter @welfare-mall/api run test -- test/order/order-payment.service.spec.ts --runInBand` failed as expected before implementation because settlement generation was called 0 times.
+- Local focused verification: `pnpm --filter @welfare-mall/api run test -- test/order/order-payment.service.spec.ts test/settlement --runInBand` passed with 4 suites / 18 tests.
+- Local full verification: `pnpm run verify` passed with API 61 suites / 231 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Local diff check: `git diff --check` passed, with Windows LF-to-CRLF warnings only.
+- Docker runtime verification: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed.
+- Live API smoke without calling the manual settlement generation endpoint: paid order `ORDER-20260605084150554-AMNIA0` generated pending bill item `MSBI-ORDER-20260605084150554-AMNIA0-CMQ0ODWPN000EQZ1UTNRVD3GT` for `merchant-local-review`.
