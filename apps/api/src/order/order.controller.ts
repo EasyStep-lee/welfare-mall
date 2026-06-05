@@ -88,12 +88,19 @@ export class OrderController {
       }
     }
   })
-  async listMerchantFulfillmentOrders(@Query('merchantId') merchantId: string, @Query('status') status?: string) {
+  async listMerchantFulfillmentOrders(
+    @Query('merchantId') merchantId: string,
+    @Query('status') status?: string,
+    @Query('orderNo') orderNo?: string,
+    @Query('taskNo') taskNo?: string
+  ) {
     assertRequiredText(merchantId, 'merchantId');
 
     return this.orderFulfillmentService.listMerchantFulfillmentOrders({
       merchantId: merchantId.trim(),
-      status: status?.trim() || 'paid'
+      status: status?.trim() || 'paid',
+      orderNo: orderNo?.trim(),
+      taskNo: taskNo?.trim()
     });
   }
 

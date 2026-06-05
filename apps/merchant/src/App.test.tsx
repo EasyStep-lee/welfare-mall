@@ -217,6 +217,30 @@ describe('Merchant product submission workbench', () => {
     });
   });
 
+  it('filters merchant fulfillment orders by order and task lookup fields', async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('履约订单号'), { target: { value: ' ORDER-20260603-001 ' } });
+    fireEvent.change(await screen.findByLabelText('履约任务号'), {
+      target: { value: ' FT-ORDER-20260603-001-MERCHANT-001-001 ' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: '筛选履约' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=paid&orderNo=ORDER-20260603-001&taskNo=FT-ORDER-20260603-001-MERCHANT-001-001'
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: '已完成' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=completed&orderNo=ORDER-20260603-001&taskNo=FT-ORDER-20260603-001-MERCHANT-001-001'
+      );
+    });
+  });
+
   it('renders completed fulfillment tasks as read-only history', async () => {
     render(<App />);
 

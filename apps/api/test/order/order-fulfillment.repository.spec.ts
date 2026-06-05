@@ -193,6 +193,29 @@ describe('OrderFulfillmentRepository', () => {
     });
   });
 
+  it('filters fulfillment orders by status, order number, and task number', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderFulfillmentRepository(prisma as never);
+
+    await repository.listOrdersForMerchant({
+      merchantId: 'merchant-001',
+      status: 'completed',
+      orderNo: 'ORDER-20260603-001',
+      taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'completed',
+        merchantId: 'merchant-001',
+        orderNo: 'ORDER-20260603-001',
+        taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001'
+      },
+      orderBy: { createdAt: 'desc' },
+      select: expect.any(Object)
+    });
+  });
+
   it('returns an empty queue when the merchant has no products', async () => {
     const prisma = createPrismaMock();
     prisma.fulfillmentTask.findMany.mockResolvedValue([]);
