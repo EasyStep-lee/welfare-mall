@@ -2,14 +2,18 @@ import { Check, CreditCard, RefreshCw, RotateCcw, Search, Send, X } from 'lucide
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminFulfillmentStatusFilter,
+  AdminInventoryReservation,
+  AdminInventoryReservationStatusFilter,
   AdminOrder,
   AdminOrderStatusFilter,
   ReviewQueueItem,
   ReviewQueueStatus,
   adminFulfillmentStatusLabels,
+  adminInventoryReservationStatusLabels,
   adminOrderStatusLabels,
   createOrderRefund,
   decideProductReview,
+  fetchAdminInventoryReservations,
   fetchAdminOrders,
   fetchReviewQueue,
   processOrderPaymentCallback,
@@ -30,6 +34,7 @@ const orderStatuses: AdminOrderStatusFilter[] = [
   'completed'
 ];
 const fulfillmentStatuses: AdminFulfillmentStatusFilter[] = ['all', 'pending', 'completed'];
+const inventoryStatuses: AdminInventoryReservationStatusFilter[] = ['all', 'reserved', 'released'];
 
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
@@ -39,8 +44,14 @@ export default function App() {
   const [activeMerchantFilter, setActiveMerchantFilter] = useState('');
   const [taskNoFilterInput, setTaskNoFilterInput] = useState('');
   const [activeTaskNoFilter, setActiveTaskNoFilter] = useState('');
+  const [activeInventoryStatus, setActiveInventoryStatus] = useState<AdminInventoryReservationStatusFilter>('all');
+  const [inventoryMerchantFilterInput, setInventoryMerchantFilterInput] = useState('');
+  const [activeInventoryMerchantFilter, setActiveInventoryMerchantFilter] = useState('');
+  const [inventoryOrderFilterInput, setInventoryOrderFilterInput] = useState('');
+  const [activeInventoryOrderFilter, setActiveInventoryOrderFilter] = useState('');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [inventoryReservations, setInventoryReservations] = useState<AdminInventoryReservation[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -82,6 +93,20 @@ export default function App() {
     }
   }
 
+  async function loadInventoryReservations(
+    status: AdminInventoryReservationStatusFilter = activeInventoryStatus,
+    merchantId: string = activeInventoryMerchantFilter,
+    orderNo: string = activeInventoryOrderFilter
+  ) {
+    try {
+      const response = await fetchAdminInventoryReservations(status, merchantId, orderNo);
+      setInventoryReservations(response.reservations);
+    } catch (loadError) {
+      setInventoryReservations([]);
+      setError(loadError instanceof Error ? loadError.message : '库存预占列表加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
@@ -89,6 +114,10 @@ export default function App() {
   useEffect(() => {
     void loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
   }, [activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter]);
+
+  useEffect(() => {
+    void loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
+  }, [activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -142,6 +171,7 @@ export default function App() {
       });
       setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
+      await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
     });
   }
 
@@ -163,6 +193,7 @@ export default function App() {
       });
       setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
+      await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
     });
   }
 
@@ -184,6 +215,7 @@ export default function App() {
       });
       setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
+      await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
     });
   }
 
@@ -203,6 +235,24 @@ export default function App() {
   function clearTaskNoFilter() {
     setTaskNoFilterInput('');
     setActiveTaskNoFilter('');
+  }
+
+  function applyInventoryMerchantFilter() {
+    setActiveInventoryMerchantFilter(inventoryMerchantFilterInput.trim());
+  }
+
+  function clearInventoryMerchantFilter() {
+    setInventoryMerchantFilterInput('');
+    setActiveInventoryMerchantFilter('');
+  }
+
+  function applyInventoryOrderFilter() {
+    setActiveInventoryOrderFilter(inventoryOrderFilterInput.trim());
+  }
+
+  function clearInventoryOrderFilter() {
+    setInventoryOrderFilterInput('');
+    setActiveInventoryOrderFilter('');
   }
 
   async function runAction(action: () => Promise<void>) {
@@ -400,6 +450,88 @@ export default function App() {
                   ) : null}
                 </div>
               ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="inventory-panel" aria-label="库存预占">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">库存域</p>
+            <h2>库存预占</h2>
+          </div>
+          <span className="queue-count">{inventoryReservations.length} 条</span>
+        </div>
+        <nav className="status-tabs panel-status-tabs" aria-label="库存预占状态">
+          {inventoryStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeInventoryStatus === status ? 'active' : ''}
+              onClick={() => setActiveInventoryStatus(status)}
+            >
+              {adminInventoryReservationStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
+        <div className="order-filter-row">
+          <label>
+            <span>库存商户</span>
+            <input
+              aria-label="库存商户"
+              value={inventoryMerchantFilterInput}
+              placeholder="merchant-001"
+              onChange={(event) => setInventoryMerchantFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applyInventoryMerchantFilter}>
+            <Search size={15} />
+            筛选库存商户
+          </button>
+          {activeInventoryMerchantFilter ? (
+            <button type="button" onClick={clearInventoryMerchantFilter}>
+              <X size={15} />
+              清除库存商户
+            </button>
+          ) : null}
+          <label>
+            <span>库存订单</span>
+            <input
+              aria-label="库存订单"
+              value={inventoryOrderFilterInput}
+              placeholder="ORDER-..."
+              onChange={(event) => setInventoryOrderFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applyInventoryOrderFilter}>
+            <Search size={15} />
+            筛选库存订单
+          </button>
+          {activeInventoryOrderFilter ? (
+            <button type="button" onClick={clearInventoryOrderFilter}>
+              <X size={15} />
+              清除库存订单
+            </button>
+          ) : null}
+        </div>
+        <div className="inventory-list">
+          {inventoryReservations.length === 0 ? <p className="empty-text">暂无库存预占</p> : null}
+          {inventoryReservations.map((reservation) => (
+            <article className="inventory-card" key={reservation.id}>
+              <div className="inventory-card-header">
+                <strong>{reservation.orderNo}</strong>
+                <span className={`inventory-status ${reservation.status}`}>{inventoryReservationStatusLabel(reservation.status)}</span>
+              </div>
+              <div className="inventory-grid">
+                <span>{reservation.productId}</span>
+                <span>{reservation.merchantId}</span>
+                <span>数量 {reservation.quantity}</span>
+                <span>{reservation.skuId ?? '默认规格'}</span>
+                <span>来源 {inventorySourceLabel(reservation.source)}</span>
+                <span>创建 {formatDateTime(reservation.createdAt)}</span>
+                {reservation.releasedAt ? <span>释放 {formatDateTime(reservation.releasedAt)}</span> : null}
+              </div>
             </article>
           ))}
         </div>
@@ -675,6 +807,23 @@ function fulfillmentTaskStatusLabel(status: string) {
   };
 
   return labels[status] ?? status;
+}
+
+function inventoryReservationStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    reserved: '已预占',
+    released: '已释放'
+  };
+
+  return labels[status] ?? status;
+}
+
+function inventorySourceLabel(source: string) {
+  const labels: Record<string, string> = {
+    order_paid: '支付成功'
+  };
+
+  return labels[source] ?? source;
 }
 
 function formatDateTime(value: string) {

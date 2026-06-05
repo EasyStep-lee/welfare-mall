@@ -7,6 +7,8 @@ import { OrderCheckoutService } from './order-checkout.service';
 import { OrderController } from './order.controller';
 import { OrderFulfillmentRepository } from './order-fulfillment.repository';
 import { OrderFulfillmentService } from './order-fulfillment.service';
+import { OrderInventoryRepository } from './order-inventory.repository';
+import { OrderInventoryService } from './order-inventory.service';
 import { OrderPaymentRepository } from './order-payment.repository';
 import { OrderPaymentService } from './order-payment.service';
 import { OrderReadRepository } from './order-read.repository';
@@ -25,6 +27,8 @@ import { OrderStateRepository } from './order-state.repository';
     OrderCheckoutService,
     OrderFulfillmentRepository,
     OrderFulfillmentService,
+    OrderInventoryRepository,
+    OrderInventoryService,
     OrderPaymentRepository,
     OrderPaymentService,
     OrderReadRepository,
@@ -40,6 +44,8 @@ import { OrderStateRepository } from './order-state.repository';
     OrderCheckoutService,
     OrderFulfillmentRepository,
     OrderFulfillmentService,
+    OrderInventoryRepository,
+    OrderInventoryService,
     OrderPaymentRepository,
     OrderPaymentService,
     OrderReadRepository,

@@ -3,6 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
 import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
 import { OrderFulfillmentService } from './order-fulfillment.service';
+import { OrderInventoryService } from './order-inventory.service';
 import { CreateOrderPaymentInput, OrderPaymentService, ProcessOrderPaymentCallbackServiceInput } from './order-payment.service';
 import { OrderReadService } from './order-read.service';
 import { CreateOrderRefundInput, OrderRefundService, ProcessOrderRefundCallbackServiceInput } from './order-refund.service';
@@ -18,7 +19,8 @@ export class OrderController {
     private readonly orderPaymentService: OrderPaymentService,
     private readonly orderRefundService: OrderRefundService,
     private readonly orderReadService: OrderReadService,
-    private readonly orderFulfillmentService: OrderFulfillmentService
+    private readonly orderFulfillmentService: OrderFulfillmentService,
+    private readonly orderInventoryService: OrderInventoryService
   ) {}
 
   @Get('statuses')
@@ -133,6 +135,36 @@ export class OrderController {
       fulfillmentStatus: fulfillmentStatus?.trim(),
       merchantId: merchantId?.trim(),
       taskNo: taskNo?.trim()
+    });
+  }
+
+  @Get('admin/inventory-reservations')
+  @ApiOkResponse({
+    description: 'List recent inventory reservations for Admin inventory read model',
+    schema: {
+      example: {
+        reservations: [
+          {
+            orderNo: 'ORDER-20260603-001',
+            productId: 'product-001',
+            merchantId: 'merchant-001',
+            quantity: 2,
+            status: 'reserved',
+            source: 'order_paid'
+          }
+        ]
+      }
+    }
+  })
+  async listAdminInventoryReservations(
+    @Query('status') status?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('orderNo') orderNo?: string
+  ) {
+    return this.orderInventoryService.listReservations({
+      status: status?.trim(),
+      merchantId: merchantId?.trim(),
+      orderNo: orderNo?.trim()
     });
   }
 
