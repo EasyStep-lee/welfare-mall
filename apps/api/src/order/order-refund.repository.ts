@@ -68,6 +68,9 @@ type OrderRefundTransaction = {
   orderHeader: {
     update(args: unknown): Promise<unknown>;
   };
+  inventoryReservation: {
+    updateMany(args: unknown): Promise<unknown>;
+  };
 } & OrderStateClient;
 
 @Injectable()
@@ -180,6 +183,16 @@ async function updateRefundFromCallback(
         data: { status: OrderStatuses.Refunded }
       });
     }
+    await tx.inventoryReservation.updateMany({
+      where: {
+        orderNo: refund.orderNo,
+        status: 'reserved'
+      },
+      data: {
+        status: 'released',
+        releasedAt: input.succeededAt
+      }
+    });
 
     return tx.orderRefund.update({
       where: { id: refund.id },
