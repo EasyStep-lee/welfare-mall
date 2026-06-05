@@ -4,6 +4,7 @@ import {
   AdminFulfillmentStatusFilter,
   AdminInventoryReservation,
   AdminInventoryReservationStatusFilter,
+  AdminInventoryStock,
   AdminOrder,
   AdminOrderStatusFilter,
   ReviewQueueItem,
@@ -14,6 +15,7 @@ import {
   createOrderRefund,
   decideProductReview,
   fetchAdminInventoryReservations,
+  fetchAdminInventoryStocks,
   fetchAdminOrders,
   fetchReviewQueue,
   processOrderPaymentCallback,
@@ -49,9 +51,16 @@ export default function App() {
   const [activeInventoryMerchantFilter, setActiveInventoryMerchantFilter] = useState('');
   const [inventoryOrderFilterInput, setInventoryOrderFilterInput] = useState('');
   const [activeInventoryOrderFilter, setActiveInventoryOrderFilter] = useState('');
+  const [stockMerchantFilterInput, setStockMerchantFilterInput] = useState('');
+  const [activeStockMerchantFilter, setActiveStockMerchantFilter] = useState('');
+  const [stockProductFilterInput, setStockProductFilterInput] = useState('');
+  const [activeStockProductFilter, setActiveStockProductFilter] = useState('');
+  const [stockSkuFilterInput, setStockSkuFilterInput] = useState('');
+  const [activeStockSkuFilter, setActiveStockSkuFilter] = useState('');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [inventoryReservations, setInventoryReservations] = useState<AdminInventoryReservation[]>([]);
+  const [inventoryStocks, setInventoryStocks] = useState<AdminInventoryStock[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -107,6 +116,20 @@ export default function App() {
     }
   }
 
+  async function loadInventoryStocks(
+    merchantId: string = activeStockMerchantFilter,
+    productId: string = activeStockProductFilter,
+    skuId: string = activeStockSkuFilter
+  ) {
+    try {
+      const response = await fetchAdminInventoryStocks(merchantId, productId, skuId);
+      setInventoryStocks(response.stocks);
+    } catch (loadError) {
+      setInventoryStocks([]);
+      setError(loadError instanceof Error ? loadError.message : '库存余额列表加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
@@ -118,6 +141,10 @@ export default function App() {
   useEffect(() => {
     void loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
   }, [activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter]);
+
+  useEffect(() => {
+    void loadInventoryStocks(activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter);
+  }, [activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -172,6 +199,7 @@ export default function App() {
       setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
       await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
+      await loadInventoryStocks(activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter);
     });
   }
 
@@ -194,6 +222,7 @@ export default function App() {
       setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
       await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
+      await loadInventoryStocks(activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter);
     });
   }
 
@@ -216,6 +245,7 @@ export default function App() {
       setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
       await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
       await loadInventoryReservations(activeInventoryStatus, activeInventoryMerchantFilter, activeInventoryOrderFilter);
+      await loadInventoryStocks(activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter);
     });
   }
 
@@ -253,6 +283,21 @@ export default function App() {
   function clearInventoryOrderFilter() {
     setInventoryOrderFilterInput('');
     setActiveInventoryOrderFilter('');
+  }
+
+  function applyStockFilters() {
+    setActiveStockMerchantFilter(stockMerchantFilterInput.trim());
+    setActiveStockProductFilter(stockProductFilterInput.trim());
+    setActiveStockSkuFilter(stockSkuFilterInput.trim());
+  }
+
+  function clearStockFilters() {
+    setStockMerchantFilterInput('');
+    setStockProductFilterInput('');
+    setStockSkuFilterInput('');
+    setActiveStockMerchantFilter('');
+    setActiveStockProductFilter('');
+    setActiveStockSkuFilter('');
   }
 
   async function runAction(action: () => Promise<void>) {
@@ -450,6 +495,74 @@ export default function App() {
                   ) : null}
                 </div>
               ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="inventory-panel" aria-label="库存余额">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">库存域</p>
+            <h2>库存余额</h2>
+          </div>
+          <span className="queue-count">{inventoryStocks.length} 条</span>
+        </div>
+        <div className="order-filter-row">
+          <label>
+            <span>余额商户</span>
+            <input
+              aria-label="余额商户"
+              value={stockMerchantFilterInput}
+              placeholder="merchant-001"
+              onChange={(event) => setStockMerchantFilterInput(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>余额商品</span>
+            <input
+              aria-label="余额商品"
+              value={stockProductFilterInput}
+              placeholder="product-001"
+              onChange={(event) => setStockProductFilterInput(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>余额规格</span>
+            <input
+              aria-label="余额规格"
+              value={stockSkuFilterInput}
+              placeholder="sku-001"
+              onChange={(event) => setStockSkuFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applyStockFilters}>
+            <Search size={15} />
+            筛选库存余额
+          </button>
+          {activeStockMerchantFilter || activeStockProductFilter || activeStockSkuFilter ? (
+            <button type="button" onClick={clearStockFilters}>
+              <X size={15} />
+              清除库存余额
+            </button>
+          ) : null}
+        </div>
+        <div className="inventory-list">
+          {inventoryStocks.length === 0 ? <p className="empty-text">暂无库存余额</p> : null}
+          {inventoryStocks.map((stock) => (
+            <article className="inventory-card" key={stock.id}>
+              <div className="inventory-card-header">
+                <strong>{stock.stockKey}</strong>
+                <span>{formatDateTime(stock.updatedAt)}</span>
+              </div>
+              <div className="inventory-grid">
+                <span>{stock.productId}</span>
+                <span>{stock.merchantId}</span>
+                <span>{stock.skuId ?? '默认规格'}</span>
+                <span>可用 {stock.availableQuantity}</span>
+                <span>预占 {stock.reservedQuantity}</span>
+                <span>合计 {stock.availableQuantity + stock.reservedQuantity}</span>
+              </div>
             </article>
           ))}
         </div>

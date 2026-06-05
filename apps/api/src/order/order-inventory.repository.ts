@@ -26,6 +26,28 @@ export type ListInventoryReservationsResult = {
   reservations: InventoryReservationRecord[];
 };
 
+export type InventoryStockRecord = {
+  id: string;
+  stockKey: string;
+  productId: string;
+  skuId: string | null;
+  merchantId: string;
+  availableQuantity: number;
+  reservedQuantity: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ListInventoryStocksInput = {
+  merchantId?: string;
+  productId?: string;
+  skuId?: string;
+};
+
+export type ListInventoryStocksResult = {
+  stocks: InventoryStockRecord[];
+};
+
 @Injectable()
 export class OrderInventoryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -42,5 +64,19 @@ export class OrderInventoryRepository {
     });
 
     return { reservations };
+  }
+
+  async listStocks(input: ListInventoryStocksInput): Promise<ListInventoryStocksResult> {
+    const stocks = await this.prisma.inventoryStock.findMany({
+      where: {
+        ...(input.merchantId ? { merchantId: input.merchantId } : {}),
+        ...(input.productId ? { productId: input.productId } : {}),
+        ...(input.skuId ? { skuId: input.skuId } : {})
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 100
+    });
+
+    return { stocks };
   }
 }

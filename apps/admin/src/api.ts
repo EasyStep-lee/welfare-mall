@@ -148,6 +148,22 @@ export type AdminInventoryReservationResponse = {
   reservations: AdminInventoryReservation[];
 };
 
+export type AdminInventoryStock = {
+  id: string;
+  stockKey: string;
+  productId: string;
+  skuId: string | null;
+  merchantId: string;
+  availableQuantity: number;
+  reservedQuantity: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminInventoryStockResponse = {
+  stocks: AdminInventoryStock[];
+};
+
 export type CreateOrderRefundInput = {
   requestId: string;
   paymentNo: string;
@@ -312,6 +328,31 @@ export async function fetchAdminInventoryReservations(
   }
 
   return response.json() as Promise<AdminInventoryReservationResponse>;
+}
+
+export async function fetchAdminInventoryStocks(
+  merchantId?: string,
+  productId?: string,
+  skuId?: string
+): Promise<AdminInventoryStockResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders/admin/inventory-stocks`);
+
+  if (merchantId?.trim()) {
+    url.searchParams.set('merchantId', merchantId.trim());
+  }
+  if (productId?.trim()) {
+    url.searchParams.set('productId', productId.trim());
+  }
+  if (skuId?.trim()) {
+    url.searchParams.set('skuId', skuId.trim());
+  }
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load inventory stocks: ${response.status}`);
+  }
+
+  return response.json() as Promise<AdminInventoryStockResponse>;
 }
 
 export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {

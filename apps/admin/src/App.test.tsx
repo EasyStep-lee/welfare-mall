@@ -195,6 +195,33 @@ const adminInventoryReservationsResponse = {
   ]
 };
 
+const adminInventoryStocksResponse = {
+  stocks: [
+    {
+      id: 'stock-001',
+      stockKey: 'product-001:sku-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      merchantId: 'merchant-001',
+      availableQuantity: 99,
+      reservedQuantity: 1,
+      createdAt: '2026-06-05T00:00:00.000Z',
+      updatedAt: '2026-06-05T00:30:00.000Z'
+    },
+    {
+      id: 'stock-002',
+      stockKey: 'product-002:default',
+      productId: 'product-002',
+      skuId: null,
+      merchantId: 'merchant-002',
+      availableQuantity: 0,
+      reservedQuantity: 3,
+      createdAt: '2026-06-05T00:00:00.000Z',
+      updatedAt: '2026-06-05T00:45:00.000Z'
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
     let adminOrderLoads = 0;
@@ -202,6 +229,13 @@ describe('Admin product review workbench', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+
+        if (url.includes('/orders/admin/inventory-stocks')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryStocksResponse
+          };
+        }
 
         if (url.includes('/orders/admin/inventory-reservations')) {
           return {
@@ -317,6 +351,23 @@ describe('Admin product review workbench', () => {
     expect(within(inventoryPanel).getByText('释放 2026-06-03 00:30')).toBeInTheDocument();
   });
 
+  it('renders Admin inventory stock balances', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('库存余额')).toBeInTheDocument();
+    const stockPanel = screen.getByLabelText('库存余额');
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin/inventory-stocks');
+    expect(within(stockPanel).getByText('product-001:sku-001')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('product-001')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('merchant-001')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('sku-001')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('可用 99')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('预占 1')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('合计 100')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('product-002:default')).toBeInTheDocument();
+    expect(within(stockPanel).getByText('默认规格')).toBeInTheDocument();
+  });
+
   it('filters Admin inventory reservations by merchant', async () => {
     render(<App />);
 
@@ -326,6 +377,21 @@ describe('Admin product review workbench', () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:3000/api/orders/admin/inventory-reservations?merchantId=merchant-001'
+      );
+    });
+  });
+
+  it('filters Admin inventory stock balances by merchant, product, and sku', async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('余额商户'), { target: { value: ' merchant-001 ' } });
+    fireEvent.change(screen.getByLabelText('余额商品'), { target: { value: ' product-001 ' } });
+    fireEvent.change(screen.getByLabelText('余额规格'), { target: { value: ' sku-001 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '筛选库存余额' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/admin/inventory-stocks?merchantId=merchant-001&productId=product-001&skuId=sku-001'
       );
     });
   });
@@ -426,6 +492,13 @@ describe('Admin product review workbench', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
 
+        if (url.includes('/orders/admin/inventory-stocks')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryStocksResponse
+          };
+        }
+
         if (url.includes('/orders/admin/inventory-reservations')) {
           return {
             ok: true,
@@ -503,6 +576,13 @@ describe('Admin product review workbench', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+
+        if (url.includes('/orders/admin/inventory-stocks')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryStocksResponse
+          };
+        }
 
         if (url.includes('/orders/admin/inventory-reservations')) {
           return {

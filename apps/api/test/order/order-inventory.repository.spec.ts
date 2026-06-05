@@ -17,12 +17,29 @@ function createPrismaMock() {
       updatedAt: new Date('2026-06-05T00:00:00.000Z')
     }
   ];
+  const stocks = [
+    {
+      id: 'stock-001',
+      stockKey: 'product-001:sku-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      merchantId: 'merchant-001',
+      availableQuantity: 99,
+      reservedQuantity: 1,
+      createdAt: new Date('2026-06-05T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-05T00:30:00.000Z')
+    }
+  ];
 
   return {
     reservations,
+    stocks,
     prisma: {
       inventoryReservation: {
         findMany: jest.fn().mockResolvedValue(reservations)
+      },
+      inventoryStock: {
+        findMany: jest.fn().mockResolvedValue(stocks)
       }
     }
   };
@@ -49,5 +66,27 @@ describe('OrderInventoryRepository', () => {
       take: 100
     });
     expect(result).toEqual({ reservations });
+  });
+
+  it('lists filtered inventory stock balances for Admin read model', async () => {
+    const { prisma, stocks } = createPrismaMock();
+    const repository = new OrderInventoryRepository(prisma as never);
+
+    const result = await repository.listStocks({
+      merchantId: 'merchant-001',
+      productId: 'product-001',
+      skuId: 'sku-001'
+    });
+
+    expect(prisma.inventoryStock.findMany).toHaveBeenCalledWith({
+      where: {
+        merchantId: 'merchant-001',
+        productId: 'product-001',
+        skuId: 'sku-001'
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 100
+    });
+    expect(result).toEqual({ stocks });
   });
 });
