@@ -299,6 +299,31 @@ describe('Admin product review workbench', () => {
     });
   });
 
+  it('filters Admin orders by fulfillment task number and keeps fulfillment filters composed', async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('履约任务号'), {
+      target: { value: ' FT-ORDER-20260603-001-MERCHANT-001-001 ' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: '筛选任务' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/admin?taskNo=FT-ORDER-20260603-001-MERCHANT-001-001'
+      );
+    });
+
+    fireEvent.change(await screen.findByLabelText('履约商户'), { target: { value: ' merchant-001 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '筛选商户' }));
+    fireEvent.click(await screen.findByRole('button', { name: '待履约' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/admin?fulfillmentStatus=pending&merchantId=merchant-001&taskNo=FT-ORDER-20260603-001-MERCHANT-001-001'
+      );
+    });
+  });
+
   it('creates a full refund request for a paid order', async () => {
     render(<App />);
 

@@ -37,6 +37,8 @@ export default function App() {
   const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<AdminFulfillmentStatusFilter>('all');
   const [merchantFilterInput, setMerchantFilterInput] = useState('');
   const [activeMerchantFilter, setActiveMerchantFilter] = useState('');
+  const [taskNoFilterInput, setTaskNoFilterInput] = useState('');
+  const [activeTaskNoFilter, setActiveTaskNoFilter] = useState('');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -68,10 +70,11 @@ export default function App() {
   async function loadOrders(
     status: AdminOrderStatusFilter = activeOrderStatus,
     fulfillmentStatus: AdminFulfillmentStatusFilter = activeFulfillmentStatus,
-    merchantId: string = activeMerchantFilter
+    merchantId: string = activeMerchantFilter,
+    taskNo: string = activeTaskNoFilter
   ) {
     try {
-      const response = await fetchAdminOrders(status, fulfillmentStatus, merchantId);
+      const response = await fetchAdminOrders(status, fulfillmentStatus, merchantId, taskNo);
       setOrders(response.orders);
     } catch (loadError) {
       setOrders([]);
@@ -84,8 +87,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
-  }, [activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter]);
+    void loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
+  }, [activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -138,7 +141,7 @@ export default function App() {
         reason: 'after_sale'
       });
       setMessage(`${order.orderNo} 已提交退款申请 ${result.refund.refundNo}`);
-      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
     });
   }
 
@@ -159,7 +162,7 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认支付成功 ${result.payment.paymentNo}`);
-      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
     });
   }
 
@@ -180,7 +183,7 @@ export default function App() {
         payload: { source: 'admin-order-management' }
       });
       setMessage(`${order.orderNo} 已确认退款成功 ${result.refund.refundNo}`);
-      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter);
+      await loadOrders(activeOrderStatus, activeFulfillmentStatus, activeMerchantFilter, activeTaskNoFilter);
     });
   }
 
@@ -191,6 +194,15 @@ export default function App() {
   function clearMerchantFilter() {
     setMerchantFilterInput('');
     setActiveMerchantFilter('');
+  }
+
+  function applyTaskNoFilter() {
+    setActiveTaskNoFilter(taskNoFilterInput.trim());
+  }
+
+  function clearTaskNoFilter() {
+    setTaskNoFilterInput('');
+    setActiveTaskNoFilter('');
   }
 
   async function runAction(action: () => Promise<void>) {
@@ -281,6 +293,25 @@ export default function App() {
             <button type="button" onClick={clearMerchantFilter}>
               <X size={15} />
               清除商户
+            </button>
+          ) : null}
+          <label className="task-filter-field">
+            <span>履约任务号</span>
+            <input
+              aria-label="履约任务号"
+              value={taskNoFilterInput}
+              placeholder="FT-ORDER-..."
+              onChange={(event) => setTaskNoFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applyTaskNoFilter}>
+            <Search size={15} />
+            筛选任务
+          </button>
+          {activeTaskNoFilter ? (
+            <button type="button" onClick={clearTaskNoFilter}>
+              <X size={15} />
+              清除任务
             </button>
           ) : null}
         </div>

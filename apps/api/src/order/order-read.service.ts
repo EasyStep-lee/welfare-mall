@@ -16,6 +16,7 @@ export type ListAdminOrdersInput = {
   status?: string;
   fulfillmentStatus?: string;
   merchantId?: string;
+  taskNo?: string;
 };
 
 @Injectable()
@@ -33,7 +34,8 @@ export class OrderReadService {
     const status = optionalOrderStatus(input.status, 'status');
     const fulfillmentStatus = optionalFulfillmentStatus(input.fulfillmentStatus, 'fulfillmentStatus');
     const merchantId = optionalText(input.merchantId);
-    const orders = await this.orderReadRepository.listRecentAdminOrders({ status, fulfillmentStatus, merchantId });
+    const taskNo = optionalText(input.taskNo);
+    const orders = await this.orderReadRepository.listRecentAdminOrders({ status, fulfillmentStatus, merchantId, taskNo });
 
     return { orders };
   }
