@@ -4,6 +4,7 @@ import {
   OrderPaymentRepository,
   ProcessOrderPaymentCallbackResult
 } from './order-payment.repository';
+import { SettlementRepository } from '../settlement/settlement.repository';
 import { OrderPaymentChannel, OrderPaymentChannels, OrderPaymentStatus, OrderPaymentStatuses } from './order-payment-status';
 import { OrderStatuses } from './order-status';
 
@@ -32,7 +33,10 @@ export type ProcessOrderPaymentCallbackServiceInput = {
 
 @Injectable()
 export class OrderPaymentService {
-  constructor(private readonly orderPaymentRepository: OrderPaymentRepository) {}
+  constructor(
+    private readonly orderPaymentRepository: OrderPaymentRepository,
+    private readonly settlementRepository: SettlementRepository
+  ) {}
 
   async createPayment(input: CreateOrderPaymentInput): Promise<CreateOrderPaymentResult> {
     assertCreatePaymentInput(input);
@@ -81,6 +85,10 @@ export class OrderPaymentService {
 
     if (!result) {
       throw new NotFoundException(`Payment ${input.paymentNo} not found.`);
+    }
+
+    if (!result.duplicate && result.payment.status === OrderPaymentStatuses.Paid) {
+      await this.settlementRepository.generateMerchantBillItemsForPaidOrder(result.payment.orderNo);
     }
 
     return result;
