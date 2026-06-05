@@ -103,3 +103,15 @@ Actual: PASS locally. `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smo
 - This slice does not implement real payment gateway reconciliation or automatic refunds for late provider-paid callbacks.
 - This slice does not add payment timeout jobs or Admin close actions.
 - This slice does not perform target-environment deployment or true-device acceptance.
+
+## Completion Evidence
+
+- Feature PR: <https://github.com/EasyStep-lee/welfare-mall/pull/139>
+- Merged main commit: `2766a87 feat: guard payments for cancelled orders (#139)`
+- RED evidence: `pnpm --filter @welfare-mall/api run test -- test/order/order-payment.service.spec.ts test/order/order-payment.repository.spec.ts --runInBand` failed because cancelled/closed/missing order states still allowed payment creation, and paid callbacks after cancellation still updated `OrderPayment` to `paid`.
+- Focused GREEN evidence: `pnpm --filter @welfare-mall/api run test -- test/order/order-payment.service.spec.ts test/order/order-payment.repository.spec.ts --runInBand` passed with 2 suites / 13 tests.
+- Full verification evidence: `pnpm run verify` passed with API 58 suites / 221 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Static diff evidence: `git diff --check` passed with CRLF warnings only.
+- Docker runtime evidence: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed locally.
+- Live local API smoke: order `ORDER-20260605075235729-VODYAF` was created with a pending payment, cancelled, then a new payment request after cancellation returned `409`; a late paid callback was recorded with `callback.status = paid`, while `callback.payment.status = pending` and the final order status remained `cancelled`.
+- Acceptance boundary: local API/Docker/runtime only; target-environment deployment, real payment gateway reconciliation, automatic late-payment refunds, true-device acceptance, and formal business acceptance remain outside this slice.
