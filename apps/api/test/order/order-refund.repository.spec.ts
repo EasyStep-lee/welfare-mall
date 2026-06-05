@@ -69,6 +69,25 @@ function createPrismaMock() {
       })
     },
     inventoryReservation: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'reservation-001',
+          orderNo: 'ORDER-20260603-001',
+          orderLineId: 'order-line-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          quantity: 2,
+          status: 'reserved',
+          source: 'order_checkout',
+          releasedAt: null,
+          createdAt: new Date('2026-06-03T00:05:00.000Z'),
+          updatedAt: new Date('2026-06-03T00:05:00.000Z')
+        }
+      ]),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 })
+    },
+    inventoryStock: {
       updateMany: jest.fn().mockResolvedValue({ count: 1 })
     }
   };
@@ -199,6 +218,17 @@ describe('OrderRefundRepository', () => {
       where: { orderNo: 'ORDER-20260603-001' },
       data: { status: 'refunded' }
     });
+    expect(tx.inventoryReservation.findMany).toHaveBeenCalledWith({
+      where: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'reserved'
+      },
+      select: {
+        productId: true,
+        skuId: true,
+        quantity: true
+      }
+    });
     expect(tx.inventoryReservation.updateMany).toHaveBeenCalledWith({
       where: {
         orderNo: 'ORDER-20260603-001',
@@ -207,6 +237,13 @@ describe('OrderRefundRepository', () => {
       data: {
         status: 'released',
         releasedAt: new Date('2026-06-03T00:15:00.000Z')
+      }
+    });
+    expect(tx.inventoryStock.updateMany).toHaveBeenCalledWith({
+      where: { stockKey: 'product-001:sku-001' },
+      data: {
+        availableQuantity: { increment: 2 },
+        reservedQuantity: { decrement: 2 }
       }
     });
     expect(result).toEqual(
@@ -245,7 +282,9 @@ describe('OrderRefundRepository', () => {
     expect(tx.orderRefund.update).not.toHaveBeenCalled();
     expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(tx.inventoryReservation.findMany).not.toHaveBeenCalled();
     expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
+    expect(tx.inventoryStock.updateMany).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
@@ -299,7 +338,9 @@ describe('OrderRefundRepository', () => {
       where: { orderNo: 'ORDER-20260603-001' },
       data: { status: 'paid' }
     });
+    expect(tx.inventoryReservation.findMany).not.toHaveBeenCalled();
     expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
+    expect(tx.inventoryStock.updateMany).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,

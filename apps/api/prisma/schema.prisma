@@ -475,6 +475,23 @@ model FulfillmentTaskLine {
   @@map("fulfillment_task_line")
 }
 
+model InventoryStock {
+  id                String   @id @default(cuid())
+  stockKey          String   @unique
+  productId         String
+  skuId             String?
+  merchantId        String
+  availableQuantity Int
+  reservedQuantity  Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([productId])
+  @@index([skuId])
+  @@index([merchantId])
+  @@map("inventory_stock")
+}
+
 model InventoryReservation {
   id          String    @id @default(cuid())
   orderNo     String

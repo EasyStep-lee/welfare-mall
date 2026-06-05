@@ -14,7 +14,8 @@ function createPrismaMock() {
     merchant: { upsert: jest.fn() },
     productCategory: { upsert: jest.fn() },
     productBrand: { upsert: jest.fn() },
-    product: { upsert: jest.fn() }
+    product: { upsert: jest.fn() },
+    inventoryStock: { upsert: jest.fn() }
   };
   const prisma = {
     $transaction: jest.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
@@ -50,6 +51,7 @@ describe('seedLocalReviewProduct', () => {
         data: [
           expect.objectContaining({
             productId: 'product-local-review',
+            id: 'sku-local-review-5kg',
             code: 'SKU-LOCAL-REVIEW-5KG',
             priceAmount: 6990,
             specs: [{ name: '规格', value: '5kg' }]
@@ -57,6 +59,22 @@ describe('seedLocalReviewProduct', () => {
         ]
       })
     );
+    expect(tx.inventoryStock.upsert).toHaveBeenCalledWith({
+      where: { stockKey: 'product-local-review:sku-local-review-5kg' },
+      update: {
+        merchantId: 'merchant-local-review',
+        availableQuantity: 100,
+        reservedQuantity: 0
+      },
+      create: {
+        stockKey: 'product-local-review:sku-local-review-5kg',
+        productId: 'product-local-review',
+        skuId: 'sku-local-review-5kg',
+        merchantId: 'merchant-local-review',
+        availableQuantity: 100,
+        reservedQuantity: 0
+      }
+    });
     expect(tx.productMedia.createMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.arrayContaining([
