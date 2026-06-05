@@ -24,15 +24,15 @@
 
 ### Task 1: RED Tests
 
-- [ ] **Step 1: Add failing backend pickup-code detail test**
+- [x] **Step 1: Add failing backend pickup-code detail test**
 
 Add a repository test proving `findOrderForBuyer()` returns `pickupCode` for a pickup order by reading fulfillment tasks, while `listOrdersByBuyer()` still does not query fulfillment tasks.
 
-- [ ] **Step 2: Add failing user mini-program display tests**
+- [x] **Step 2: Add failing user mini-program display tests**
 
 Add tests proving pickup order details format `receiverText` from `pickupStoreName`, expose `pickupCodeText`, and the order-detail page stores that display data after loading.
 
-- [ ] **Step 3: Run focused RED tests**
+- [x] **Step 3: Run focused RED tests**
 
 Run:
 
@@ -45,21 +45,21 @@ Expected: FAIL because buyer order detail does not attach pickup codes and the m
 
 ### Task 2: Implementation
 
-- [ ] **Step 1: Attach pickup code to buyer order detail**
+- [x] **Step 1: Attach pickup code to buyer order detail**
 
 Update the order read repository so single buyer detail reads fulfillment task pickup codes only for pickup orders and returns `pickupCode: string | null` on detail records.
 
-- [ ] **Step 2: Format and render pickup code in the user mini-program**
+- [x] **Step 2: Format and render pickup code in the user mini-program**
 
 Update the display helper to use pickup store text for pickup orders and expose `pickupCodeText`; update order-detail WXML/WXSS to show a compact `取货码` row only when present.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run the same focused commands from RED. Expected: PASS.
 
-- [ ] **Step 2: Run local verification gates**
+- [x] **Step 2: Run local verification gates**
 
 Run:
 
@@ -73,6 +73,8 @@ git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 3: Run live API smoke**
+- [x] **Step 3: Run live API smoke**
 
 In the Docker-backed local API, create a pickup order, complete the payment callback, then fetch buyer order detail and confirm the returned `pickupCode` starts with `WM_PICKUP:`.
+
+Evidence: `ORDER-20260605034607066-61B7PG` returned `WM_PICKUP:FT-ORDER-20260605034607066-61B7PG-MERCHANT-LOCAL-REVIEW-1780631167206`.
