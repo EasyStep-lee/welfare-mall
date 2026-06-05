@@ -112,3 +112,15 @@ Then create a local order, cancel it, and confirm stock is restored and reservat
 - This slice only handles explicit buyer cancellation for `pending_payment` orders.
 - This slice does not add payment-time stock capture, payment timeout jobs, scheduled order close, Admin close action, or front-end cancel buttons.
 - This slice does not perform target-environment deployment or true-device acceptance.
+
+## Completion Evidence
+
+- Feature PR: <https://github.com/EasyStep-lee/welfare-mall/pull/135>
+- Merged main commit: `86c61a2 feat: release inventory on order cancel (#135)`
+- RED evidence: `pnpm --filter @welfare-mall/api run test -- test/order/order-cancel.repository.spec.ts test/order/order-cancel.service.spec.ts test/order/order-read.e2e-spec.ts --runInBand` failed before implementation because `order-cancel.repository` and `order-cancel.service` were missing.
+- Focused GREEN evidence: `pnpm --filter @welfare-mall/api run test -- test/order/order-cancel.repository.spec.ts test/order/order-cancel.service.spec.ts test/order/order-read.e2e-spec.ts --runInBand` passed with 3 suites / 19 tests.
+- Full verification evidence: `pnpm run verify` passed with API 58 suites / 217 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 29 tests.
+- Static diff evidence: `git diff --check` passed with CRLF warnings only.
+- Docker runtime evidence: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed locally.
+- Live local cancel smoke: order `ORDER-20260605070931741-VQ8J0T` was created as `pending_payment`, cancelled to `cancelled`, stock moved from 99 available / 1 reserved after create to 100 available / 0 reserved after cancel, and the reservation status became `released` at `2026-06-05T07:09:31.793Z`.
+- Acceptance boundary: local Docker/runtime only; target-environment deployment, true-device acceptance, and formal business acceptance remain outside this slice.
