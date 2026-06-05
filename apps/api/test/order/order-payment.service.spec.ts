@@ -21,6 +21,16 @@ const paymentRecord = {
 function createRepositoryMock() {
   return {
     findPaymentByRequestId: jest.fn().mockResolvedValue(null),
+    findOrderStateByOrderNo: jest.fn().mockResolvedValue({
+      id: 'order-state-001',
+      orderNo: 'ORDER-20260603-001',
+      status: 'pending_payment',
+      paidAt: null,
+      refundRequestedAt: null,
+      refundedAt: null,
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-03T00:00:00.000Z')
+    }),
     createPayment: jest.fn().mockResolvedValue(paymentRecord),
     processCallback: jest.fn().mockResolvedValue({
       duplicate: false,
@@ -61,6 +71,41 @@ describe('OrderPaymentService', () => {
     );
     expect(result).toEqual({ idempotentReplay: false, payment: paymentRecord });
   });
+
+  it.each(['cancelled', 'closed', null])(
+    'rejects payment creation when order state is %s',
+    async (status) => {
+      const repository = createRepositoryMock();
+      repository.findOrderStateByOrderNo.mockResolvedValue(
+        status === null
+          ? null
+          : {
+              id: 'order-state-001',
+              orderNo: 'ORDER-20260603-001',
+              status,
+              paidAt: null,
+              refundRequestedAt: null,
+              refundedAt: null,
+              createdAt: new Date('2026-06-03T00:00:00.000Z'),
+              updatedAt: new Date('2026-06-03T00:00:00.000Z')
+            }
+      );
+      const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
+
+      await expect(
+        service.createPayment({
+          requestId: 'request-001',
+          orderNo: 'ORDER-20260603-001',
+          channel: 'wechat',
+          totalAmount: 13980,
+          welfareCardPayableAmount: 5000,
+          cashPayableAmount: 8980
+        })
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      expect(repository.createPayment).not.toHaveBeenCalled();
+    }
+  );
 
   it('returns existing payment for the same idempotent request', async () => {
     const repository = createRepositoryMock();

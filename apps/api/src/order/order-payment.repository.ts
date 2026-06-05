@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderPaymentStatus, OrderPaymentStatuses } from './order-payment-status';
 import { OrderStatuses } from './order-status';
-import { applySystemOrderTransition, ensurePendingPaymentOrderState, OrderStateClient } from './order-state.repository';
+import {
+  applySystemOrderTransition,
+  ensurePendingPaymentOrderState,
+  OrderStateClient,
+  OrderStateRecord,
+  orderStateSelect
+} from './order-state.repository';
 
 export type OrderPaymentRecord = {
   id: string;
@@ -113,6 +119,13 @@ export class OrderPaymentRepository {
     });
   }
 
+  async findOrderStateByOrderNo(orderNo: string): Promise<OrderStateRecord | null> {
+    return this.prisma.orderState.findUnique({
+      where: { orderNo },
+      select: orderStateSelect()
+    });
+  }
+
   async createPayment(input: CreateOrderPaymentRecordInput): Promise<OrderPaymentRecord> {
     const payment = await this.prisma.orderPayment.create({
       data: {
@@ -202,17 +215,19 @@ async function updatePaymentFromCallback(
         data: { status: OrderStatuses.Paid }
       });
       await createFulfillmentTasksForPaidOrder(tx, payment.orderNo);
+
+      return tx.orderPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: OrderPaymentStatuses.Paid,
+          providerPaymentNo: input.providerPaymentNo,
+          paidAt: input.paidAt
+        },
+        select: paymentSelect()
+      });
     }
 
-    return tx.orderPayment.update({
-      where: { id: payment.id },
-      data: {
-        status: OrderPaymentStatuses.Paid,
-        providerPaymentNo: input.providerPaymentNo,
-        paidAt: input.paidAt
-      },
-      select: paymentSelect()
-    });
+    return payment;
   }
 
   if (input.status === OrderPaymentStatuses.Failed && payment.status === OrderPaymentStatuses.Pending) {

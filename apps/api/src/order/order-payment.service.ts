@@ -5,6 +5,7 @@ import {
   ProcessOrderPaymentCallbackResult
 } from './order-payment.repository';
 import { OrderPaymentChannel, OrderPaymentChannels, OrderPaymentStatus, OrderPaymentStatuses } from './order-payment-status';
+import { OrderStatuses } from './order-status';
 
 export type CreateOrderPaymentInput = {
   requestId: string;
@@ -48,6 +49,11 @@ export class OrderPaymentService {
         idempotentReplay: true,
         payment: existingPayment
       };
+    }
+
+    const orderState = await this.orderPaymentRepository.findOrderStateByOrderNo(normalizedInput.orderNo);
+    if (orderState?.status !== OrderStatuses.PendingPayment) {
+      throw new ConflictException('order is not payable.');
     }
 
     const payment = await this.orderPaymentRepository.createPayment({
