@@ -85,7 +85,7 @@ Against Docker API, create a pickup order, mark payment paid, prove completion w
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -94,6 +94,12 @@ feat: verify merchant pickup codes
 ```
 
 Expected: PR targets `main` and includes RED/GREEN, full verify, Docker, live API, and browser smoke evidence.
+
+Result:
+
+- Feature commit: `9053520 feat: verify merchant pickup codes`
+- Feature PR: `#121 feat: verify merchant pickup codes`
+- Main merge commit: `337811c feat: verify merchant pickup codes (#121)`
 
 ## Acceptance Boundary
 
