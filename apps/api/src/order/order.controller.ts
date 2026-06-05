@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
+import { CancelOrderInput, OrderCancelService } from './order-cancel.service';
 import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
 import { OrderFulfillmentService } from './order-fulfillment.service';
 import { OrderInventoryService } from './order-inventory.service';
@@ -15,6 +16,7 @@ import { OrderStatusTransitionCatalog } from './order-status-transition';
 export class OrderController {
   constructor(
     private readonly orderAmountService: OrderAmountService,
+    private readonly orderCancelService: OrderCancelService,
     private readonly orderCheckoutService: OrderCheckoutService,
     private readonly orderPaymentService: OrderPaymentService,
     private readonly orderRefundService: OrderRefundService,
@@ -222,6 +224,33 @@ export class OrderController {
       orderNo: orderNo.trim(),
       merchantId: input.merchantId.trim(),
       ...(pickupCode ? { pickupCode } : {})
+    });
+  }
+
+  @Post(':orderNo/cancel')
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'Cancel one buyer-scoped pending payment order and release checkout inventory reservations',
+    schema: {
+      example: {
+        order: {
+          orderNo: 'ORDER-20260605-001',
+          buyerUserId: 'user-001',
+          status: 'cancelled',
+          totalAmount: 6990
+        }
+      }
+    }
+  })
+  async cancelOrder(@Param('orderNo') orderNo: string, @Body() input: CancelOrderRequest) {
+    assertRequiredText(orderNo, 'orderNo');
+    assertRequiredText(input?.buyerUserId, 'buyerUserId');
+    assertRequiredText(input?.reason, 'reason');
+
+    return this.orderCancelService.cancelOrder({
+      orderNo: orderNo.trim(),
+      buyerUserId: input.buyerUserId.trim(),
+      reason: input.reason.trim()
     });
   }
 
@@ -461,6 +490,7 @@ export class OrderController {
 }
 
 type OrderAmountPreviewRequest = OrderAmountPreviewInput;
+type CancelOrderRequest = Omit<CancelOrderInput, 'orderNo'>;
 type OrderCheckoutRequest = OrderCheckoutInput;
 type CompleteMerchantFulfillmentOrderRequest = {
   merchantId: string;

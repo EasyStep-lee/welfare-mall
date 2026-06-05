@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderAmountRepository } from './order-amount.repository';
 import { OrderAmountService } from './order-amount.service';
+import { OrderCancelRepository } from './order-cancel.repository';
+import { OrderCancelService } from './order-cancel.service';
 import { OrderCheckoutRepository } from './order-checkout.repository';
 import { OrderCheckoutService } from './order-checkout.service';
 import { OrderController } from './order.controller';
@@ -23,6 +25,8 @@ import { OrderStateRepository } from './order-state.repository';
     PrismaService,
     OrderAmountRepository,
     OrderAmountService,
+    OrderCancelRepository,
+    OrderCancelService,
     OrderCheckoutRepository,
     OrderCheckoutService,
     OrderFulfillmentRepository,
@@ -40,6 +44,8 @@ import { OrderStateRepository } from './order-state.repository';
   exports: [
     OrderAmountRepository,
     OrderAmountService,
+    OrderCancelRepository,
+    OrderCancelService,
     OrderCheckoutRepository,
     OrderCheckoutService,
     OrderFulfillmentRepository,

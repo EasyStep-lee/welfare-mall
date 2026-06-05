@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
+import { OrderCancelService } from '../../src/order/order-cancel.service';
 import { OrderInventoryService } from '../../src/order/order-inventory.service';
 import { OrderReadService } from '../../src/order/order-read.service';
 
@@ -20,14 +21,22 @@ function createOrderInventoryServiceMock() {
   };
 }
 
+function createOrderCancelServiceMock() {
+  return {
+    cancelOrder: jest.fn()
+  };
+}
+
 describe('Order read API contract', () => {
   let app: INestApplication;
   let orderReadService: ReturnType<typeof createOrderReadServiceMock>;
   let orderInventoryService: ReturnType<typeof createOrderInventoryServiceMock>;
+  let orderCancelService: ReturnType<typeof createOrderCancelServiceMock>;
 
   beforeEach(async () => {
     orderReadService = createOrderReadServiceMock();
     orderInventoryService = createOrderInventoryServiceMock();
+    orderCancelService = createOrderCancelServiceMock();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
     })
@@ -35,6 +44,8 @@ describe('Order read API contract', () => {
       .useValue(orderReadService)
       .overrideProvider(OrderInventoryService)
       .useValue(orderInventoryService)
+      .overrideProvider(OrderCancelService)
+      .useValue(orderCancelService)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -434,6 +445,48 @@ describe('Order read API contract', () => {
       refundAmount: 13980,
       reason: 'after_sale'
     });
+  });
+
+  it('cancels one buyer-scoped pending payment order', async () => {
+    orderCancelService.cancelOrder.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260605-001',
+        buyerUserId: 'user-001',
+        status: 'cancelled',
+        totalAmount: 6990
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/orders/ORDER-20260605-001/cancel')
+      .send({
+        buyerUserId: ' user-001 ',
+        reason: ' user changed mind '
+      })
+      .expect(200);
+
+    expect(orderCancelService.cancelOrder).toHaveBeenCalledWith({
+      orderNo: 'ORDER-20260605-001',
+      buyerUserId: 'user-001',
+      reason: 'user changed mind'
+    });
+    expect(response.body.order).toMatchObject({
+      orderNo: 'ORDER-20260605-001',
+      buyerUserId: 'user-001',
+      status: 'cancelled'
+    });
+  });
+
+  it('rejects invalid order cancel requests before calling service', async () => {
+    await request(app.getHttpServer())
+      .post('/api/orders/ORDER-20260605-001/cancel')
+      .send({
+        buyerUserId: ' ',
+        reason: 'user changed mind'
+      })
+      .expect(400);
+
+    expect(orderCancelService.cancelOrder).not.toHaveBeenCalled();
   });
 
   it('rejects blank buyer ID before calling service', async () => {
