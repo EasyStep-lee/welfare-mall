@@ -131,3 +131,18 @@ Expected: PASS, and Admin served assets contain `库存余额` and `inventory-st
 - This slice does not add Admin stock editing, adjustment, warehouse, batch, lot, or audit workflows.
 - This slice does not add Merchant or Portal inventory views.
 - This slice does not perform target-environment deployment or true-device acceptance.
+
+## Completion Evidence
+
+- Feature PR: #133
+- Merged main commit: `76ac891 feat: add admin inventory stock read model (#133)`
+- RED focused API tests: `pnpm --filter @welfare-mall/api run test -- test/order/order-inventory.repository.spec.ts test/order/order-inventory.service.spec.ts test/order/order-read.e2e-spec.ts --runInBand` failed before implementation on missing `listStocks` methods and missing `/api/orders/admin/inventory-stocks` route.
+- RED Admin tests: `pnpm --filter @welfare-mall/admin run test --run` failed before implementation on missing `库存余额` and `余额商户`.
+- GREEN focused API tests: same focused API command passed, 3 suites / 14 tests.
+- GREEN Admin tests: `pnpm --filter @welfare-mall/admin run test --run` passed, 1 file / 14 tests.
+- Full verification: `pnpm run verify` passed, including API 56 suites / 208 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 29 tests.
+- Whitespace check: `git diff --check` reported no whitespace errors; only Git CRLF conversion warnings.
+- Docker runtime: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed.
+- Live API smoke: `Invoke-RestMethod 'http://localhost:3000/api/orders/admin/inventory-stocks' | ConvertTo-Json -Depth 6` returned stock `product-local-review:sku-local-review-5kg` with `availableQuantity=99` and `reservedQuantity=1`.
+- Admin served asset smoke: `http://localhost:5173/assets/index-DR0kB5qg.js` contained `库存余额` and `inventory-stocks`.
+- Browser smoke: `http://localhost:5173/` visibly rendered `库存余额`, `product-local-review:sku-local-review-5kg`, and `可用 99`.
