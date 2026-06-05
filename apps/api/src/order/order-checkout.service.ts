@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { OrderAmountService } from './order-amount.service';
 import { OrderStatuses } from './order-status';
 import {
+  InsufficientInventoryError,
   OrderCheckoutRecord,
   OrderCheckoutRepository,
   OrderFulfillmentType
@@ -57,38 +58,53 @@ export class OrderCheckoutService {
       items: normalizedInput.items,
       welfareCardPaymentAmount: normalizedInput.welfareCardPaymentAmount
     });
-    const order = await this.orderCheckoutRepository.createOrder({
-      orderNo: createOrderNo(),
-      requestId: normalizedInput.requestId,
-      buyerUserId: normalizedInput.buyerUserId,
-      status: OrderStatuses.PendingPayment,
-      subtotalAmount: amountPreview.subtotalAmount,
-      discountAmount: amountPreview.discountAmount,
-      totalAmount: amountPreview.totalAmount,
-      welfareCardPayableAmount: amountPreview.welfareCardPayableAmount,
-      cashPayableAmount: amountPreview.cashPayableAmount,
-      fulfillmentType: normalizedInput.fulfillment.type,
-      receiverName: normalizedInput.fulfillment.receiverName ?? null,
-      receiverPhone: normalizedInput.fulfillment.receiverPhone ?? null,
-      receiverAddress: normalizedInput.fulfillment.receiverAddress ?? null,
-      pickupStoreName: normalizedInput.fulfillment.pickupStoreName ?? null,
-      lines: amountPreview.lines.map((line) => ({
-        productPoolItemId: line.productPoolItemId,
-        productId: line.productId,
-        skuId: line.skuId,
-        displayName: line.displayName,
-        displaySkuCode: line.displaySkuCode,
-        displayImageUrl: line.displayImageUrl,
-        unitPriceAmount: line.unitPriceAmount,
-        quantity: line.quantity,
-        lineTotalAmount: line.lineTotalAmount
-      }))
-    });
+    const order = await this.createOrderWithInventoryReservation(normalizedInput, amountPreview);
 
     return {
       idempotentReplay: false,
       order
     };
+  }
+
+  private async createOrderWithInventoryReservation(
+    normalizedInput: OrderCheckoutInput,
+    amountPreview: Awaited<ReturnType<OrderAmountService['previewAmount']>>
+  ): Promise<OrderCheckoutRecord> {
+    try {
+      return await this.orderCheckoutRepository.createOrder({
+        orderNo: createOrderNo(),
+        requestId: normalizedInput.requestId,
+        buyerUserId: normalizedInput.buyerUserId,
+        status: OrderStatuses.PendingPayment,
+        subtotalAmount: amountPreview.subtotalAmount,
+        discountAmount: amountPreview.discountAmount,
+        totalAmount: amountPreview.totalAmount,
+        welfareCardPayableAmount: amountPreview.welfareCardPayableAmount,
+        cashPayableAmount: amountPreview.cashPayableAmount,
+        fulfillmentType: normalizedInput.fulfillment.type,
+        receiverName: normalizedInput.fulfillment.receiverName ?? null,
+        receiverPhone: normalizedInput.fulfillment.receiverPhone ?? null,
+        receiverAddress: normalizedInput.fulfillment.receiverAddress ?? null,
+        pickupStoreName: normalizedInput.fulfillment.pickupStoreName ?? null,
+        lines: amountPreview.lines.map((line) => ({
+          productPoolItemId: line.productPoolItemId,
+          productId: line.productId,
+          skuId: line.skuId,
+          displayName: line.displayName,
+          displaySkuCode: line.displaySkuCode,
+          displayImageUrl: line.displayImageUrl,
+          unitPriceAmount: line.unitPriceAmount,
+          quantity: line.quantity,
+          lineTotalAmount: line.lineTotalAmount
+        }))
+      });
+    } catch (error) {
+      if (error instanceof InsufficientInventoryError) {
+        throw new ConflictException(error.message);
+      }
+
+      throw error;
+    }
   }
 }
 

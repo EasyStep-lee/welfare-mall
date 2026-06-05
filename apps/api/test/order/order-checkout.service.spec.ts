@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { OrderAmountService } from '../../src/order/order-amount.service';
-import { OrderCheckoutRepository } from '../../src/order/order-checkout.repository';
+import { InsufficientInventoryError, OrderCheckoutRepository } from '../../src/order/order-checkout.repository';
 import { OrderCheckoutService } from '../../src/order/order-checkout.service';
 
 const checkoutInput = {
@@ -193,5 +193,20 @@ describe('OrderCheckoutService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(amountService.previewAmount).not.toHaveBeenCalled();
+  });
+
+  it('maps insufficient stock reservation to a checkout conflict', async () => {
+    const amountService = createAmountServiceMock();
+    const repository = createRepositoryMock();
+    repository.createOrder.mockRejectedValue(
+      new InsufficientInventoryError({ productId: 'product-001', skuId: 'sku-001', requestedQuantity: 2 })
+    );
+    const service = new OrderCheckoutService(
+      amountService as unknown as OrderAmountService,
+      repository as unknown as OrderCheckoutRepository
+    );
+
+    await expect(service.createOrder(checkoutInput)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.createOrder(checkoutInput)).rejects.toThrow('insufficient inventory');
   });
 });

@@ -1,4 +1,4 @@
-import { OrderCheckoutRepository } from '../../src/order/order-checkout.repository';
+import { InsufficientInventoryError, OrderCheckoutRepository } from '../../src/order/order-checkout.repository';
 
 const orderRecord = {
   id: 'order-001',
@@ -40,6 +40,15 @@ function createPrismaMock() {
   const tx = {
     orderHeader: {
       create: jest.fn().mockResolvedValue(orderRecord)
+    },
+    product: {
+      findMany: jest.fn().mockResolvedValue([{ id: 'product-001', merchantId: 'merchant-001' }])
+    },
+    inventoryStock: {
+      updateMany: jest.fn().mockResolvedValue({ count: 1 })
+    },
+    inventoryReservation: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 })
     },
     orderState: {
       upsert: jest.fn().mockResolvedValue({
@@ -157,6 +166,75 @@ describe('OrderCheckoutRepository', () => {
       update: {},
       select: expect.any(Object)
     });
+    expect(tx.product.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['product-001'] } },
+      select: { id: true, merchantId: true }
+    });
+    expect(tx.inventoryStock.updateMany).toHaveBeenCalledWith({
+      where: {
+        stockKey: 'product-001:sku-001',
+        availableQuantity: { gte: 2 }
+      },
+      data: {
+        availableQuantity: { decrement: 2 },
+        reservedQuantity: { increment: 2 }
+      }
+    });
+    expect(tx.inventoryReservation.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          orderNo: 'ORDER-20260603-001',
+          orderLineId: 'order-line-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          quantity: 2,
+          status: 'reserved',
+          source: 'order_checkout'
+        }
+      ],
+      skipDuplicates: true
+    });
     expect(result).toEqual(orderRecord);
+  });
+
+  it('rejects checkout creation when stock cannot be reserved', async () => {
+    const { tx, prisma } = createPrismaMock();
+    tx.inventoryStock.updateMany.mockResolvedValue({ count: 0 });
+    const repository = new OrderCheckoutRepository(prisma as never);
+
+    await expect(
+      repository.createOrder({
+        orderNo: 'ORDER-20260603-001',
+        requestId: 'checkout-request-001',
+        buyerUserId: 'user-001',
+        status: 'pending_payment',
+        subtotalAmount: 13980,
+        discountAmount: 0,
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980,
+        fulfillmentType: 'delivery',
+        receiverName: '李雷',
+        receiverPhone: '13800000000',
+        receiverAddress: '上海市浦东新区世纪大道 1 号',
+        pickupStoreName: null,
+        lines: [
+          {
+            productPoolItemId: 'pool-item-001',
+            productId: 'product-001',
+            skuId: 'sku-001',
+            displayName: '东北五常大米福利装',
+            displaySkuCode: 'SKU-RICE-5KG',
+            displayImageUrl: 'https://cdn.example.com/products/rice-main.jpg',
+            unitPriceAmount: 6990,
+            quantity: 2,
+            lineTotalAmount: 13980
+          }
+        ]
+      })
+    ).rejects.toBeInstanceOf(InsufficientInventoryError);
+
+    expect(tx.inventoryReservation.createMany).not.toHaveBeenCalled();
   });
 });

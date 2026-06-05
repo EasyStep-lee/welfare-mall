@@ -69,6 +69,10 @@ type OrderRefundTransaction = {
     update(args: unknown): Promise<unknown>;
   };
   inventoryReservation: {
+    findMany(args: unknown): Promise<Array<{ productId: string; skuId: string | null; quantity: number }>>;
+    updateMany(args: unknown): Promise<unknown>;
+  };
+  inventoryStock: {
     updateMany(args: unknown): Promise<unknown>;
   };
 } & OrderStateClient;
@@ -183,16 +187,7 @@ async function updateRefundFromCallback(
         data: { status: OrderStatuses.Refunded }
       });
     }
-    await tx.inventoryReservation.updateMany({
-      where: {
-        orderNo: refund.orderNo,
-        status: 'reserved'
-      },
-      data: {
-        status: 'released',
-        releasedAt: input.succeededAt
-      }
-    });
+    await releaseInventoryReservations(tx, refund.orderNo, input.succeededAt);
 
     return tx.orderRefund.update({
       where: { id: refund.id },
@@ -228,6 +223,49 @@ async function updateRefundFromCallback(
   }
 
   return refund;
+}
+
+async function releaseInventoryReservations(tx: OrderRefundTransaction, orderNo: string, releasedAt: Date | null): Promise<void> {
+  const reservations = await tx.inventoryReservation.findMany({
+    where: {
+      orderNo,
+      status: 'reserved'
+    },
+    select: {
+      productId: true,
+      skuId: true,
+      quantity: true
+    }
+  });
+
+  if (reservations.length === 0) {
+    return;
+  }
+
+  await tx.inventoryReservation.updateMany({
+    where: {
+      orderNo,
+      status: 'reserved'
+    },
+    data: {
+      status: 'released',
+      releasedAt
+    }
+  });
+
+  for (const reservation of reservations) {
+    await tx.inventoryStock.updateMany({
+      where: { stockKey: inventoryStockKey(reservation.productId, reservation.skuId) },
+      data: {
+        availableQuantity: { increment: reservation.quantity },
+        reservedQuantity: { decrement: reservation.quantity }
+      }
+    });
+  }
+}
+
+function inventoryStockKey(productId: string, skuId: string | null): string {
+  return `${productId}:${skuId ?? 'default'}`;
 }
 
 function refundSelect() {

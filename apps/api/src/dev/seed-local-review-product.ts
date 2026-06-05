@@ -18,6 +18,7 @@ type SeedTransaction = {
   productCategory: { upsert(args: unknown): Promise<unknown> };
   productBrand: { upsert(args: unknown): Promise<unknown> };
   product: { upsert(args: unknown): Promise<unknown> };
+  inventoryStock: { upsert(args: unknown): Promise<unknown> };
 };
 
 const ids = {
@@ -25,7 +26,8 @@ const ids = {
   merchantId: 'merchant-local-review',
   categoryId: 'category-local-review',
   brandId: 'brand-local-review',
-  productId: 'product-local-review'
+  productId: 'product-local-review',
+  skuId: 'sku-local-review-5kg'
 };
 
 const productCode = 'P-LOCAL-REVIEW-001';
@@ -42,6 +44,7 @@ const draftPayload = {
   originDescription: '五常核心产区',
   skus: [
     {
+      id: ids.skuId,
       code: 'SKU-LOCAL-REVIEW-5KG',
       priceAmount: 6990,
       marketPriceAmount: 7990,
@@ -161,6 +164,22 @@ export async function seedLocalReviewProduct(prisma: SeedPrisma) {
     await tx.productSku.createMany({
       data: draftPayload.skus.map((sku) => ({ productId: ids.productId, ...sku }))
     });
+    await tx.inventoryStock.upsert({
+      where: { stockKey: inventoryStockKey(ids.productId, ids.skuId) },
+      update: {
+        merchantId: ids.merchantId,
+        availableQuantity: 100,
+        reservedQuantity: 0
+      },
+      create: {
+        stockKey: inventoryStockKey(ids.productId, ids.skuId),
+        productId: ids.productId,
+        skuId: ids.skuId,
+        merchantId: ids.merchantId,
+        availableQuantity: 100,
+        reservedQuantity: 0
+      }
+    });
     await tx.productMedia.createMany({
       data: draftPayload.media.map((media) => ({ productId: ids.productId, ...media }))
     });
@@ -195,6 +214,10 @@ export async function seedLocalReviewProduct(prisma: SeedPrisma) {
   });
 
   return { productId: ids.productId, code: productCode, status: 'pending_review' };
+}
+
+function inventoryStockKey(productId: string, skuId: string): string {
+  return `${productId}:${skuId}`;
 }
 
 async function main() {

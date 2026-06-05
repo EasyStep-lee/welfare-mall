@@ -105,7 +105,30 @@ export type CreateOrderCheckoutRecordInput = {
   lines: CreateOrderCheckoutLineInput[];
 };
 
+export class InsufficientInventoryError extends Error {
+  constructor(
+    readonly details: {
+      productId: string;
+      skuId: string | null;
+      requestedQuantity: number;
+    }
+  ) {
+    super(
+      `insufficient inventory for product ${details.productId} sku ${details.skuId ?? 'default'} quantity ${details.requestedQuantity}`
+    );
+  }
+}
+
 type OrderCheckoutTransaction = {
+  product: {
+    findMany(args: unknown): Promise<Array<{ id: string; merchantId: string }>>;
+  };
+  inventoryStock: {
+    updateMany(args: unknown): Promise<{ count: number }>;
+  };
+  inventoryReservation: {
+    createMany(args: unknown): Promise<unknown>;
+  };
   orderHeader: {
     create(args: unknown): Promise<OrderCheckoutRecord>;
   };
@@ -159,10 +182,75 @@ export class OrderCheckoutRepository {
       });
 
       await ensurePendingPaymentOrderState(tx, input.orderNo);
+      await reserveInventoryForOrder(tx, order);
 
       return order;
     });
   }
+}
+
+async function reserveInventoryForOrder(tx: OrderCheckoutTransaction, order: OrderCheckoutRecord): Promise<void> {
+  if (order.lines.length === 0) {
+    return;
+  }
+
+  const productIds = Array.from(new Set(order.lines.map((line) => line.productId)));
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, merchantId: true }
+  });
+  const merchantIdByProductId = new Map(products.map((product) => [product.id, product.merchantId]));
+  const reservations = [];
+
+  for (const line of order.lines) {
+    const merchantId = merchantIdByProductId.get(line.productId);
+    if (!merchantId) {
+      throw new InsufficientInventoryError({
+        productId: line.productId,
+        skuId: line.skuId,
+        requestedQuantity: line.quantity
+      });
+    }
+
+    const reserved = await tx.inventoryStock.updateMany({
+      where: {
+        stockKey: inventoryStockKey(line.productId, line.skuId),
+        availableQuantity: { gte: line.quantity }
+      },
+      data: {
+        availableQuantity: { decrement: line.quantity },
+        reservedQuantity: { increment: line.quantity }
+      }
+    });
+
+    if (reserved.count !== 1) {
+      throw new InsufficientInventoryError({
+        productId: line.productId,
+        skuId: line.skuId,
+        requestedQuantity: line.quantity
+      });
+    }
+
+    reservations.push({
+      orderNo: order.orderNo,
+      orderLineId: line.id,
+      productId: line.productId,
+      skuId: line.skuId,
+      merchantId,
+      quantity: line.quantity,
+      status: 'reserved',
+      source: 'order_checkout'
+    });
+  }
+
+  await tx.inventoryReservation.createMany({
+    data: reservations,
+    skipDuplicates: true
+  });
+}
+
+function inventoryStockKey(productId: string, skuId: string | null): string {
+  return `${productId}:${skuId ?? 'default'}`;
 }
 
 function orderSelect() {
