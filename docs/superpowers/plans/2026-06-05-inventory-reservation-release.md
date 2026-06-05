@@ -20,7 +20,7 @@
 
 ### Task 1: RED Tests
 
-- [ ] **Step 1: Add successful refund release expectation**
+- [x] **Step 1: Add successful refund release expectation**
 
 In `apps/api/test/order/order-refund.repository.spec.ts`, extend the first successful refund callback test so it expects:
 
@@ -37,7 +37,7 @@ expect(tx.inventoryReservation.updateMany).toHaveBeenCalledWith({
 });
 ```
 
-- [ ] **Step 2: Add duplicate callback guard expectation**
+- [x] **Step 2: Add duplicate callback guard expectation**
 
 Extend the duplicate callback test so it asserts:
 
@@ -45,7 +45,7 @@ Extend the duplicate callback test so it asserts:
 expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
 ```
 
-- [ ] **Step 3: Add failed callback guard expectation**
+- [x] **Step 3: Add failed callback guard expectation**
 
 Extend the failed refund callback test so it asserts:
 
@@ -53,7 +53,7 @@ Extend the failed refund callback test so it asserts:
 expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
 ```
 
-- [ ] **Step 4: Run focused RED tests**
+- [x] **Step 4: Run focused RED tests**
 
 Run:
 
@@ -65,11 +65,11 @@ Expected: FAIL because `OrderRefundRepository` does not call `inventoryReservati
 
 ### Task 2: Implementation
 
-- [ ] **Step 1: Extend the refund transaction type**
+- [x] **Step 1: Extend the refund transaction type**
 
 Add `inventoryReservation.updateMany(args: unknown): Promise<unknown>` to the `OrderRefundTransaction` type in `apps/api/src/order/order-refund.repository.ts`.
 
-- [ ] **Step 2: Release reservations on first successful refund**
+- [x] **Step 2: Release reservations on first successful refund**
 
 Inside the existing succeeded-callback branch in `updateRefundFromCallback`, after the order state/header transition and before returning the updated refund record, call:
 
@@ -90,7 +90,7 @@ The existing early duplicate-callback branch must remain before this code, so du
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -100,7 +100,7 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-refund.repository.s
 
 Expected: PASS.
 
-- [ ] **Step 2: Run local verification gates**
+- [x] **Step 2: Run local verification gates**
 
 Run:
 
@@ -114,9 +114,19 @@ git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 3: Run live DB smoke**
+- [x] **Step 3: Run live DB smoke**
 
 In the Docker-backed local runtime, create and pay an order, create a refund, process a succeeded refund callback, then query MySQL to confirm `inventory_reservation` rows for that order have `status=released` and a non-null `releasedAt`.
+
+## Completion Evidence
+
+- Focused RED test failed before implementation because `tx.inventoryReservation.updateMany` had zero calls.
+- Focused GREEN test passed: `pnpm --filter @welfare-mall/api run test -- test/order/order-refund.repository.spec.ts --runInBand`.
+- Full verification passed: `pnpm run verify` with API 54 suites / 200 tests, Admin 10 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 29 tests.
+- Docker runtime passed: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke`.
+- Diff hygiene passed: `git diff --check`.
+- Live DB smoke confirmed `ORDER-20260605042942663-XLGJXT` has an `inventory_reservation` row with `status=released` and non-null `releasedAt`.
+- Merged implementation PR: #127, squash commit `b0ea2fa`.
 
 ## Boundaries
 
