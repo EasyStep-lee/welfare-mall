@@ -109,3 +109,14 @@ Actual: PASS locally. `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smo
 - This slice does not add WeChat DevTools true-device acceptance.
 - This slice does not deploy to the target environment.
 - This slice does not add automatic payment timeout cancellation.
+
+## Completion Evidence
+
+- Feature PR: <https://github.com/EasyStep-lee/welfare-mall/pull/137>
+- Merged main commit: `74781e3 feat: add user miniprogram order cancel action (#137)`
+- RED evidence: `pnpm --filter @welfare-mall/user-miniprogram run test -- utils/api.test.mjs pages/order-detail/index.test.mjs --run` failed with `orderCancelUrl is not a function` and `page.cancelOrder is not a function`.
+- Focused GREEN evidence: `pnpm --filter @welfare-mall/user-miniprogram run test -- utils/api.test.mjs pages/order-detail/index.test.mjs --run` passed with 2 files / 13 tests.
+- Full verification evidence: `pnpm run verify` passed with API 58 suites / 217 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Static diff evidence: `git diff --check` passed with CRLF warnings only.
+- Docker runtime evidence: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed locally.
+- Acceptance boundary: local Docker/runtime and automated mini-program tests only; target-environment deployment, WeChat DevTools true-device acceptance, and formal business acceptance remain outside this slice.
