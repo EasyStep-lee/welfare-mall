@@ -154,9 +154,12 @@ export class OrderController {
     assertRequiredText(orderNo, 'orderNo');
     assertRequiredText(input?.merchantId, 'merchantId');
 
+    const pickupCode = input.pickupCode?.trim();
+
     return this.orderFulfillmentService.completeMerchantFulfillmentOrder({
       orderNo: orderNo.trim(),
-      merchantId: input.merchantId.trim()
+      merchantId: input.merchantId.trim(),
+      ...(pickupCode ? { pickupCode } : {})
     });
   }
 
@@ -399,6 +402,7 @@ type OrderAmountPreviewRequest = OrderAmountPreviewInput;
 type OrderCheckoutRequest = OrderCheckoutInput;
 type CompleteMerchantFulfillmentOrderRequest = {
   merchantId: string;
+  pickupCode?: string;
 };
 type CreateOrderPaymentRequest = CreateOrderPaymentInput;
 type ProcessOrderPaymentCallbackRequest = Omit<ProcessOrderPaymentCallbackServiceInput, 'paidAt'> & {

@@ -99,6 +99,42 @@ const completedFulfillmentQueueResponse = {
   ]
 };
 
+const pickupFulfillmentQueueResponse = {
+  orders: [
+    {
+      id: 'fulfillment-task-003',
+      taskNo: 'FT-ORDER-20260603-003-MERCHANT-001-001',
+      orderNo: 'ORDER-20260603-003',
+      status: 'paid',
+      createdAt: '2026-06-03T08:10:00.000Z',
+      updatedAt: '2026-06-03T08:10:00.000Z',
+      completedAt: null,
+      totalAmount: 6990,
+      cashPayableAmount: 6990,
+      welfareCardPayableAmount: 0,
+      fulfillmentType: 'pickup',
+      receiverName: null,
+      receiverPhone: null,
+      receiverAddress: null,
+      pickupStoreName: '浦东直营网点',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-003-MERCHANT-001-001',
+      latestPayment: {
+        paymentNo: 'PAY-20260603-003',
+        status: 'paid',
+        channel: 'wechat'
+      },
+      lines: [
+        {
+          displayName: 'Pickup Rice',
+          displaySkuCode: 'SKU-RICE-2KG',
+          quantity: 1,
+          lineTotalAmount: 6990
+        }
+      ]
+    }
+  ]
+};
+
 describe('Merchant product submission workbench', () => {
   beforeEach(() => {
     let fulfillmentQueueLoads = 0;
@@ -257,6 +293,54 @@ describe('Merchant product submission workbench', () => {
     expect(screen.getByText('浦东直营网点')).toBeInTheDocument();
     expect(screen.getByText('取货码 WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '确认完成' })).not.toBeInTheDocument();
+  });
+
+  it('submits the entered pickup code when completing pickup fulfillment', async () => {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-003/complete')) {
+        return {
+          ok: true,
+          json: async () => ({
+            order: {
+              orderNo: 'ORDER-20260603-003',
+              status: 'completed'
+            }
+          })
+        } as Response;
+      }
+
+      if (url.includes('/orders/merchant/fulfillment')) {
+        return {
+          ok: true,
+          json: async () => pickupFulfillmentQueueResponse
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        json: async () => draftQueueResponse
+      } as Response;
+    });
+
+    render(<App />);
+
+    const pickupCodeInput = await screen.findByLabelText('核销取货码');
+    fireEvent.change(pickupCodeInput, {
+      target: { value: ' WM_PICKUP:FT-ORDER-20260603-003-MERCHANT-001-001 ' }
+    });
+    await userEvent.click(screen.getByRole('button', { name: '确认完成' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/merchant/fulfillment/ORDER-20260603-003/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchantId: 'merchant-001',
+          pickupCode: 'WM_PICKUP:FT-ORDER-20260603-003-MERCHANT-001-001'
+        })
+      });
+    });
   });
 
   it('saves a complete product draft from merchant-facing fields', async () => {

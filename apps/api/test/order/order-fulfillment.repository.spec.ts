@@ -330,6 +330,56 @@ describe('OrderFulfillmentRepository', () => {
     });
   });
 
+  it('rejects pickup fulfillment completion when the pickup code does not match', async () => {
+    const prisma = createPrismaMock();
+    prisma.tx.fulfillmentTask.findFirst.mockResolvedValue({
+      ...fulfillmentTaskRecord,
+      fulfillmentType: 'pickup',
+      receiverName: null,
+      receiverPhone: null,
+      receiverAddress: null,
+      pickupStoreName: '浦东直营网点',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
+    const repository = new OrderFulfillmentRepository(prisma as never);
+
+    const result = await repository.completePaidOrderForMerchant({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001',
+      pickupCode: 'WRONG-CODE'
+    } as never);
+
+    expect(result).toBeNull();
+    expect(prisma.tx.fulfillmentTask.update).not.toHaveBeenCalled();
+    expect(prisma.tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(prisma.tx.orderState.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects pickup fulfillment completion when the pickup code is blank', async () => {
+    const prisma = createPrismaMock();
+    prisma.tx.fulfillmentTask.findFirst.mockResolvedValue({
+      ...fulfillmentTaskRecord,
+      fulfillmentType: 'pickup',
+      receiverName: null,
+      receiverPhone: null,
+      receiverAddress: null,
+      pickupStoreName: '浦东直营网点',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
+    const repository = new OrderFulfillmentRepository(prisma as never);
+
+    const result = await repository.completePaidOrderForMerchant({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001',
+      pickupCode: undefined
+    } as never);
+
+    expect(result).toBeNull();
+    expect(prisma.tx.fulfillmentTask.update).not.toHaveBeenCalled();
+    expect(prisma.tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(prisma.tx.orderState.update).not.toHaveBeenCalled();
+  });
+
   it('returns null when the order does not contain merchant-owned products', async () => {
     const prisma = createPrismaMock();
     prisma.tx.fulfillmentTask.findFirst.mockResolvedValue(null);
