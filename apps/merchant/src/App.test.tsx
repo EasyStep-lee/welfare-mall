@@ -44,6 +44,8 @@ const fulfillmentQueueResponse = {
       receiverName: 'Li Lei',
       receiverPhone: '13800000000',
       receiverAddress: 'Pudong Avenue 1',
+      pickupStoreName: null,
+      pickupCode: null,
       latestPayment: {
         paymentNo: 'PAY-20260603-001',
         status: 'paid',
@@ -79,6 +81,7 @@ const completedFulfillmentQueueResponse = {
       receiverPhone: null,
       receiverAddress: null,
       pickupStoreName: '浦东直营网点',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001',
       latestPayment: {
         paymentNo: 'PAY-20260603-002',
         status: 'paid',
@@ -252,6 +255,7 @@ describe('Merchant product submission workbench', () => {
     expect(screen.getByText('创建 2026-06-03 08:10')).toBeInTheDocument();
     expect(screen.getByText('完成 2026-06-03 08:45')).toBeInTheDocument();
     expect(screen.getByText('浦东直营网点')).toBeInTheDocument();
+    expect(screen.getByText('取货码 WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '确认完成' })).not.toBeInTheDocument();
   });
 

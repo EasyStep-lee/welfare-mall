@@ -296,6 +296,16 @@ tbody tr:hover {
   margin: 0;
 }
 
+.fulfillment-card .pickup-code {
+  background: #f3f6f5;
+  border-radius: 6px;
+  color: #24524d;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+}
+
 .fulfillment-card-header,
 .fulfillment-card-footer {
   align-items: center;

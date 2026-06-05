@@ -21,6 +21,7 @@ export type MerchantFulfillmentOrderRecord = {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  pickupCode: string | null;
   createdAt: Date;
   updatedAt: Date;
   lines: MerchantFulfillmentOrderLineRecord[];
@@ -80,6 +81,7 @@ type FulfillmentTaskRecord = {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  pickupCode: string | null;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -203,6 +205,7 @@ function taskToFulfillmentOrder(
     receiverPhone: task.receiverPhone,
     receiverAddress: task.receiverAddress,
     pickupStoreName: task.pickupStoreName,
+    pickupCode: task.pickupCode,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     lines: task.lines,
@@ -222,6 +225,7 @@ function fulfillmentTaskSelect() {
     receiverPhone: true,
     receiverAddress: true,
     pickupStoreName: true,
+    pickupCode: true,
     completedAt: true,
     createdAt: true,
     updatedAt: true,

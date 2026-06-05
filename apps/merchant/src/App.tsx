@@ -247,6 +247,7 @@ export default function App() {
                 {order.completedAt ? <span>完成 {formatDateTime(order.completedAt)}</span> : null}
               </div>
               <p>{formatReceiver(order)}</p>
+              {order.pickupCode ? <p className="pickup-code">取货码 {order.pickupCode}</p> : null}
               <div className="fulfillment-lines">
                 {order.lines.map((line) => (
                   <span key={`${order.orderNo}-${line.displayName}-${line.displaySkuCode ?? 'default'}`}>
