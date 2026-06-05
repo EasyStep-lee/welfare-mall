@@ -115,6 +115,7 @@ export type MerchantFulfillmentOrder = {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  pickupCode: string | null;
   latestPayment: {
     paymentNo: string;
     status: string;

@@ -439,6 +439,7 @@ model FulfillmentTask {
   receiverPhone   String?
   receiverAddress String?
   pickupStoreName String?
+  pickupCode      String?
   completedAt     DateTime?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt

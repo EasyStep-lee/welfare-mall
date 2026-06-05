@@ -85,6 +85,7 @@ type PaidOrderForFulfillment = {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  pickupCode?: string | null;
   lines: Array<{
     id: string;
     productId: string;
@@ -285,9 +286,11 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, o
       continue;
     }
 
+    const taskNo = createFulfillmentTaskNo(orderNo, merchantId);
+
     await tx.fulfillmentTask.create({
       data: {
-        taskNo: createFulfillmentTaskNo(orderNo, merchantId),
+        taskNo,
         orderNo,
         merchantId,
         status: 'pending',
@@ -296,6 +299,7 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, o
         receiverPhone: order.receiverPhone,
         receiverAddress: order.receiverAddress,
         pickupStoreName: order.pickupStoreName,
+        pickupCode: createPickupCode(order.fulfillmentType, taskNo),
         lines: {
           create: lines.map((line) => ({
             orderLineId: line.id,
@@ -313,6 +317,10 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, o
       select: { id: true }
     });
   }
+}
+
+function createPickupCode(fulfillmentType: string, taskNo: string): string | null {
+  return fulfillmentType === 'pickup' ? `WM_PICKUP:${taskNo}` : null;
 }
 
 function createFulfillmentTaskNo(orderNo: string, merchantId: string): string {

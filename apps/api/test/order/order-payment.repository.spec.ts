@@ -38,6 +38,15 @@ const paidOrderRecord = {
   ]
 };
 
+const pickupOrderRecord = {
+  ...paidOrderRecord,
+  fulfillmentType: 'pickup',
+  receiverName: null,
+  receiverPhone: null,
+  receiverAddress: null,
+  pickupStoreName: '浦东直营网点'
+};
+
 function createPrismaMock() {
   const tx = {
     product: {
@@ -224,6 +233,7 @@ describe('OrderPaymentRepository', () => {
         receiverPhone: '13800000000',
         receiverAddress: 'Pudong Avenue 1',
         pickupStoreName: null,
+        pickupCode: null,
         lines: {
           create: [
             {
@@ -248,6 +258,33 @@ describe('OrderPaymentRepository', () => {
         payment: expect.objectContaining({ status: 'paid', providerPaymentNo: 'wx-pay-001' })
       })
     );
+  });
+
+  it('creates pickup fulfillment tasks with a pickup code after a paid callback', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderHeader.findUnique.mockResolvedValue(pickupOrderRecord);
+    const repository = new OrderPaymentRepository(prisma as never);
+
+    await repository.processCallback({
+      providerEventId: 'event-001',
+      paymentNo: 'PAY-20260603-001',
+      providerPaymentNo: 'wx-pay-001',
+      status: 'paid',
+      paidAt: new Date('2026-06-03T00:05:00.000Z'),
+      payload: { event: 'paid' }
+    });
+
+    expect(tx.fulfillmentTask.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        fulfillmentType: 'pickup',
+        receiverName: null,
+        receiverPhone: null,
+        receiverAddress: null,
+        pickupStoreName: '浦东直营网点',
+        pickupCode: expect.stringMatching(/^WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-\d+$/)
+      }),
+      select: expect.any(Object)
+    });
   });
 
   it('returns the existing callback result without updating payment again', async () => {

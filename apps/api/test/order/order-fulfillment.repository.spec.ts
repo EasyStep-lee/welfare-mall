@@ -77,6 +77,7 @@ const fulfillmentTaskRecord = {
   receiverPhone: '13800000000',
   receiverAddress: 'Pudong Avenue 1',
   pickupStoreName: null,
+  pickupCode: null,
   createdAt: new Date('2026-06-03T00:10:00.000Z'),
   updatedAt: new Date('2026-06-03T00:10:00.000Z'),
   completedAt: null,
@@ -169,6 +170,7 @@ describe('OrderFulfillmentRepository', () => {
         receiverPhone: fulfillmentTaskRecord.receiverPhone,
         receiverAddress: fulfillmentTaskRecord.receiverAddress,
         pickupStoreName: fulfillmentTaskRecord.pickupStoreName,
+        pickupCode: null,
         createdAt: fulfillmentTaskRecord.createdAt,
         updatedAt: fulfillmentTaskRecord.updatedAt,
         lines: [orderRecord.lines[0]],
@@ -214,6 +216,48 @@ describe('OrderFulfillmentRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
+  });
+
+  it('returns pickup codes for pickup fulfillment tasks', async () => {
+    const prisma = createPrismaMock();
+    prisma.fulfillmentTask.findMany.mockResolvedValue([
+      {
+        ...fulfillmentTaskRecord,
+        fulfillmentType: 'pickup',
+        receiverName: null,
+        receiverPhone: null,
+        receiverAddress: null,
+        pickupStoreName: '浦东直营网点',
+        pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
+        order: {
+          ...fulfillmentTaskRecord.order,
+          fulfillmentType: 'pickup',
+          receiverName: null,
+          receiverPhone: null,
+          receiverAddress: null,
+          pickupStoreName: '浦东直营网点'
+        }
+      }
+    ]);
+    const repository = new OrderFulfillmentRepository(prisma as never);
+
+    const result = await repository.listPaidOrdersForMerchant('merchant-001');
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'pending',
+        merchantId: 'merchant-001'
+      },
+      orderBy: { createdAt: 'desc' },
+      select: expect.objectContaining({ pickupCode: true })
+    });
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        fulfillmentType: 'pickup',
+        pickupStoreName: '浦东直营网点',
+        pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+      })
+    );
   });
 
   it('returns an empty queue when the merchant has no products', async () => {
@@ -273,6 +317,12 @@ describe('OrderFulfillmentRepository', () => {
       id: 'fulfillment-task-001',
       taskNo: fulfillmentTaskRecord.taskNo,
       status: 'completed',
+      fulfillmentType: fulfillmentTaskRecord.fulfillmentType,
+      receiverName: fulfillmentTaskRecord.receiverName,
+      receiverPhone: fulfillmentTaskRecord.receiverPhone,
+      receiverAddress: fulfillmentTaskRecord.receiverAddress,
+      pickupStoreName: fulfillmentTaskRecord.pickupStoreName,
+      pickupCode: null,
       createdAt: fulfillmentTaskRecord.createdAt,
       updatedAt: fulfillmentTaskRecord.updatedAt,
       lines: [orderRecord.lines[0]],
