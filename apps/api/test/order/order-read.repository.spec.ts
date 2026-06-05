@@ -287,6 +287,29 @@ describe('OrderReadRepository', () => {
     });
   });
 
+  it('filters recent admin orders by fulfillment task number', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    await repository.listRecentAdminOrders({ taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001' });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
+      where: { taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001' },
+      orderBy: { createdAt: 'asc' },
+      select: expect.objectContaining({
+        orderNo: true,
+        taskNo: true,
+        status: true
+      })
+    });
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+  });
+
   it('composes recent admin order filtering by status, fulfillment progress, and merchant', async () => {
     const prisma = createPrismaMock();
     const repository = new OrderReadRepository(prisma as never);
@@ -300,6 +323,37 @@ describe('OrderReadRepository', () => {
     expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
       where: {
         merchantId: 'merchant-001',
+        status: 'pending'
+      },
+      orderBy: { createdAt: 'asc' },
+      select: expect.any(Object)
+    });
+    expect(prisma.orderHeader.findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'paid',
+        orderNo: { in: ['ORDER-20260603-001'] }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: expect.any(Object)
+    });
+  });
+
+  it('composes recent admin order filtering by status, fulfillment progress, merchant, and task number', async () => {
+    const prisma = createPrismaMock();
+    const repository = new OrderReadRepository(prisma as never);
+
+    await repository.listRecentAdminOrders({
+      status: 'paid',
+      fulfillmentStatus: 'pending',
+      merchantId: 'merchant-001',
+      taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
+
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        merchantId: 'merchant-001',
+        taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
         status: 'pending'
       },
       orderBy: { createdAt: 'asc' },

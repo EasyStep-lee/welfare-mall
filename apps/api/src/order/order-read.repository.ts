@@ -12,6 +12,7 @@ export type ListRecentAdminOrdersInput = {
   status?: OrderStatus;
   fulfillmentStatus?: AdminFulfillmentStatusFilter;
   merchantId?: string;
+  taskNo?: string;
 };
 
 export type AdminFulfillmentStatusFilter = 'pending' | 'completed';
@@ -55,10 +56,11 @@ export class OrderReadRepository {
   }
 
   async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<AdminOrderReadRecord[]> {
-    const fulfillmentOrderNos = input.fulfillmentStatus || input.merchantId
+    const fulfillmentOrderNos = input.fulfillmentStatus || input.merchantId || input.taskNo
       ? await this.findOrderNosByFulfillmentFilters({
           status: input.fulfillmentStatus,
-          merchantId: input.merchantId
+          merchantId: input.merchantId,
+          taskNo: input.taskNo
         })
       : undefined;
 
@@ -97,15 +99,16 @@ export class OrderReadRepository {
   private async findOrderNosByFulfillmentFilters(input: {
     status?: AdminFulfillmentStatusFilter;
     merchantId?: string;
+    taskNo?: string;
   }): Promise<string[]> {
     const tasks = await this.prisma.fulfillmentTask.findMany({
-      where: fulfillmentTaskFilterWhere(input.status, input.merchantId),
+      where: fulfillmentTaskFilterWhere(input.status, input.merchantId, input.taskNo),
       orderBy: { createdAt: 'asc' },
       select: fulfillmentTaskSummarySelect()
     });
     const orderNos = uniqueOrderNos(tasks);
 
-    if (input.merchantId) {
+    if (input.merchantId || input.taskNo) {
       return orderNos;
     }
 
@@ -289,7 +292,8 @@ function fulfillmentTaskSummarySelect() {
 
 function fulfillmentTaskFilterWhere(
   status: AdminFulfillmentStatusFilter | undefined,
-  merchantId: string | undefined
+  merchantId: string | undefined,
+  taskNo: string | undefined
 ) {
   const where: Record<string, string> = {};
 
@@ -297,7 +301,11 @@ function fulfillmentTaskFilterWhere(
     where.merchantId = merchantId;
   }
 
-  if (merchantId && status) {
+  if (taskNo) {
+    where.taskNo = taskNo;
+  }
+
+  if ((merchantId || taskNo) && status) {
     where.status = status;
   }
 
