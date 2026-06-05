@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 const {
   apiUrl,
   orderAmountPreviewUrl,
+  orderCancelUrl,
   orderCheckoutUrl,
   orderDetailUrl,
   orderListUrl,
@@ -33,6 +34,9 @@ describe('user mini-program API helpers', () => {
     expect(orderCheckoutUrl()).toBe('http://localhost:3000/api/orders');
     expect(orderPaymentUrl()).toBe('http://localhost:3000/api/orders/payments');
     expect(orderRefundUrl()).toBe('http://localhost:3000/api/orders/refunds');
+    expect(orderCancelUrl('ORDER 001', 'https://api.example.com/api/')).toBe(
+      'https://api.example.com/api/orders/ORDER%20001/cancel'
+    );
   });
 
   it('builds buyer-scoped order read URLs', () => {
