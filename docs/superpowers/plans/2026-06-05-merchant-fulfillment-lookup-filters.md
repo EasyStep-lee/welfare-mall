@@ -79,7 +79,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -88,6 +88,12 @@ feat: filter merchant fulfillment by order and task
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature PR: #117 `feat: filter merchant fulfillment by order and task`
+- Feature branch commit: `67d2772`
+- Main merge commit: `fe0a3e6`
 
 ## Acceptance Boundary
 
