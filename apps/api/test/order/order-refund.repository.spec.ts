@@ -67,6 +67,9 @@ function createPrismaMock() {
         orderNo: 'ORDER-20260603-001',
         status: 'refunded'
       })
+    },
+    inventoryReservation: {
+      updateMany: jest.fn().mockResolvedValue({ count: 1 })
     }
   };
   const prisma = {
@@ -196,6 +199,16 @@ describe('OrderRefundRepository', () => {
       where: { orderNo: 'ORDER-20260603-001' },
       data: { status: 'refunded' }
     });
+    expect(tx.inventoryReservation.updateMany).toHaveBeenCalledWith({
+      where: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'reserved'
+      },
+      data: {
+        status: 'released',
+        releasedAt: new Date('2026-06-03T00:15:00.000Z')
+      }
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -232,6 +245,7 @@ describe('OrderRefundRepository', () => {
     expect(tx.orderRefund.update).not.toHaveBeenCalled();
     expect(tx.orderState.update).not.toHaveBeenCalled();
     expect(tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
@@ -285,6 +299,7 @@ describe('OrderRefundRepository', () => {
       where: { orderNo: 'ORDER-20260603-001' },
       data: { status: 'paid' }
     });
+    expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
