@@ -21,7 +21,7 @@
 
 ### Task 1: RED Tests
 
-- [ ] **Step 1: Add failing inventory-reservation repository test**
+- [x] **Step 1: Add failing inventory-reservation repository test**
 
 Add a test to `apps/api/test/order/order-payment.repository.spec.ts` proving a first successful paid callback creates one inventory reservation per order line with:
 
@@ -36,11 +36,11 @@ Add a test to `apps/api/test/order/order-payment.repository.spec.ts` proving a f
 
 The same test should keep the existing fulfillment-task assertion intact.
 
-- [ ] **Step 2: Add duplicate callback guard expectation**
+- [x] **Step 2: Add duplicate callback guard expectation**
 
 Extend the duplicate-callback test to assert `tx.inventoryReservation.createMany` is not called when the provider event is already present.
 
-- [ ] **Step 3: Run focused RED tests**
+- [x] **Step 3: Run focused RED tests**
 
 Run:
 
@@ -52,17 +52,17 @@ Expected: FAIL because the transaction mock has no `inventoryReservation` client
 
 ### Task 2: Implementation
 
-- [ ] **Step 1: Add reservation schema**
+- [x] **Step 1: Add reservation schema**
 
 Add an `InventoryReservation` model to `apps/api/prisma/schema.prisma` with unique `orderLineId`, indexed `orderNo`, `merchantId`, `productId`, `skuId`, and `status`.
 
-- [ ] **Step 2: Write reservations from paid callback**
+- [x] **Step 2: Write reservations from paid callback**
 
 Extend `OrderPaymentTransaction` with `inventoryReservation.createMany`. In the paid-callback flow, after merchant grouping is known, create reservation rows for all order lines that resolved to a merchant. Use `skipDuplicates: true` and the unique `orderLineId` key for idempotency.
 
 ### Task 3: Verification
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -72,7 +72,7 @@ pnpm --filter @welfare-mall/api run test -- test/order/order-payment.repository.
 
 Expected: PASS.
 
-- [ ] **Step 2: Run local verification gates**
+- [x] **Step 2: Run local verification gates**
 
 Run:
 
@@ -86,6 +86,16 @@ git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 3: Run live DB smoke**
+- [x] **Step 3: Run live DB smoke**
 
 In the Docker-backed local runtime, create and pay an order, then query MySQL to confirm `inventory_reservation` has at least one `reserved` row for that order.
+
+## Completion Evidence
+
+- Focused RED test failed before implementation because `tx.inventoryReservation.createMany` was not called.
+- Focused GREEN test passed: `pnpm --filter @welfare-mall/api run test -- test/order/order-payment.repository.spec.ts --runInBand`.
+- Full verification passed: `pnpm run verify` with API 54 suites / 200 tests, Admin 10 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 29 tests.
+- Docker runtime passed: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke`.
+- Diff hygiene passed: `git diff --check`.
+- Live DB smoke confirmed `ORDER-20260605040302774-UB3KFW` has an `inventory_reservation` row with `status=reserved` and `source=order_paid`.
+- Merged implementation PR: #125, squash commit `e803ad2`.
