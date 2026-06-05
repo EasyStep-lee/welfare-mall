@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
+import { OrderInventoryService } from '../../src/order/order-inventory.service';
 import { OrderReadService } from '../../src/order/order-read.service';
 
 function createOrderReadServiceMock() {
@@ -12,17 +13,27 @@ function createOrderReadServiceMock() {
   };
 }
 
+function createOrderInventoryServiceMock() {
+  return {
+    listReservations: jest.fn()
+  };
+}
+
 describe('Order read API contract', () => {
   let app: INestApplication;
   let orderReadService: ReturnType<typeof createOrderReadServiceMock>;
+  let orderInventoryService: ReturnType<typeof createOrderInventoryServiceMock>;
 
   beforeEach(async () => {
     orderReadService = createOrderReadServiceMock();
+    orderInventoryService = createOrderInventoryServiceMock();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
     })
       .overrideProvider(OrderReadService)
       .useValue(orderReadService)
+      .overrideProvider(OrderInventoryService)
+      .useValue(orderInventoryService)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -162,6 +173,45 @@ describe('Order read API contract', () => {
     expect(response.body.orders[0]).toMatchObject({
       orderNo: 'ORDER-20260603-002',
       status: 'refund_processing'
+    });
+  });
+
+  it('lists filtered Admin inventory reservations', async () => {
+    orderInventoryService.listReservations.mockResolvedValue({
+      reservations: [
+        {
+          id: 'reservation-001',
+          orderNo: 'ORDER-001',
+          orderLineId: 'order-line-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          quantity: 2,
+          status: 'reserved',
+          source: 'order_paid',
+          releasedAt: null,
+          createdAt: '2026-06-05T00:00:00.000Z',
+          updatedAt: '2026-06-05T00:00:00.000Z'
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/orders/admin/inventory-reservations?status=reserved&merchantId=merchant-001&orderNo=ORDER-001')
+      .expect(200);
+
+    expect(orderInventoryService.listReservations).toHaveBeenCalledWith({
+      status: 'reserved',
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-001'
+    });
+    expect(response.body.reservations).toHaveLength(1);
+    expect(response.body.reservations[0]).toMatchObject({
+      orderNo: 'ORDER-001',
+      productId: 'product-001',
+      merchantId: 'merchant-001',
+      quantity: 2,
+      status: 'reserved'
     });
   });
 

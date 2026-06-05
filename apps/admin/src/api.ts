@@ -7,6 +7,7 @@ export type AdminOrderStatusFilter =
   | 'refunded'
   | 'completed';
 export type AdminFulfillmentStatusFilter = 'all' | 'pending' | 'completed';
+export type AdminInventoryReservationStatusFilter = 'all' | 'reserved' | 'released';
 
 export type BusinessParty = {
   id: string;
@@ -128,6 +129,25 @@ export type AdminOrderResponse = {
   orders: AdminOrder[];
 };
 
+export type AdminInventoryReservation = {
+  id: string;
+  orderNo: string;
+  orderLineId: string;
+  productId: string;
+  skuId: string | null;
+  merchantId: string;
+  quantity: number;
+  status: string;
+  source: string;
+  releasedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminInventoryReservationResponse = {
+  reservations: AdminInventoryReservation[];
+};
+
 export type CreateOrderRefundInput = {
   requestId: string;
   paymentNo: string;
@@ -216,6 +236,12 @@ export const adminFulfillmentStatusLabels: Record<AdminFulfillmentStatusFilter, 
   completed: '履约完成'
 };
 
+export const adminInventoryReservationStatusLabels: Record<AdminInventoryReservationStatusFilter, string> = {
+  all: '全部库存',
+  reserved: '预占中',
+  released: '释放记录'
+};
+
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 
 function apiBaseUrl() {
@@ -261,6 +287,31 @@ export async function fetchAdminOrders(
   }
 
   return response.json() as Promise<AdminOrderResponse>;
+}
+
+export async function fetchAdminInventoryReservations(
+  status: AdminInventoryReservationStatusFilter = 'all',
+  merchantId?: string,
+  orderNo?: string
+): Promise<AdminInventoryReservationResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders/admin/inventory-reservations`);
+
+  if (status !== 'all') {
+    url.searchParams.set('status', status);
+  }
+  if (merchantId?.trim()) {
+    url.searchParams.set('merchantId', merchantId.trim());
+  }
+  if (orderNo?.trim()) {
+    url.searchParams.set('orderNo', orderNo.trim());
+  }
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load inventory reservations: ${response.status}`);
+  }
+
+  return response.json() as Promise<AdminInventoryReservationResponse>;
 }
 
 export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {

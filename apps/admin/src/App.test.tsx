@@ -162,6 +162,39 @@ const refundedAfterCallbackOrdersResponse = {
   ]
 };
 
+const adminInventoryReservationsResponse = {
+  reservations: [
+    {
+      id: 'reservation-001',
+      orderNo: 'ORDER-20260603-001',
+      orderLineId: 'order-line-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      merchantId: 'merchant-001',
+      quantity: 2,
+      status: 'reserved',
+      source: 'order_paid',
+      releasedAt: null,
+      createdAt: '2026-06-03T00:15:00.000Z',
+      updatedAt: '2026-06-03T00:15:00.000Z'
+    },
+    {
+      id: 'reservation-002',
+      orderNo: 'ORDER-20260603-002',
+      orderLineId: 'order-line-002',
+      productId: 'product-002',
+      skuId: null,
+      merchantId: 'merchant-002',
+      quantity: 1,
+      status: 'released',
+      source: 'order_paid',
+      releasedAt: '2026-06-03T00:30:00.000Z',
+      createdAt: '2026-06-03T00:16:00.000Z',
+      updatedAt: '2026-06-03T00:30:00.000Z'
+    }
+  ]
+};
+
 describe('Admin product review workbench', () => {
   beforeEach(() => {
     let adminOrderLoads = 0;
@@ -169,6 +202,13 @@ describe('Admin product review workbench', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+
+        if (url.includes('/orders/admin/inventory-reservations')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryReservationsResponse
+          };
+        }
 
         if (url.includes('/orders/refunds')) {
           return {
@@ -237,27 +277,57 @@ describe('Admin product review workbench', () => {
     render(<App />);
 
     expect(await screen.findByText('订单管理')).toBeInTheDocument();
+    const orderManagement = screen.getByLabelText('订单管理');
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin');
-    expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
-    expect(screen.getByText('user-001')).toBeInTheDocument();
-    expect(screen.getAllByText('已支付').length).toBeGreaterThan(0);
-    expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
-    expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
-    expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
-    expect(screen.getByText('REF-20260603-001')).toBeInTheDocument();
-    expect(screen.getByText('微信支付 退款处理中 ¥139.80')).toBeInTheDocument();
-    expect(screen.getByText('履约 2 项')).toBeInTheDocument();
-    expect(screen.getByText('待履约 1')).toBeInTheDocument();
-    expect(screen.getByText('已完成 1')).toBeInTheDocument();
-    expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
-    expect(screen.getByText('FT-ORDER-20260603-001-MERCHANT-002-001')).toBeInTheDocument();
-    expect(screen.getByText('商户 merchant-001')).toBeInTheDocument();
-    expect(screen.getByText('任务状态 待履约')).toBeInTheDocument();
-    expect(screen.getByText('创建 2026-06-03 00:15')).toBeInTheDocument();
-    expect(screen.getByText('商户 merchant-002')).toBeInTheDocument();
-    expect(screen.getByText('任务状态 履约完成')).toBeInTheDocument();
-    expect(screen.getByText('完成 2026-06-03 00:30')).toBeInTheDocument();
-    expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('user-001')).toBeInTheDocument();
+    expect(within(orderManagement).getAllByText('已支付').length).toBeGreaterThan(0);
+    expect(within(orderManagement).getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('合计 ¥139.80')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('微信支付 已支付')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('REF-20260603-001')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('微信支付 退款处理中 ¥139.80')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('履约 2 项')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('待履约 1')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('已完成 1')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('FT-ORDER-20260603-001-MERCHANT-002-001')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('商户 merchant-001')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('任务状态 待履约')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('创建 2026-06-03 00:15')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('商户 merchant-002')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('任务状态 履约完成')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('完成 2026-06-03 00:30')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('Local Rice x2')).toBeInTheDocument();
+  });
+
+  it('renders Admin inventory reservation read model', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('库存预占')).toBeInTheDocument();
+    const inventoryPanel = screen.getByLabelText('库存预占');
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin/inventory-reservations');
+    expect(within(inventoryPanel).getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('product-001')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('merchant-001')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('数量 2')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('已预占')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('ORDER-20260603-002')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('已释放')).toBeInTheDocument();
+    expect(within(inventoryPanel).getByText('释放 2026-06-03 00:30')).toBeInTheDocument();
+  });
+
+  it('filters Admin inventory reservations by merchant', async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('库存商户'), { target: { value: ' merchant-001 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '筛选库存商户' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/orders/admin/inventory-reservations?merchantId=merchant-001'
+      );
+    });
   });
 
   it('filters Admin orders by status tab', async () => {
@@ -356,6 +426,13 @@ describe('Admin product review workbench', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
 
+        if (url.includes('/orders/admin/inventory-reservations')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryReservationsResponse
+          };
+        }
+
         if (url.includes('/orders/payments/callbacks')) {
           return {
             ok: true,
@@ -426,6 +503,13 @@ describe('Admin product review workbench', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+
+        if (url.includes('/orders/admin/inventory-reservations')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryReservationsResponse
+          };
+        }
 
         if (url.includes('/orders/refunds/callbacks')) {
           return {
