@@ -95,6 +95,23 @@ describe('OrderFulfillmentService', () => {
     expect(result).toEqual({ order: { ...fulfillmentOrder, status: 'completed', latestPayment: null } });
   });
 
+  it('trims pickup codes when completing merchant pickup fulfillment', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderFulfillmentService(repository as unknown as OrderFulfillmentRepository);
+
+    await service.completeMerchantFulfillmentOrder({
+      merchantId: ' merchant-001 ',
+      orderNo: ' ORDER-20260603-001 ',
+      pickupCode: ' WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001 '
+    } as never);
+
+    expect(repository.completePaidOrderForMerchant).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-001',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
+  });
+
   it('rejects blank order numbers when completing fulfillment', async () => {
     const repository = createRepositoryMock();
     const service = new OrderFulfillmentService(repository as unknown as OrderFulfillmentRepository);

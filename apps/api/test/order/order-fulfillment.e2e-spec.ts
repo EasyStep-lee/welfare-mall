@@ -180,6 +180,37 @@ describe('Merchant fulfillment order API contract', () => {
     });
   });
 
+  it('forwards pickup codes when completing merchant pickup fulfillment', async () => {
+    orderFulfillmentService.completeMerchantFulfillmentOrder.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260603-002',
+        status: 'completed',
+        fulfillmentType: 'pickup',
+        pickupCode: 'WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001',
+        lines: [{ displayName: 'Pickup Rice', quantity: 1 }]
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/orders/merchant/fulfillment/ORDER-20260603-002/complete')
+      .send({
+        merchantId: 'merchant-001',
+        pickupCode: ' WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001 '
+      })
+      .expect(200);
+
+    expect(orderFulfillmentService.completeMerchantFulfillmentOrder).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      orderNo: 'ORDER-20260603-002',
+      pickupCode: 'WM_PICKUP:FT-ORDER-20260603-002-MERCHANT-001-001'
+    });
+    expect(response.body.order).toMatchObject({
+      orderNo: 'ORDER-20260603-002',
+      status: 'completed',
+      fulfillmentType: 'pickup'
+    });
+  });
+
   it('rejects blank merchant ID before completing fulfillment', async () => {
     await request(app.getHttpServer())
       .post('/api/orders/merchant/fulfillment/ORDER-20260603-001/complete')

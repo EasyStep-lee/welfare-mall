@@ -45,6 +45,7 @@ export type MerchantFulfillmentOrderLineRecord = {
 export type CompletePaidOrderForMerchantInput = {
   merchantId: string;
   orderNo: string;
+  pickupCode?: string;
 };
 
 export type ListOrdersForMerchantInput = {
@@ -143,6 +144,10 @@ export class OrderFulfillmentRepository {
         return null;
       }
 
+      if (!canCompleteFulfillmentTask(task, input.pickupCode)) {
+        return null;
+      }
+
       const completedAt = new Date();
       const completedTask = await tx.fulfillmentTask.update({
         where: { id: task.id },
@@ -176,6 +181,14 @@ export class OrderFulfillmentRepository {
       return taskToFulfillmentOrder(completedTask, null);
     });
   }
+}
+
+function canCompleteFulfillmentTask(task: FulfillmentTaskRecord, pickupCode: string | undefined): boolean {
+  if (task.fulfillmentType !== 'pickup') {
+    return true;
+  }
+
+  return typeof task.pickupCode === 'string' && task.pickupCode.length > 0 && task.pickupCode === pickupCode;
 }
 
 function toFulfillmentTaskStatus(status: OrderStatus): FulfillmentTaskStatus {

@@ -36,6 +36,7 @@ export default function App() {
   const [items, setItems] = useState<SubmissionQueueItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [fulfillmentOrders, setFulfillmentOrders] = useState<MerchantFulfillmentOrder[]>([]);
+  const [pickupCodeInputs, setPickupCodeInputs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,9 +129,15 @@ export default function App() {
     try {
       await completeMerchantFulfillmentOrder({
         merchantId: fixedMerchantContext.merchantId,
-        orderNo: order.orderNo
+        orderNo: order.orderNo,
+        pickupCode: order.fulfillmentType === 'pickup' ? pickupCodeInputs[order.taskNo]?.trim() : undefined
       });
       setMessage(`${order.orderNo} 已确认完成`);
+      setPickupCodeInputs((current) => {
+        const next = { ...current };
+        delete next[order.taskNo];
+        return next;
+      });
       await loadFulfillmentOrders(activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup);
     } catch (completeError) {
       setError(completeError instanceof Error ? completeError.message : '确认履约完成失败');
@@ -153,6 +160,13 @@ export default function App() {
     setDraftForm((current) => ({
       ...current,
       [field]: value
+    }));
+  }
+
+  function updatePickupCodeInput(taskNo: string, value: string) {
+    setPickupCodeInputs((current) => ({
+      ...current,
+      [taskNo]: value
     }));
   }
 
@@ -262,6 +276,16 @@ export default function App() {
               </div>
               {order.status === 'paid' ? (
                 <div className="fulfillment-actions">
+                  {order.fulfillmentType === 'pickup' ? (
+                    <label className="pickup-code-verification">
+                      核销取货码
+                      <input
+                        aria-label="核销取货码"
+                        value={pickupCodeInputs[order.taskNo] ?? ''}
+                        onChange={(event) => updatePickupCodeInput(order.taskNo, event.target.value)}
+                      />
+                    </label>
+                  ) : null}
                   <button type="button" className="submit-button" onClick={() => void completeFulfillmentOrder(order)}>
                     确认完成
                   </button>

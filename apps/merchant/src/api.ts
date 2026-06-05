@@ -219,11 +219,15 @@ function setOptionalSearchParam(url: URL, key: string, value: string | undefined
   }
 }
 
-export async function completeMerchantFulfillmentOrder(input: { merchantId: string; orderNo: string }) {
+export async function completeMerchantFulfillmentOrder(input: { merchantId: string; orderNo: string; pickupCode?: string }) {
+  const pickupCode = input.pickupCode?.trim();
   const response = await fetch(`${apiBaseUrl()}/orders/merchant/fulfillment/${input.orderNo}/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ merchantId: input.merchantId })
+    body: JSON.stringify({
+      merchantId: input.merchantId,
+      ...(pickupCode ? { pickupCode } : {})
+    })
   });
 
   if (!response.ok) {

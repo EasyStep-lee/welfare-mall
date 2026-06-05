@@ -14,6 +14,7 @@ export type MerchantFulfillmentStatus = typeof OrderStatuses.Paid | typeof Order
 export type CompleteMerchantFulfillmentOrderInput = {
   merchantId: string;
   orderNo: string;
+  pickupCode?: string;
 };
 
 @Injectable()
@@ -40,7 +41,12 @@ export class OrderFulfillmentService {
   ): Promise<{ order: MerchantFulfillmentOrderRecord }> {
     const merchantId = requireText(input.merchantId, 'merchantId');
     const orderNo = requireText(input.orderNo, 'orderNo');
-    const order = await this.orderFulfillmentRepository.completePaidOrderForMerchant({ merchantId, orderNo });
+    const pickupCode = optionalText(input.pickupCode);
+    const order = await this.orderFulfillmentRepository.completePaidOrderForMerchant({
+      merchantId,
+      orderNo,
+      ...(pickupCode ? { pickupCode } : {})
+    });
 
     if (!order) {
       throw new NotFoundException('Merchant fulfillment order was not found.');

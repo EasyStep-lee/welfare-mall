@@ -344,8 +344,29 @@ tbody tr:hover {
 }
 
 .fulfillment-actions {
+  align-items: flex-end;
   display: flex;
+  gap: 10px;
   justify-content: flex-end;
+}
+
+.pickup-code-verification {
+  color: #4a5f5b;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 4px;
+  min-width: 260px;
+}
+
+.pickup-code-verification input {
+  border: 1px solid #cbd9d6;
+  border-radius: 6px;
+  color: #172421;
+  font: inherit;
+  font-weight: 500;
+  height: 36px;
+  padding: 0 10px;
 }
 
 .editor-heading {
