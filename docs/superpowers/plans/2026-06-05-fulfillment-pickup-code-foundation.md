@@ -78,7 +78,7 @@ Expected: PASS.
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, PR, merge**
+- [x] **Step 1: Commit, push, PR, merge**
 
 Commit message:
 
@@ -87,6 +87,12 @@ feat: add fulfillment pickup codes
 ```
 
 Expected: PR targets `main` and includes focused/full/Docker verification evidence.
+
+Result:
+
+- Feature commit: `6f520ad feat: add fulfillment pickup codes`
+- Feature PR: `#119 feat: add fulfillment pickup codes`
+- Main merge commit: `04d6584 feat: add fulfillment pickup codes (#119)`
 
 ## Acceptance Boundary
 
