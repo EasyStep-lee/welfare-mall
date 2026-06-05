@@ -68,6 +68,7 @@ model Merchant {
   region         Region?   @relation(fields: [regionId], references: [id])
   products       Product[]
   fulfillmentTasks FulfillmentTask[]
+  settlementBillItems MerchantSettlementBillItem[]
 
   @@index([franchiseId])
   @@index([regionId])
@@ -512,6 +513,32 @@ model InventoryReservation {
   @@index([skuId])
   @@index([status])
   @@map("inventory_reservation")
+}
+
+model MerchantSettlementBillItem {
+  id                 String   @id @default(cuid())
+  billItemNo         String   @unique
+  merchantId         String
+  orderNo            String
+  orderLineId        String   @unique
+  productId          String
+  skuId              String?
+  source             String
+  status             String
+  grossAmount        Int
+  refundOffsetAmount Int      @default(0)
+  adjustmentAmount   Int      @default(0)
+  netAmount          Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  merchant           Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@index([orderNo])
+  @@index([productId])
+  @@index([skuId])
+  @@index([status])
+  @@map("merchant_settlement_bill_item")
 }
 
 model OrderPayment {
