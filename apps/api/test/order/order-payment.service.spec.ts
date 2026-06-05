@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { OrderPaymentRepository } from '../../src/order/order-payment.repository';
 import { OrderPaymentService } from '../../src/order/order-payment.service';
+import { SettlementRepository } from '../../src/settlement/settlement.repository';
 
 const paymentRecord = {
   id: 'payment-001',
@@ -45,10 +46,30 @@ function createRepositoryMock() {
   };
 }
 
+function createSettlementRepositoryMock() {
+  return {
+    generateMerchantBillItemsForPaidOrder: jest.fn().mockResolvedValue({ items: [] })
+  };
+}
+
+function createServiceFixture() {
+  const repository = createRepositoryMock();
+  const settlementRepository = createSettlementRepositoryMock();
+  const service = new OrderPaymentService(
+    repository as unknown as OrderPaymentRepository,
+    settlementRepository as unknown as SettlementRepository
+  );
+
+  return {
+    repository,
+    settlementRepository,
+    service
+  };
+}
+
 describe('OrderPaymentService', () => {
   it('creates a pending payment order', async () => {
-    const repository = createRepositoryMock();
-    const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
+    const { repository, service } = createServiceFixture();
 
     const result = await service.createPayment({
       requestId: 'request-001',
@@ -76,6 +97,7 @@ describe('OrderPaymentService', () => {
     'rejects payment creation when order state is %s',
     async (status) => {
       const repository = createRepositoryMock();
+      const settlementRepository = createSettlementRepositoryMock();
       repository.findOrderStateByOrderNo.mockResolvedValue(
         status === null
           ? null
@@ -90,7 +112,10 @@ describe('OrderPaymentService', () => {
               updatedAt: new Date('2026-06-03T00:00:00.000Z')
             }
       );
-      const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
+      const service = new OrderPaymentService(
+        repository as unknown as OrderPaymentRepository,
+        settlementRepository as unknown as SettlementRepository
+      );
 
       await expect(
         service.createPayment({
@@ -108,9 +133,8 @@ describe('OrderPaymentService', () => {
   );
 
   it('returns existing payment for the same idempotent request', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.findPaymentByRequestId.mockResolvedValue(paymentRecord);
-    const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
 
     const result = await service.createPayment({
       requestId: 'request-001',
@@ -126,9 +150,8 @@ describe('OrderPaymentService', () => {
   });
 
   it('rejects a reused request ID with different payment amount', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.findPaymentByRequestId.mockResolvedValue(paymentRecord);
-    const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
 
     await expect(
       service.createPayment({
@@ -143,8 +166,7 @@ describe('OrderPaymentService', () => {
   });
 
   it('processes payment callback through repository idempotency', async () => {
-    const repository = createRepositoryMock();
-    const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
+    const { repository, settlementRepository, service } = createServiceFixture();
 
     const result = await service.processCallback({
       providerEventId: 'event-001',
@@ -164,12 +186,62 @@ describe('OrderPaymentService', () => {
       payload: { event: 'paid' }
     });
     expect(result).toEqual(expect.objectContaining({ duplicate: false }));
+    expect(settlementRepository.generateMerchantBillItemsForPaidOrder).toHaveBeenCalledWith('ORDER-20260603-001');
+  });
+
+  it('does not generate settlement bill items for duplicate callbacks', async () => {
+    const { repository, settlementRepository, service } = createServiceFixture();
+    repository.processCallback.mockResolvedValue({
+      duplicate: true,
+      payment: { ...paymentRecord, status: 'paid', providerPaymentNo: 'wx-pay-001' },
+      callback: {
+        id: 'callback-001',
+        paymentNo: paymentRecord.paymentNo,
+        providerEventId: 'event-001',
+        status: 'paid'
+      }
+    });
+
+    await service.processCallback({
+      providerEventId: 'event-001',
+      paymentNo: 'PAY-20260603-001',
+      providerPaymentNo: 'wx-pay-001',
+      status: 'paid',
+      paidAt: new Date('2026-06-03T00:05:00.000Z'),
+      payload: { event: 'paid' }
+    });
+
+    expect(settlementRepository.generateMerchantBillItemsForPaidOrder).not.toHaveBeenCalled();
+  });
+
+  it('does not generate settlement bill items for failed callbacks', async () => {
+    const { repository, settlementRepository, service } = createServiceFixture();
+    repository.processCallback.mockResolvedValue({
+      duplicate: false,
+      payment: { ...paymentRecord, status: 'failed', providerPaymentNo: 'wx-pay-001' },
+      callback: {
+        id: 'callback-001',
+        paymentNo: paymentRecord.paymentNo,
+        providerEventId: 'event-001',
+        status: 'failed'
+      }
+    });
+
+    await service.processCallback({
+      providerEventId: 'event-001',
+      paymentNo: 'PAY-20260603-001',
+      providerPaymentNo: 'wx-pay-001',
+      status: 'failed',
+      paidAt: null,
+      payload: { event: 'failed' }
+    });
+
+    expect(settlementRepository.generateMerchantBillItemsForPaidOrder).not.toHaveBeenCalled();
   });
 
   it('returns not found when callback references a missing payment', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.processCallback.mockResolvedValue(null);
-    const service = new OrderPaymentService(repository as unknown as OrderPaymentRepository);
 
     await expect(
       service.processCallback({
