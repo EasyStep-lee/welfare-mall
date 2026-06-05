@@ -128,3 +128,13 @@ Actual: PASS.
 - This slice only creates pending merchant bill items from paid order lines.
 - This slice does not auto-generate settlement records from payment callbacks.
 - This slice does not implement refund offsets, adjustment commands, settlement statement locking, offline payout confirmation, franchise settlement, reconciliation reports, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion Evidence
+
+- Feature PR: [#141](https://github.com/EasyStep-lee/welfare-mall/pull/141) `feat: add merchant settlement bill foundation`.
+- Merge commit: `b2ccc27f4a8d99bd33120ce3c68526df442ca1e1`.
+- Local focused verification: `pnpm --filter @welfare-mall/api run test -- test/settlement --runInBand` passed with 3 suites / 8 tests.
+- Local full verification: `pnpm run verify` passed with API 61 suites / 229 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Local diff check: `git diff --check` passed, with Windows LF-to-CRLF warnings only before staging.
+- Docker runtime verification: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed.
+- Live API smoke: created paid order `ORDER-20260605082010143-99IATA`, payment `PAY-20260605082010171-KXTDCL`, generated bill item `MSBI-ORDER-20260605082010143-99IATA-CMQ0NM1B4000EO71YH3QMS3XI`, and confirmed merchant/status readback for `merchant-local-review` with `pending_settlement`.
