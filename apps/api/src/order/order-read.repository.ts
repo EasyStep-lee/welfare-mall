@@ -41,6 +41,12 @@ type FulfillmentTaskSummaryRecord = AdminOrderFulfillmentTask & {
   orderNo: string;
 };
 
+type PickupFulfillmentTaskRecord = {
+  orderNo: string;
+  pickupCode: string | null;
+  createdAt: Date;
+};
+
 @Injectable()
 export class OrderReadRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -91,7 +97,9 @@ export class OrderReadRepository {
       return null;
     }
 
-    const [orderWithFacts] = await this.attachLatestOrderFacts([order]);
+    const [orderWithFacts] = await this.attachLatestOrderFacts([order], {
+      includePickupCodes: order.fulfillmentType === 'pickup'
+    });
 
     return orderWithFacts ?? null;
   }
@@ -125,14 +133,40 @@ export class OrderReadRepository {
     });
   }
 
+  private async findPickupCodesByOrderNo(orderNos: string[]): Promise<Map<string, string>> {
+    const pickupCodeByOrderNo = new Map<string, string>();
+
+    if (orderNos.length === 0) {
+      return pickupCodeByOrderNo;
+    }
+
+    const tasks: PickupFulfillmentTaskRecord[] = await this.prisma.fulfillmentTask.findMany({
+      where: { orderNo: { in: orderNos } },
+      orderBy: { createdAt: 'asc' },
+      select: pickupFulfillmentTaskSelect()
+    });
+
+    for (const task of tasks) {
+      if (task.pickupCode && !pickupCodeByOrderNo.has(task.orderNo)) {
+        pickupCodeByOrderNo.set(task.orderNo, task.pickupCode);
+      }
+    }
+
+    return pickupCodeByOrderNo;
+  }
+
   private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]>;
+  private async attachLatestOrderFacts(
+    orders: OrderCheckoutRecord[],
+    options: { includePickupCodes: boolean }
+  ): Promise<OrderCheckoutRecord[]>;
   private async attachLatestOrderFacts(
     orders: OrderCheckoutRecord[],
     options: { includeFulfillmentSummary: true }
   ): Promise<AdminOrderReadRecord[]>;
   private async attachLatestOrderFacts(
     orders: OrderCheckoutRecord[],
-    options: { includeFulfillmentSummary?: boolean } = {}
+    options: { includeFulfillmentSummary?: boolean; includePickupCodes?: boolean } = {}
   ): Promise<OrderCheckoutRecord[] | AdminOrderReadRecord[]> {
     const orderNos = orders.map((order) => order.orderNo);
 
@@ -180,6 +214,18 @@ export class OrderReadRepository {
         latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
         fulfillmentSummary: fulfillmentSummaryByOrderNo.get(order.orderNo) ?? emptyFulfillmentSummary(),
         fulfillmentTasks: fulfillmentTasksByOrderNo.get(order.orderNo) ?? []
+      }));
+    }
+
+    if (options.includePickupCodes) {
+      const pickupOrderNos = orders.filter((order) => order.fulfillmentType === 'pickup').map((order) => order.orderNo);
+      const pickupCodeByOrderNo = await this.findPickupCodesByOrderNo(pickupOrderNos);
+
+      return orders.map((order) => ({
+        ...order,
+        latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
+        latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
+        ...(order.fulfillmentType === 'pickup' ? { pickupCode: pickupCodeByOrderNo.get(order.orderNo) ?? null } : {})
       }));
     }
 
@@ -287,6 +333,14 @@ function fulfillmentTaskSummarySelect() {
     status: true,
     createdAt: true,
     completedAt: true
+  } as const;
+}
+
+function pickupFulfillmentTaskSelect() {
+  return {
+    orderNo: true,
+    pickupCode: true,
+    createdAt: true
   } as const;
 }
 

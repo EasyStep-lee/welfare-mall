@@ -72,6 +72,7 @@ export type OrderCheckoutRecord = {
   lines: OrderCheckoutLineRecord[];
   latestPayment?: OrderCheckoutPaymentRecord | null;
   latestRefund?: OrderCheckoutRefundRecord | null;
+  pickupCode?: string | null;
 };
 
 export type CreateOrderCheckoutLineInput = {
