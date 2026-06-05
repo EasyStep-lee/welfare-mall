@@ -15,7 +15,8 @@ function createOrderReadServiceMock() {
 
 function createOrderInventoryServiceMock() {
   return {
-    listReservations: jest.fn()
+    listReservations: jest.fn(),
+    listStocks: jest.fn()
   };
 }
 
@@ -212,6 +213,43 @@ describe('Order read API contract', () => {
       merchantId: 'merchant-001',
       quantity: 2,
       status: 'reserved'
+    });
+  });
+
+  it('lists filtered Admin inventory stock balances', async () => {
+    orderInventoryService.listStocks.mockResolvedValue({
+      stocks: [
+        {
+          id: 'stock-001',
+          stockKey: 'product-001:sku-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          availableQuantity: 99,
+          reservedQuantity: 1,
+          createdAt: '2026-06-05T00:00:00.000Z',
+          updatedAt: '2026-06-05T00:30:00.000Z'
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/orders/admin/inventory-stocks?merchantId=merchant-001&productId=product-001&skuId=sku-001')
+      .expect(200);
+
+    expect(orderInventoryService.listStocks).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      productId: 'product-001',
+      skuId: 'sku-001'
+    });
+    expect(response.body.stocks).toHaveLength(1);
+    expect(response.body.stocks[0]).toMatchObject({
+      stockKey: 'product-001:sku-001',
+      productId: 'product-001',
+      skuId: 'sku-001',
+      merchantId: 'merchant-001',
+      availableQuantity: 99,
+      reservedQuantity: 1
     });
   });
 

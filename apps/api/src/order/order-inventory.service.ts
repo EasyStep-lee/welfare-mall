@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {
   ListInventoryReservationsInput,
   ListInventoryReservationsResult,
+  ListInventoryStocksInput,
+  ListInventoryStocksResult,
   OrderInventoryRepository
 } from './order-inventory.repository';
 
@@ -14,6 +16,14 @@ export class OrderInventoryService {
       status: normalizeOptionalText(input.status),
       merchantId: normalizeOptionalText(input.merchantId),
       orderNo: normalizeOptionalText(input.orderNo)
+    });
+  }
+
+  async listStocks(input: ListInventoryStocksInput = {}): Promise<ListInventoryStocksResult> {
+    return this.orderInventoryRepository.listStocks({
+      merchantId: normalizeOptionalText(input.merchantId),
+      productId: normalizeOptionalText(input.productId),
+      skuId: normalizeOptionalText(input.skuId)
     });
   }
 }

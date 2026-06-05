@@ -168,6 +168,36 @@ export class OrderController {
     });
   }
 
+  @Get('admin/inventory-stocks')
+  @ApiOkResponse({
+    description: 'List recent inventory stock balances for Admin inventory read model',
+    schema: {
+      example: {
+        stocks: [
+          {
+            stockKey: 'product-001:sku-001',
+            productId: 'product-001',
+            skuId: 'sku-001',
+            merchantId: 'merchant-001',
+            availableQuantity: 99,
+            reservedQuantity: 1
+          }
+        ]
+      }
+    }
+  })
+  async listAdminInventoryStocks(
+    @Query('merchantId') merchantId?: string,
+    @Query('productId') productId?: string,
+    @Query('skuId') skuId?: string
+  ) {
+    return this.orderInventoryService.listStocks({
+      merchantId: merchantId?.trim(),
+      productId: productId?.trim(),
+      skuId: skuId?.trim()
+    });
+  }
+
   @Post('merchant/fulfillment/:orderNo/complete')
   @HttpCode(200)
   @ApiOkResponse({

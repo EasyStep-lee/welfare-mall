@@ -14,6 +14,19 @@ function createRepositoryMock() {
           status: 'reserved'
         }
       ]
+    }),
+    listStocks: jest.fn().mockResolvedValue({
+      stocks: [
+        {
+          id: 'stock-001',
+          stockKey: 'product-001:sku-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          merchantId: 'merchant-001',
+          availableQuantity: 99,
+          reservedQuantity: 1
+        }
+      ]
     })
   };
 }
@@ -35,5 +48,23 @@ describe('OrderInventoryService', () => {
       orderNo: undefined
     });
     expect(result.reservations).toHaveLength(1);
+  });
+
+  it('normalizes optional filters before listing stock balances', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderInventoryService(repository as unknown as OrderInventoryRepository);
+
+    const result = await service.listStocks({
+      merchantId: ' merchant-001 ',
+      productId: ' product-001 ',
+      skuId: ' '
+    });
+
+    expect(repository.listStocks).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      productId: 'product-001',
+      skuId: undefined
+    });
+    expect(result.stocks).toHaveLength(1);
   });
 });
