@@ -305,6 +305,57 @@ describe('OrderPaymentRepository', () => {
     });
   });
 
+  it('records a paid callback after cancellation without reviving payment or fulfillment', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderState.findUnique.mockResolvedValue({
+      id: 'order-state-001',
+      orderNo: 'ORDER-20260603-001',
+      status: 'cancelled',
+      paidAt: null,
+      refundRequestedAt: null,
+      refundedAt: null,
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-03T00:10:00.000Z')
+    });
+    const repository = new OrderPaymentRepository(prisma as never);
+
+    const result = await repository.processCallback({
+      providerEventId: 'event-after-cancel-001',
+      paymentNo: 'PAY-20260603-001',
+      providerPaymentNo: 'wx-pay-after-cancel-001',
+      status: 'paid',
+      paidAt: new Date('2026-06-03T00:11:00.000Z'),
+      payload: { event: 'paid' }
+    });
+
+    expect(tx.orderPaymentCallback.create).toHaveBeenCalledWith({
+      data: {
+        paymentId: 'payment-001',
+        paymentNo: 'PAY-20260603-001',
+        providerEventId: 'event-after-cancel-001',
+        providerPaymentNo: 'wx-pay-after-cancel-001',
+        status: 'paid',
+        payload: { event: 'paid' }
+      },
+      select: expect.any(Object)
+    });
+    expect(tx.orderState.update).not.toHaveBeenCalled();
+    expect(tx.orderPayment.update).not.toHaveBeenCalled();
+    expect(tx.orderHeader.update).not.toHaveBeenCalled();
+    expect(tx.fulfillmentTask.create).not.toHaveBeenCalled();
+    expect(tx.inventoryReservation.createMany).not.toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        duplicate: false,
+        payment: paymentRecord,
+        callback: expect.objectContaining({
+          providerEventId: 'event-001',
+          status: 'paid'
+        })
+      })
+    );
+  });
+
   it('returns the existing callback result without updating payment again', async () => {
     const { prisma, tx } = createPrismaMock();
     tx.orderPaymentCallback.findUnique.mockResolvedValue({
