@@ -63,6 +63,15 @@ const refreshedPaidOrder = {
   }
 };
 
+const cancelledOrder = {
+  ...order,
+  status: 'cancelled',
+  latestPayment: {
+    ...order.latestPayment,
+    status: 'cancelled'
+  }
+};
+
 const refund = {
   refundNo: 'REF-20260603-001',
   status: 'processing',
@@ -80,6 +89,7 @@ function mountPage(options = {}) {
   let pageDefinition;
   const requests = [];
   const orderResponses = options.orderResponses ? [...options.orderResponses] : [options.order || order];
+  const cancelResponse = options.cancelResponse || cancelledOrder;
 
   global.Page = vi.fn((definition) => {
     pageDefinition = definition;
@@ -94,6 +104,15 @@ function mountPage(options = {}) {
       }
       if (request.url.endsWith('/orders/refunds')) {
         request.success({ statusCode: 201, data: { refund } });
+        return;
+      }
+      if (request.url.endsWith('/cancel')) {
+        if (options.cancelFails) {
+          request.success({ statusCode: 409, data: { message: 'order cannot be cancelled' } });
+          return;
+        }
+
+        request.success({ statusCode: 200, data: { order: cancelResponse } });
         return;
       }
 
@@ -198,6 +217,58 @@ describe('user mini-program order detail page', () => {
       }
     });
     expect(page.data.canRequestRefund).toBe(true);
+  });
+
+  it('cancels a pending-payment order and updates the current detail snapshot', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.cancelOrder();
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/ORDER-20260603-001/cancel',
+      data: {
+        buyerUserId: 'local-user-001',
+        reason: 'user_cancel'
+      }
+    });
+    expect(page.data.order).toEqual(cancelledOrder);
+    expect(page.data.orderDisplay).toMatchObject({
+      orderNo: 'ORDER-20260603-001',
+      statusText: '已取消'
+    });
+    expect(page.data.canCancelOrder).toBe(false);
+    expect(page.data.cancellingOrder).toBe(false);
+    expect(page.data.cancelError).toBe('');
+  });
+
+  it('blocks cancel actions for orders that are no longer pending payment', async () => {
+    const { page, requests } = mountPage({ order: paidOrder });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.cancelOrder();
+
+    expect(requests).toHaveLength(1);
+    expect(page.data.order).toEqual(paidOrder);
+    expect(page.data.cancelError).toBe('当前订单不可取消');
+  });
+
+  it('keeps the loaded order snapshot when cancel request fails', async () => {
+    const { page, requests } = mountPage({ cancelFails: true });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.cancelOrder();
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/ORDER-20260603-001/cancel'
+    });
+    expect(page.data.order).toEqual(order);
+    expect(page.data.orderDisplay.statusText).toBe('待支付');
+    expect(page.data.canCancelOrder).toBe(true);
+    expect(page.data.cancellingOrder).toBe(false);
+    expect(page.data.cancelError).toBe('Request failed: 409');
   });
 
   it('creates a full after-sale refund request from a paid order', async () => {

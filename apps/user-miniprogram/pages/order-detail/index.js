@@ -20,6 +20,9 @@ Page({
     refundDisplay: null,
     refundError: '',
     canRequestRefund: false,
+    canCancelOrder: false,
+    cancellingOrder: false,
+    cancelError: '',
     refreshingOrder: false
   },
 
@@ -54,6 +57,9 @@ Page({
         refundDisplay: null,
         refundError: '',
         canRequestRefund: canRequestRefund(order),
+        canCancelOrder: canCancelOrder(order),
+        cancellingOrder: false,
+        cancelError: '',
         refreshingOrder: false
       });
     } catch (error) {
@@ -63,6 +69,9 @@ Page({
         loading: false,
         error: error instanceof Error ? error.message : '订单详情加载失败',
         canRequestRefund: false,
+        canCancelOrder: false,
+        cancellingOrder: false,
+        cancelError: '',
         refreshingOrder: false
       });
     }
@@ -110,6 +119,45 @@ Page({
     }
   },
 
+  async cancelOrder() {
+    if (!this.data.order) {
+      this.setData({ cancelError: '缺少订单信息' });
+      return;
+    }
+
+    if (!canCancelOrder(this.data.order)) {
+      this.setData({ cancelError: '当前订单不可取消' });
+      return;
+    }
+
+    this.setData({ cancellingOrder: true, cancelError: '' });
+
+    try {
+      const response = await requestJson(`/orders/${encodeURIComponent(this.data.order.orderNo)}/cancel`, {
+        method: 'POST',
+        data: {
+          buyerUserId: LOCAL_BUYER_USER_ID,
+          reason: 'user_cancel'
+        }
+      });
+      const nextOrder = response.order;
+
+      this.setData({
+        order: nextOrder,
+        orderDisplay: toOrderDetailDisplay(nextOrder),
+        canRequestRefund: canRequestRefund(nextOrder),
+        canCancelOrder: canCancelOrder(nextOrder),
+        cancellingOrder: false,
+        cancelError: ''
+      });
+    } catch (error) {
+      this.setData({
+        cancellingOrder: false,
+        cancelError: error instanceof Error ? error.message : '订单取消失败'
+      });
+    }
+  },
+
   async submitRefund() {
     if (!this.data.order) {
       this.setData({ refundError: '缺少订单信息' });
@@ -150,3 +198,7 @@ Page({
     }
   }
 });
+
+function canCancelOrder(order) {
+  return order?.status === 'pending_payment';
+}

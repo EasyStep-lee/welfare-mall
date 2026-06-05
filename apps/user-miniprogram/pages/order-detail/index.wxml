@@ -46,6 +46,9 @@
       <button class="primary-button" loading="{{creatingPayment}}" disabled="{{creatingPayment}}" bindtap="submitPayment">
         发起微信支付
       </button>
+      <button wx:if="{{canCancelOrder}}" class="secondary-button danger-button" loading="{{cancellingOrder}}" disabled="{{cancellingOrder}}" bindtap="cancelOrder">
+        取消订单
+      </button>
       <view wx:if="{{paymentDisplay}}" class="payment-result">
         <view class="line">
           <text>支付单号</text>
@@ -61,6 +64,7 @@
         </view>
       </view>
       <text wx:if="{{paymentError}}" class="error">{{paymentError}}</text>
+      <text wx:if="{{cancelError}}" class="error">{{cancelError}}</text>
     </view>
 
     <view wx:if="{{canRequestRefund || refundDisplay || orderDisplay.latestRefundDisplay}}" class="section refund-action">

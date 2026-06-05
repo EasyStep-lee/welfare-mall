@@ -31,6 +31,10 @@ function orderRefundUrl(baseUrl) {
   return apiUrl('/orders/refunds', baseUrl);
 }
 
+function orderCancelUrl(orderNo, baseUrl) {
+  return apiUrl(`/orders/${encodeURIComponent(orderNo)}/cancel`, baseUrl);
+}
+
 function orderListUrl(buyerUserId, baseUrl) {
   return apiUrl(`/orders?buyerUserId=${encodeURIComponent(buyerUserId)}`, baseUrl);
 }
@@ -67,6 +71,7 @@ module.exports = {
   DEFAULT_API_BASE_URL,
   apiUrl,
   orderAmountPreviewUrl,
+  orderCancelUrl,
   orderCheckoutUrl,
   orderDetailUrl,
   orderListUrl,
