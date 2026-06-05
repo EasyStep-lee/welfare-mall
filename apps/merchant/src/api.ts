@@ -127,6 +127,11 @@ export type MerchantFulfillmentQueueResponse = {
   orders: MerchantFulfillmentOrder[];
 };
 
+export type MerchantFulfillmentLookupFilters = {
+  orderNo?: string;
+  taskNo?: string;
+};
+
 export const statusLabels: Record<SubmissionQueueStatus, string> = {
   draft: '草稿',
   rejected: '已驳回'
@@ -189,11 +194,14 @@ export async function saveProductDraft(input: { payload: ProductDraftPayload; ac
 
 export async function fetchMerchantFulfillmentOrders(
   merchantId: string,
-  status: MerchantFulfillmentStatusFilter = 'paid'
+  status: MerchantFulfillmentStatusFilter = 'paid',
+  filters: MerchantFulfillmentLookupFilters = {}
 ): Promise<MerchantFulfillmentQueueResponse> {
   const url = new URL(`${apiBaseUrl()}/orders/merchant/fulfillment`);
   url.searchParams.set('merchantId', merchantId);
   url.searchParams.set('status', status);
+  setOptionalSearchParam(url, 'orderNo', filters.orderNo);
+  setOptionalSearchParam(url, 'taskNo', filters.taskNo);
 
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -201,6 +209,13 @@ export async function fetchMerchantFulfillmentOrders(
   }
 
   return response.json() as Promise<MerchantFulfillmentQueueResponse>;
+}
+
+function setOptionalSearchParam(url: URL, key: string, value: string | undefined) {
+  const trimmed = value?.trim();
+  if (trimmed) {
+    url.searchParams.set(key, trimmed);
+  }
 }
 
 export async function completeMerchantFulfillmentOrder(input: { merchantId: string; orderNo: string }) {

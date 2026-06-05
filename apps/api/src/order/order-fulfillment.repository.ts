@@ -49,6 +49,8 @@ export type CompletePaidOrderForMerchantInput = {
 export type ListOrdersForMerchantInput = {
   merchantId: string;
   status: OrderStatus;
+  orderNo?: string;
+  taskNo?: string;
 };
 
 type OrderFulfillmentTransaction = {
@@ -95,10 +97,7 @@ export class OrderFulfillmentRepository {
 
   async listOrdersForMerchant(input: ListOrdersForMerchantInput): Promise<MerchantFulfillmentOrderRecord[]> {
     const tasks = await this.prisma.fulfillmentTask.findMany({
-      where: {
-        merchantId: input.merchantId,
-        status: toFulfillmentTaskStatus(input.status)
-      },
+      where: fulfillmentTaskWhere(input),
       orderBy: { createdAt: 'desc' },
       select: fulfillmentTaskSelect()
     });
@@ -179,6 +178,15 @@ export class OrderFulfillmentRepository {
 
 function toFulfillmentTaskStatus(status: OrderStatus): FulfillmentTaskStatus {
   return status === OrderStatuses.Completed ? 'completed' : 'pending';
+}
+
+function fulfillmentTaskWhere(input: ListOrdersForMerchantInput) {
+  return {
+    merchantId: input.merchantId,
+    status: toFulfillmentTaskStatus(input.status),
+    ...(input.orderNo ? { orderNo: input.orderNo } : {}),
+    ...(input.taskNo ? { taskNo: input.taskNo } : {})
+  };
 }
 
 function taskToFulfillmentOrder(

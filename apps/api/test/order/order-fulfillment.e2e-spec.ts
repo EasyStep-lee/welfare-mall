@@ -108,6 +108,47 @@ describe('Merchant fulfillment order API contract', () => {
     });
   });
 
+  it('filters merchant fulfillment orders by status, order number, and task number', async () => {
+    orderFulfillmentService.listMerchantFulfillmentOrders.mockResolvedValue({
+      orders: [
+        {
+          taskNo: 'FT-ORDER-20260603-003-MERCHANT-001-001',
+          orderNo: 'ORDER-20260603-003',
+          status: 'completed',
+          totalAmount: 9990,
+          receiverName: 'Wang Wu',
+          receiverPhone: '13700000000',
+          receiverAddress: 'Century Avenue 3',
+          latestPayment: {
+            paymentNo: 'PAY-20260603-003',
+            status: 'paid',
+            channel: 'wechat'
+          },
+          lines: [{ displayName: 'Local Rice', quantity: 1 }]
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/orders/merchant/fulfillment?merchantId=merchant-001&status=completed&orderNo=ORDER-20260603-003&taskNo=FT-ORDER-20260603-003-MERCHANT-001-001'
+      )
+      .expect(200);
+
+    expect(orderFulfillmentService.listMerchantFulfillmentOrders).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      status: 'completed',
+      orderNo: 'ORDER-20260603-003',
+      taskNo: 'FT-ORDER-20260603-003-MERCHANT-001-001'
+    });
+    expect(response.body.orders).toHaveLength(1);
+    expect(response.body.orders[0]).toMatchObject({
+      taskNo: 'FT-ORDER-20260603-003-MERCHANT-001-001',
+      orderNo: 'ORDER-20260603-003',
+      status: 'completed'
+    });
+  });
+
   it('rejects blank merchant ID before calling service', async () => {
     await request(app.getHttpServer()).get('/api/orders/merchant/fulfillment?merchantId=').expect(400);
 

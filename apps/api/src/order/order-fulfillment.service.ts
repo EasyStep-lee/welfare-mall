@@ -5,6 +5,8 @@ import { OrderStatuses } from './order-status';
 export type ListMerchantFulfillmentOrdersInput = {
   merchantId: string;
   status?: string;
+  orderNo?: string;
+  taskNo?: string;
 };
 
 export type MerchantFulfillmentStatus = typeof OrderStatuses.Paid | typeof OrderStatuses.Completed;
@@ -23,7 +25,12 @@ export class OrderFulfillmentService {
   ): Promise<{ orders: MerchantFulfillmentOrderRecord[] }> {
     const merchantId = requireText(input.merchantId, 'merchantId');
     const status = optionalMerchantFulfillmentStatus(input.status);
-    const orders = await this.orderFulfillmentRepository.listOrdersForMerchant({ merchantId, status });
+    const orders = await this.orderFulfillmentRepository.listOrdersForMerchant({
+      merchantId,
+      status,
+      orderNo: optionalText(input.orderNo),
+      taskNo: optionalText(input.taskNo)
+    });
 
     return { orders };
   }
@@ -65,4 +72,13 @@ function requireText(value: string | undefined, fieldName: string): string {
   }
 
   return value.trim();
+}
+
+function optionalText(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }

@@ -53,6 +53,7 @@ h2 {
 
 .icon-button,
 .status-tabs button,
+.fulfillment-filter-row button,
 .submit-button {
   align-items: center;
   border: 1px solid #cbd9d6;
@@ -89,6 +90,41 @@ h2 {
 
 .panel-status-tabs {
   margin-top: 12px;
+}
+
+.fulfillment-filter-row {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1fr) auto auto;
+  margin: 0 0 14px;
+}
+
+.fulfillment-filter-row label {
+  color: #637a76;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.fulfillment-filter-row input {
+  border: 1px solid #cbd9d6;
+  border-radius: 8px;
+  color: #172421;
+  font: inherit;
+  min-height: 38px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.fulfillment-filter-row button {
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.secondary-action {
+  background: #f8fbfa;
 }
 
 .notice {
@@ -384,6 +420,10 @@ dd {
   }
 
   .fulfillment-list {
+    grid-template-columns: 1fr;
+  }
+
+  .fulfillment-filter-row {
     grid-template-columns: 1fr;
   }
 

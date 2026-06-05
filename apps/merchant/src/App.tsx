@@ -1,4 +1,4 @@
-import { RefreshCw, Send } from 'lucide-react';
+import { RefreshCw, Search, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   completeMerchantFulfillmentOrder,
@@ -29,6 +29,10 @@ const fixedMerchantContext = {
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<SubmissionQueueStatus>('draft');
   const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<MerchantFulfillmentStatusFilter>('paid');
+  const [orderNoLookupInput, setOrderNoLookupInput] = useState('');
+  const [taskNoLookupInput, setTaskNoLookupInput] = useState('');
+  const [activeOrderNoLookup, setActiveOrderNoLookup] = useState('');
+  const [activeTaskNoLookup, setActiveTaskNoLookup] = useState('');
   const [items, setItems] = useState<SubmissionQueueItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [fulfillmentOrders, setFulfillmentOrders] = useState<MerchantFulfillmentOrder[]>([]);
@@ -69,9 +73,14 @@ export default function App() {
     }
   }
 
-  async function loadFulfillmentOrders(status: MerchantFulfillmentStatusFilter = activeFulfillmentStatus) {
+  async function loadFulfillmentOrders(
+    status: MerchantFulfillmentStatusFilter = activeFulfillmentStatus,
+    orderNo: string = activeOrderNoLookup,
+    taskNo: string = activeTaskNoLookup
+  ) {
+    setError(null);
     try {
-      const response = await fetchMerchantFulfillmentOrders(fixedMerchantContext.merchantId, status);
+      const response = await fetchMerchantFulfillmentOrders(fixedMerchantContext.merchantId, status, { orderNo, taskNo });
       setFulfillmentOrders(response.orders);
     } catch (loadError) {
       setFulfillmentOrders([]);
@@ -84,8 +93,8 @@ export default function App() {
   }, [activeStatus]);
 
   useEffect(() => {
-    void loadFulfillmentOrders(activeFulfillmentStatus);
-  }, [activeFulfillmentStatus]);
+    void loadFulfillmentOrders(activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup);
+  }, [activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup]);
 
   async function submit(item: SubmissionQueueItem) {
     setError(null);
@@ -122,10 +131,22 @@ export default function App() {
         orderNo: order.orderNo
       });
       setMessage(`${order.orderNo} 已确认完成`);
-      await loadFulfillmentOrders(activeFulfillmentStatus);
+      await loadFulfillmentOrders(activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup);
     } catch (completeError) {
       setError(completeError instanceof Error ? completeError.message : '确认履约完成失败');
     }
+  }
+
+  function applyFulfillmentLookup() {
+    setActiveOrderNoLookup(orderNoLookupInput.trim());
+    setActiveTaskNoLookup(taskNoLookupInput.trim());
+  }
+
+  function clearFulfillmentLookup() {
+    setOrderNoLookupInput('');
+    setTaskNoLookupInput('');
+    setActiveOrderNoLookup('');
+    setActiveTaskNoLookup('');
   }
 
   function updateDraftField(field: keyof typeof draftForm, value: string) {
@@ -183,6 +204,34 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="fulfillment-filter-row">
+          <label>
+            履约订单号
+            <input
+              aria-label="履约订单号"
+              value={orderNoLookupInput}
+              onChange={(event) => setOrderNoLookupInput(event.target.value)}
+            />
+          </label>
+          <label className="task-filter-field">
+            履约任务号
+            <input
+              aria-label="履约任务号"
+              value={taskNoLookupInput}
+              onChange={(event) => setTaskNoLookupInput(event.target.value)}
+            />
+          </label>
+          <button type="button" className="submit-button" onClick={applyFulfillmentLookup}>
+            <Search size={15} />
+            筛选履约
+          </button>
+          {activeOrderNoLookup || activeTaskNoLookup ? (
+            <button type="button" className="submit-button secondary-action" onClick={clearFulfillmentLookup}>
+              <X size={15} />
+              清除履约
+            </button>
+          ) : null}
+        </div>
         <div className="fulfillment-list">
           {fulfillmentOrders.length === 0 ? <p className="empty-text">暂无待履约订单</p> : null}
           {fulfillmentOrders.map((order) => (

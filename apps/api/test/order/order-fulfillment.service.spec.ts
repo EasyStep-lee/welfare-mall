@@ -24,7 +24,12 @@ describe('OrderFulfillmentService', () => {
 
     const result = await service.listMerchantFulfillmentOrders({ merchantId: ' merchant-001 ' });
 
-    expect(repository.listOrdersForMerchant).toHaveBeenCalledWith({ merchantId: 'merchant-001', status: 'paid' });
+    expect(repository.listOrdersForMerchant).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      status: 'paid',
+      orderNo: undefined,
+      taskNo: undefined
+    });
     expect(result).toEqual({ orders: [fulfillmentOrder] });
   });
 
@@ -37,7 +42,32 @@ describe('OrderFulfillmentService', () => {
       status: ' completed '
     });
 
-    expect(repository.listOrdersForMerchant).toHaveBeenCalledWith({ merchantId: 'merchant-001', status: 'completed' });
+    expect(repository.listOrdersForMerchant).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      status: 'completed',
+      orderNo: undefined,
+      taskNo: undefined
+    });
+    expect(result).toEqual({ orders: [fulfillmentOrder] });
+  });
+
+  it('filters merchant fulfillment orders by order and task lookup fields', async () => {
+    const repository = createRepositoryMock();
+    const service = new OrderFulfillmentService(repository as unknown as OrderFulfillmentRepository);
+
+    const result = await service.listMerchantFulfillmentOrders({
+      merchantId: ' merchant-001 ',
+      status: ' completed ',
+      orderNo: ' ORDER-20260603-001 ',
+      taskNo: ' FT-ORDER-20260603-001-MERCHANT-001-001 '
+    });
+
+    expect(repository.listOrdersForMerchant).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      status: 'completed',
+      orderNo: 'ORDER-20260603-001',
+      taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001'
+    });
     expect(result).toEqual({ orders: [fulfillmentOrder] });
   });
 
