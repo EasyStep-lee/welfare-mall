@@ -56,8 +56,31 @@ const billItems = [
   }
 ];
 
+const statementRecord = {
+  id: 'statement-001',
+  statementNo: 'MSS-20260606-001',
+  merchantId: 'merchant-001',
+  status: 'generated',
+  itemCount: 2,
+  grossAmount: 18980,
+  refundOffsetAmount: 0,
+  adjustmentAmount: 0,
+  netAmount: 18980,
+  generatedAt: new Date('2026-06-06T00:00:00.000Z'),
+  paidAt: null,
+  createdAt: new Date('2026-06-06T00:00:00.000Z'),
+  updatedAt: new Date('2026-06-06T00:00:00.000Z'),
+  items: [
+    billItems[0],
+    {
+      ...billItems[1],
+      merchantId: 'merchant-001'
+    }
+  ]
+};
+
 function createPrismaMock() {
-  return {
+  const tx = {
     orderHeader: {
       findUnique: jest.fn().mockResolvedValue(paidOrder)
     },
@@ -70,8 +93,17 @@ function createPrismaMock() {
     merchantSettlementBillItem: {
       createMany: jest.fn().mockResolvedValue({ count: 2 }),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 2 }),
       findMany: jest.fn().mockResolvedValue(billItems)
+    },
+    merchantSettlementStatement: {
+      create: jest.fn().mockResolvedValue(statementRecord),
+      findMany: jest.fn().mockResolvedValue([statementRecord])
     }
+  };
+  return {
+    $transaction: jest.fn(async (callback) => callback(tx)),
+    ...tx
   };
 }
 
@@ -233,5 +265,90 @@ describe('SettlementRepository', () => {
 
     expect(prisma.merchantSettlementBillItem.update).not.toHaveBeenCalled();
     expect(result.items).toEqual([]);
+  });
+
+  it('generates a merchant settlement statement from pending bill items', async () => {
+    const prisma = createPrismaMock();
+    prisma.merchantSettlementBillItem.findMany.mockResolvedValue(statementRecord.items);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.generateMerchantSettlementStatement({
+      merchantId: 'merchant-001',
+      statementNo: 'MSS-20260606-001',
+      generatedAt: new Date('2026-06-06T00:00:00.000Z')
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.merchantSettlementBillItem.findMany).toHaveBeenCalledWith({
+      where: {
+        merchantId: 'merchant-001',
+        status: 'pending_settlement',
+        netAmount: { gt: 0 }
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementStatement.create).toHaveBeenCalledWith({
+      data: {
+        statementNo: 'MSS-20260606-001',
+        merchantId: 'merchant-001',
+        status: 'generated',
+        itemCount: 2,
+        grossAmount: 18980,
+        refundOffsetAmount: 0,
+        adjustmentAmount: 0,
+        netAmount: 18980,
+        generatedAt: new Date('2026-06-06T00:00:00.000Z')
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementBillItem.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['bill-item-001', 'bill-item-002'] },
+        status: 'pending_settlement'
+      },
+      data: {
+        status: 'statement_generated',
+        statementId: 'statement-001'
+      }
+    });
+    expect(result.statement).toEqual(statementRecord);
+  });
+
+  it('returns no statement when a merchant has no pending positive net bill items', async () => {
+    const prisma = createPrismaMock();
+    prisma.merchantSettlementBillItem.findMany.mockResolvedValue([]);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.generateMerchantSettlementStatement({
+      merchantId: 'merchant-001',
+      statementNo: 'MSS-20260606-001',
+      generatedAt: new Date('2026-06-06T00:00:00.000Z')
+    });
+
+    expect(prisma.merchantSettlementStatement.create).not.toHaveBeenCalled();
+    expect(prisma.merchantSettlementBillItem.updateMany).not.toHaveBeenCalled();
+    expect(result.statement).toBeNull();
+  });
+
+  it('lists merchant settlement statements by merchant and status', async () => {
+    const prisma = createPrismaMock();
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.listMerchantSettlementStatements({
+      merchantId: 'merchant-001',
+      status: 'generated'
+    });
+
+    expect(prisma.merchantSettlementStatement.findMany).toHaveBeenCalledWith({
+      where: {
+        merchantId: 'merchant-001',
+        status: 'generated'
+      },
+      orderBy: { generatedAt: 'desc' },
+      take: 100,
+      select: expect.any(Object)
+    });
+    expect(result.statements).toEqual([statementRecord]);
   });
 });

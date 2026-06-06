@@ -14,10 +14,24 @@ const billItem = {
   netAmount: 13980
 };
 
+const statement = {
+  statementNo: 'MSS-20260606-001',
+  merchantId: 'merchant-001',
+  status: 'generated',
+  itemCount: 1,
+  grossAmount: 13980,
+  refundOffsetAmount: 0,
+  adjustmentAmount: 0,
+  netAmount: 13980,
+  items: [billItem]
+};
+
 function createSettlementServiceMock() {
   return {
     generateMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] }),
-    listMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] })
+    listMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] }),
+    generateMerchantSettlementStatement: jest.fn().mockResolvedValue({ statement }),
+    listMerchantSettlementStatements: jest.fn().mockResolvedValue({ statements: [statement] })
   };
 }
 
@@ -65,5 +79,29 @@ describe('Settlement API contract', () => {
       status: 'pending_settlement'
     });
     expect(response.body.items).toEqual([billItem]);
+  });
+
+  it('generates a merchant settlement statement', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/settlements/merchant-statements/generate')
+      .send({ merchantId: ' merchant-001 ' })
+      .expect(201);
+
+    expect(settlementService.generateMerchantSettlementStatement).toHaveBeenCalledWith({
+      merchantId: ' merchant-001 '
+    });
+    expect(response.body.statement).toEqual(statement);
+  });
+
+  it('lists merchant settlement statements by filters', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/settlements/merchant-statements?merchantId=merchant-001&status=generated')
+      .expect(200);
+
+    expect(settlementService.listMerchantSettlementStatements).toHaveBeenCalledWith({
+      merchantId: 'merchant-001',
+      status: 'generated'
+    });
+    expect(response.body.statements).toEqual([statement]);
   });
 });

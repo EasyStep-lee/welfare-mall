@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { MerchantSettlementBillSources, MerchantSettlementBillStatuses } from './settlement-status';
+import {
+  MerchantSettlementBillSources,
+  MerchantSettlementBillStatuses,
+  MerchantSettlementStatementStatuses
+} from './settlement-status';
 
 export type MerchantSettlementBillItemRecord = {
   id: string;
@@ -16,8 +21,26 @@ export type MerchantSettlementBillItemRecord = {
   refundOffsetAmount: number;
   adjustmentAmount: number;
   netAmount: number;
+  statementId: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type MerchantSettlementStatementRecord = {
+  id: string;
+  statementNo: string;
+  merchantId: string;
+  status: string;
+  itemCount: number;
+  grossAmount: number;
+  refundOffsetAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  generatedAt: Date;
+  paidAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  items: MerchantSettlementBillItemRecord[];
 };
 
 export type MerchantSettlementBillItemListInput = {
@@ -30,8 +53,27 @@ export type ApplyRefundOffsetInput = {
   refundAmount: number;
 };
 
+export type GenerateMerchantSettlementStatementInput = {
+  merchantId: string;
+  statementNo: string;
+  generatedAt: Date;
+};
+
+export type MerchantSettlementStatementListInput = {
+  merchantId?: string;
+  status?: string;
+};
+
 export type MerchantSettlementBillItemListResult = {
   items: MerchantSettlementBillItemRecord[];
+};
+
+export type MerchantSettlementStatementGenerateResult = {
+  statement: MerchantSettlementStatementRecord | null;
+};
+
+export type MerchantSettlementStatementListResult = {
+  statements: MerchantSettlementStatementRecord[];
 };
 
 type PaidOrderForSettlement = {
@@ -131,6 +173,88 @@ export class SettlementRepository {
     return { items: updatedItems };
   }
 
+  async generateMerchantSettlementStatement(
+    input: GenerateMerchantSettlementStatementInput
+  ): Promise<MerchantSettlementStatementGenerateResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const billItems = await tx.merchantSettlementBillItem.findMany({
+        where: {
+          merchantId: input.merchantId,
+          status: MerchantSettlementBillStatuses.PendingSettlement,
+          netAmount: { gt: 0 }
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        select: merchantSettlementBillItemSelect()
+      });
+
+      if (billItems.length === 0) {
+        return { statement: null };
+      }
+
+      const totals = billItems.reduce(
+        (acc, item) => ({
+          grossAmount: acc.grossAmount + item.grossAmount,
+          refundOffsetAmount: acc.refundOffsetAmount + item.refundOffsetAmount,
+          adjustmentAmount: acc.adjustmentAmount + item.adjustmentAmount,
+          netAmount: acc.netAmount + item.netAmount
+        }),
+        {
+          grossAmount: 0,
+          refundOffsetAmount: 0,
+          adjustmentAmount: 0,
+          netAmount: 0
+        }
+      );
+
+      const statement = await tx.merchantSettlementStatement.create({
+        data: {
+          statementNo: input.statementNo,
+          merchantId: input.merchantId,
+          status: MerchantSettlementStatementStatuses.Generated,
+          itemCount: billItems.length,
+          grossAmount: totals.grossAmount,
+          refundOffsetAmount: totals.refundOffsetAmount,
+          adjustmentAmount: totals.adjustmentAmount,
+          netAmount: totals.netAmount,
+          generatedAt: input.generatedAt
+        },
+        select: merchantSettlementStatementSelect()
+      });
+
+      await tx.merchantSettlementBillItem.updateMany({
+        where: {
+          id: { in: billItems.map((item) => item.id) },
+          status: MerchantSettlementBillStatuses.PendingSettlement
+        },
+        data: {
+          status: MerchantSettlementBillStatuses.StatementGenerated,
+          statementId: statement.id
+        }
+      });
+
+      const statements = await tx.merchantSettlementStatement.findMany({
+        where: { id: statement.id },
+        take: 1,
+        select: merchantSettlementStatementSelect()
+      });
+
+      return { statement: (statements[0] ?? { ...statement, items: [] }) as MerchantSettlementStatementRecord };
+    });
+  }
+
+  async listMerchantSettlementStatements(
+    input: MerchantSettlementStatementListInput = {}
+  ): Promise<MerchantSettlementStatementListResult> {
+    const statements = await this.prisma.merchantSettlementStatement.findMany({
+      where: merchantSettlementStatementWhere(input),
+      orderBy: { generatedAt: 'desc' },
+      take: 100,
+      select: merchantSettlementStatementSelect()
+    });
+
+    return { statements: statements as MerchantSettlementStatementRecord[] };
+  }
+
   private async buildBillItems(order: PaidOrderForSettlement) {
     const productIds = Array.from(new Set(order.lines.map((line) => line.productId)));
     const products = await this.prisma.product.findMany({
@@ -195,12 +319,49 @@ function merchantSettlementBillItemSelect() {
     refundOffsetAmount: true,
     adjustmentAmount: true,
     netAmount: true,
+    statementId: true,
     createdAt: true,
     updatedAt: true
   } as const;
 }
 
+function merchantSettlementStatementSelect(): Prisma.MerchantSettlementStatementSelect {
+  return {
+    id: true,
+    statementNo: true,
+    merchantId: true,
+    status: true,
+    itemCount: true,
+    grossAmount: true,
+    refundOffsetAmount: true,
+    adjustmentAmount: true,
+    netAmount: true,
+    generatedAt: true,
+    paidAt: true,
+    createdAt: true,
+    updatedAt: true,
+    items: {
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: merchantSettlementBillItemSelect()
+    }
+  };
+}
+
 function merchantBillItemWhere(input: MerchantSettlementBillItemListInput) {
+  const where: Record<string, string> = {};
+
+  if (input.merchantId) {
+    where.merchantId = input.merchantId;
+  }
+
+  if (input.status) {
+    where.status = input.status;
+  }
+
+  return Object.keys(where).length > 0 ? where : undefined;
+}
+
+function merchantSettlementStatementWhere(input: MerchantSettlementStatementListInput) {
   const where: Record<string, string> = {};
 
   if (input.merchantId) {

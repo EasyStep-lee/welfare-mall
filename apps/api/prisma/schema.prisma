@@ -69,6 +69,7 @@ model Merchant {
   products       Product[]
   fulfillmentTasks FulfillmentTask[]
   settlementBillItems MerchantSettlementBillItem[]
+  settlementStatements MerchantSettlementStatement[]
 
   @@index([franchiseId])
   @@index([regionId])
@@ -529,16 +530,42 @@ model MerchantSettlementBillItem {
   refundOffsetAmount Int      @default(0)
   adjustmentAmount   Int      @default(0)
   netAmount          Int
+  statementId        String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   merchant           Merchant @relation(fields: [merchantId], references: [id])
+  statement          MerchantSettlementStatement? @relation(fields: [statementId], references: [id])
 
   @@index([merchantId])
   @@index([orderNo])
   @@index([productId])
   @@index([skuId])
   @@index([status])
+  @@index([statementId])
   @@map("merchant_settlement_bill_item")
+}
+
+model MerchantSettlementStatement {
+  id                 String   @id @default(cuid())
+  statementNo        String   @unique
+  merchantId         String
+  status             String
+  itemCount          Int
+  grossAmount        Int
+  refundOffsetAmount Int
+  adjustmentAmount   Int
+  netAmount          Int
+  generatedAt        DateTime
+  paidAt             DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  merchant           Merchant @relation(fields: [merchantId], references: [id])
+  items              MerchantSettlementBillItem[]
+
+  @@index([merchantId])
+  @@index([status])
+  @@index([generatedAt])
+  @@map("merchant_settlement_statement")
 }
 
 model OrderPayment {
