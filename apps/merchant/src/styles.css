@@ -88,6 +88,12 @@ h2 {
   color: #ffffff;
 }
 
+.settlement-export-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 14px;
+}
+
 .panel-status-tabs {
   margin-top: 12px;
 }

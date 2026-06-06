@@ -1,4 +1,4 @@
-import { RefreshCw, Search, Send, X } from 'lucide-react';
+import { Download, RefreshCw, Search, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   completeMerchantFulfillmentOrder,
@@ -18,6 +18,7 @@ import {
   statusLabels,
   submitProductForReview
 } from './api';
+import { buildSettlementCsv } from './settlementExport';
 import './styles.css';
 
 const merchantActorUserId = 'merchant-user-001';
@@ -179,6 +180,19 @@ export default function App() {
     setActiveTaskNoLookup('');
   }
 
+  function exportSettlementStatements() {
+    if (settlementStatements.length === 0) {
+      setMessage(null);
+      setError('暂无可导出的结算单');
+      return;
+    }
+
+    const csv = buildSettlementCsv(settlementStatements);
+    downloadTextFile(createSettlementExportFilename(activeSettlementStatus), csv);
+    setError(null);
+    setMessage(`已导出 ${settlementStatements.length} 张结算单`);
+  }
+
   function updateDraftField(field: keyof typeof draftForm, value: string) {
     setDraftForm((current) => ({
       ...current,
@@ -241,6 +255,12 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="settlement-export-row">
+          <button type="button" className="submit-button" onClick={exportSettlementStatements} disabled={settlementStatements.length === 0}>
+            <Download size={15} />
+            导出结算CSV
+          </button>
+        </div>
         <div className="settlement-list">
           {settlementStatements.length === 0 ? <p className="empty-text">暂无结算单</p> : null}
           {settlementStatements.map((statement) => (
@@ -616,6 +636,20 @@ function settlementBillItemStatusLabel(status: string) {
   };
 
   return labels[status] ?? status;
+}
+
+function createSettlementExportFilename(status: MerchantSettlementStatementStatusFilter) {
+  return `merchant-settlements-${fixedMerchantContext.merchantId}-${status}.csv`;
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function toDraftPayload(form: {
