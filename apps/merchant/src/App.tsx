@@ -18,6 +18,7 @@ import {
   statusLabels,
   submitProductForReview
 } from './api';
+import { summarizeMerchantFulfillmentOrders } from './fulfillmentSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 import './styles.css';
@@ -70,6 +71,10 @@ export default function App() {
   const settlementSummary = useMemo(
     () => summarizeSettlementStatements(settlementStatements),
     [settlementStatements]
+  );
+  const fulfillmentSummary = useMemo(
+    () => summarizeMerchantFulfillmentOrders(fulfillmentOrders),
+    [fulfillmentOrders]
   );
 
   async function loadQueue(status: SubmissionQueueStatus) {
@@ -356,6 +361,16 @@ export default function App() {
               清除履约
             </button>
           ) : null}
+        </div>
+        <div className="queue-summary-panel" aria-label="履约汇总">
+          <strong>履约汇总</strong>
+          <span>汇总任务 {fulfillmentSummary.taskCount} 单</span>
+          <span>汇总商品 {fulfillmentSummary.lineQuantity} 件</span>
+          <span>汇总总额 {formatMoney(fulfillmentSummary.totalAmount)}</span>
+          <span>汇总福利卡 {formatMoney(fulfillmentSummary.welfareCardPayableAmount)}</span>
+          <span>汇总现金 {formatMoney(fulfillmentSummary.cashPayableAmount)}</span>
+          <span>配送任务 {fulfillmentSummary.deliveryTasks} 单</span>
+          <span>自提任务 {fulfillmentSummary.pickupTasks} 单</span>
         </div>
         <div className="fulfillment-list">
           {fulfillmentOrders.length === 0 ? <p className="empty-text">暂无待履约订单</p> : null}

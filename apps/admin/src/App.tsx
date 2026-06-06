@@ -29,6 +29,7 @@ import {
   publishProductToPool,
   statusLabels
 } from './api';
+import { summarizeAdminOrders } from './orderSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 import './styles.css';
@@ -84,6 +85,7 @@ export default function App() {
     () => items.find((item) => item.productId === selectedProductId) ?? items[0] ?? null,
     [items, selectedProductId]
   );
+  const orderSummary = useMemo(() => summarizeAdminOrders(orders), [orders]);
   const settlementSummary = useMemo(
     () => summarizeSettlementStatements(settlementStatements),
     [settlementStatements]
@@ -612,6 +614,16 @@ export default function App() {
               清除任务
             </button>
           ) : null}
+        </div>
+        <div className="queue-summary-panel" aria-label="订单汇总">
+          <strong>订单汇总</strong>
+          <span>汇总订单 {orderSummary.orderCount} 单</span>
+          <span>汇总商品 {orderSummary.lineQuantity} 件</span>
+          <span>汇总总额 {formatMoney(orderSummary.totalAmount)}</span>
+          <span>汇总福利卡 {formatMoney(orderSummary.welfareCardPayableAmount)}</span>
+          <span>汇总现金 {formatMoney(orderSummary.cashPayableAmount)}</span>
+          <span>待履约任务 {orderSummary.pendingFulfillmentTasks} 项</span>
+          <span>已完成任务 {orderSummary.completedFulfillmentTasks} 项</span>
         </div>
         <div className="order-list">
           {orders.length === 0 ? <p className="empty-text">暂无订单</p> : null}

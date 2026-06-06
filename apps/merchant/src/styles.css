@@ -301,6 +301,7 @@ tbody tr:hover {
   gap: 12px;
 }
 
+.queue-summary-panel,
 .settlement-summary-panel {
   background: #f7faf9;
   border: 1px solid #d9e7df;
@@ -314,6 +315,7 @@ tbody tr:hover {
   padding: 10px;
 }
 
+.queue-summary-panel strong,
 .settlement-summary-panel strong {
   color: #172421;
 }
@@ -558,6 +560,7 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .queue-summary-panel,
   .settlement-summary-panel,
   .settlement-summary,
   .settlement-bill-row {
