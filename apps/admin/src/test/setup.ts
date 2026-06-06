@@ -1,1 +1,1 @@
-import '@testing-library/jest-dom/vitest';
+// Vue test setup placeholder.
