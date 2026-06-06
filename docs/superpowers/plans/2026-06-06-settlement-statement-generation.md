@@ -117,3 +117,13 @@ Actual: PASS.
 
 - This slice only generates and reads settlement statements.
 - This slice does not confirm offline payouts, reverse generated statements, handle line-level refund allocation after statement generation, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion Evidence
+
+- Feature branch: `codex/settlement-statement-generation`
+- Feature PR: #147 `feat: generate merchant settlement statements`
+- Feature merge commit: `fc965aa52138ee8df6f006656a2de20c20d28a5a`
+- Focused tests: `pnpm --filter @welfare-mall/api run test -- test/settlement --runInBand` PASS with 3 suites / 18 tests.
+- Full verification: `pnpm run verify` PASS with API 61 suites / 243 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Docker runtime: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` PASS.
+- Live API smoke: order `ORDER-20260606020354197-N4ISHU` was included in settlement statement `MSS-20260606020354304-6BPEYN`; linked merchant bill item was locked as `statement_generated`.
