@@ -30,6 +30,8 @@ const paidStatement = {
   ...statement,
   status: 'paid_offline',
   paidAt: '2026-06-07T00:00:00.000Z',
+  payoutReference: 'BANK-20260607-001',
+  payoutRemark: 'June welfare payout',
   items: [{ ...billItem, status: 'paid_offline' }]
 };
 
@@ -116,12 +118,18 @@ describe('Settlement API contract', () => {
   it('confirms a merchant settlement statement offline payout', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout')
-      .send({ paidAt: '2026-06-07T00:00:00.000Z' })
+      .send({
+        paidAt: '2026-06-07T00:00:00.000Z',
+        payoutReference: ' BANK-20260607-001 ',
+        payoutRemark: ' June welfare payout '
+      })
       .expect(201);
 
     expect(settlementService.confirmMerchantSettlementStatementOfflinePayout).toHaveBeenCalledWith({
       statementNo: 'MSS-20260606-001',
-      paidAt: '2026-06-07T00:00:00.000Z'
+      paidAt: '2026-06-07T00:00:00.000Z',
+      payoutReference: ' BANK-20260607-001 ',
+      payoutRemark: ' June welfare payout '
     });
     expect(response.body.statement).toEqual(paidStatement);
   });

@@ -286,6 +286,8 @@ const paidSettlementStatementsResponse = {
       ...generatedSettlementStatement,
       status: 'paid_offline',
       paidAt: '2026-06-07T00:00:00.000Z',
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout',
       items: generatedSettlementStatement.items.map((item) => ({
         ...item,
         status: 'paid_offline'
@@ -630,6 +632,7 @@ describe('Admin product review workbench', () => {
 
   it('confirms Admin settlement offline payout and refreshes statements', async () => {
     let settlementLoads = 0;
+    vi.spyOn(window, 'prompt').mockReturnValueOnce(' BANK-20260607-001 ').mockReturnValueOnce(' June welfare payout ');
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -700,10 +703,14 @@ describe('Admin product review workbench', () => {
       headers: { 'Content-Type': 'application/json' }
     });
     expect(JSON.parse(String(payoutCall?.[1]?.body))).toMatchObject({
-      paidAt: expect.any(String)
+      paidAt: expect.any(String),
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout'
     });
     expect(await screen.findByText('MSS-20260606-001 已确认离线打款')).toBeInTheDocument();
     expect((await screen.findAllByText('已线下打款')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('流水 BANK-20260607-001')).toBeInTheDocument();
+    expect(screen.getByText('备注 June welfare payout')).toBeInTheDocument();
   });
 
   it('filters Admin inventory reservations by merchant', async () => {

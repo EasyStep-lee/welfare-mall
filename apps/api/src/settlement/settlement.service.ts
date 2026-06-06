@@ -20,6 +20,8 @@ export type GenerateMerchantSettlementStatementInput = {
 export type ConfirmMerchantSettlementStatementOfflinePayoutInput = {
   statementNo: string;
   paidAt?: string;
+  payoutReference?: string;
+  payoutRemark?: string;
 };
 
 @Injectable()
@@ -73,7 +75,9 @@ export class SettlementService {
 
     return this.settlementRepository.confirmMerchantSettlementStatementOfflinePayout({
       statementNo: input.statementNo.trim(),
-      paidAt: normalizeOptionalDate(input.paidAt) ?? new Date()
+      paidAt: normalizeOptionalDate(input.paidAt) ?? new Date(),
+      payoutReference: normalizeOptionalText(input.payoutReference) ?? null,
+      payoutRemark: normalizeOptionalText(input.payoutRemark) ?? null
     });
   }
 }

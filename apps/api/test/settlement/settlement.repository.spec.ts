@@ -70,6 +70,8 @@ const statementRecord = {
   netAmount: 18980,
   generatedAt: new Date('2026-06-06T00:00:00.000Z'),
   paidAt: null,
+  payoutReference: null,
+  payoutRemark: null,
   createdAt: new Date('2026-06-06T00:00:00.000Z'),
   updatedAt: new Date('2026-06-06T00:00:00.000Z'),
   items: [
@@ -91,6 +93,8 @@ const paidStatementRecord = {
   ...statementRecord,
   status: 'paid_offline',
   paidAt: new Date('2026-06-07T00:00:00.000Z'),
+  payoutReference: 'BANK-20260607-001',
+  payoutRemark: 'June welfare payout',
   updatedAt: new Date('2026-06-07T00:00:00.000Z'),
   items: statementRecord.items.map((item) => ({
     ...item,
@@ -380,7 +384,9 @@ describe('SettlementRepository', () => {
 
     const result = await repository.confirmMerchantSettlementStatementOfflinePayout({
       statementNo: 'MSS-20260606-001',
-      paidAt: new Date('2026-06-07T00:00:00.000Z')
+      paidAt: new Date('2026-06-07T00:00:00.000Z'),
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout'
     });
 
     expect(prisma.$transaction).toHaveBeenCalled();
@@ -395,7 +401,9 @@ describe('SettlementRepository', () => {
       where: { id: 'statement-001' },
       data: {
         status: 'paid_offline',
-        paidAt: new Date('2026-06-07T00:00:00.000Z')
+        paidAt: new Date('2026-06-07T00:00:00.000Z'),
+        payoutReference: 'BANK-20260607-001',
+        payoutRemark: 'June welfare payout'
       },
       select: expect.any(Object)
     });
@@ -418,7 +426,9 @@ describe('SettlementRepository', () => {
 
     const result = await repository.confirmMerchantSettlementStatementOfflinePayout({
       statementNo: 'MSS-20260606-001',
-      paidAt: new Date('2026-06-07T00:00:00.000Z')
+      paidAt: new Date('2026-06-07T00:00:00.000Z'),
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout'
     });
 
     expect(prisma.merchantSettlementStatement.update).not.toHaveBeenCalled();

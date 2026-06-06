@@ -42,6 +42,8 @@ const paidStatement = {
   ...statement,
   status: 'paid_offline',
   paidAt: new Date('2026-06-07T00:00:00.000Z'),
+  payoutReference: 'BANK-20260607-001',
+  payoutRemark: 'June welfare payout',
   items: [{ ...billItem, status: 'paid_offline' }]
 };
 
@@ -132,12 +134,16 @@ describe('SettlementService', () => {
 
     const result = await service.confirmMerchantSettlementStatementOfflinePayout({
       statementNo: ' MSS-20260606-001 ',
-      paidAt: '2026-06-07T00:00:00.000Z'
+      paidAt: '2026-06-07T00:00:00.000Z',
+      payoutReference: ' BANK-20260607-001 ',
+      payoutRemark: ' June welfare payout '
     });
 
     expect(repository.confirmMerchantSettlementStatementOfflinePayout).toHaveBeenCalledWith({
       statementNo: 'MSS-20260606-001',
-      paidAt: new Date('2026-06-07T00:00:00.000Z')
+      paidAt: new Date('2026-06-07T00:00:00.000Z'),
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout'
     });
     expect(result.statement).toEqual(paidStatement);
   });

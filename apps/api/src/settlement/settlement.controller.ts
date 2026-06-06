@@ -44,7 +44,9 @@ export class SettlementController {
   ) {
     return this.settlementService.confirmMerchantSettlementStatementOfflinePayout({
       statementNo,
-      paidAt: input.paidAt
+      paidAt: input.paidAt,
+      payoutReference: input.payoutReference,
+      payoutRemark: input.payoutRemark
     });
   }
 }
@@ -59,4 +61,6 @@ type GenerateMerchantSettlementStatementRequest = {
 
 type ConfirmMerchantSettlementStatementOfflinePayoutRequest = {
   paidAt?: string;
+  payoutReference?: string;
+  payoutRemark?: string;
 };
