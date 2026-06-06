@@ -15,9 +15,10 @@ const billItem = {
   grossAmount: 13980,
   refundOffsetAmount: 0,
   adjustmentAmount: 0,
-  netAmount: 13980,
-  createdAt: new Date('2026-06-05T00:00:00.000Z'),
-  updatedAt: new Date('2026-06-05T00:00:00.000Z')
+    netAmount: 13980,
+    statementId: 'statement-001',
+    createdAt: new Date('2026-06-05T00:00:00.000Z'),
+    updatedAt: new Date('2026-06-05T00:00:00.000Z')
 };
 
 const statement = {
@@ -37,11 +38,19 @@ const statement = {
   items: [billItem]
 };
 
+const paidStatement = {
+  ...statement,
+  status: 'paid_offline',
+  paidAt: new Date('2026-06-07T00:00:00.000Z'),
+  items: [{ ...billItem, status: 'paid_offline' }]
+};
+
 function createRepositoryMock() {
   return {
     generateMerchantBillItemsForPaidOrder: jest.fn().mockResolvedValue({ items: [billItem] }),
     listMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] }),
     generateMerchantSettlementStatement: jest.fn().mockResolvedValue({ statement }),
+    confirmMerchantSettlementStatementOfflinePayout: jest.fn().mockResolvedValue({ statement: paidStatement }),
     listMerchantSettlementStatements: jest.fn().mockResolvedValue({ statements: [statement] })
   };
 }
@@ -115,5 +124,41 @@ describe('SettlementService', () => {
       merchantId: 'merchant-001',
       status: 'generated'
     });
+  });
+
+  it('normalizes statement number and paidAt before confirming offline payout', async () => {
+    const repository = createRepositoryMock();
+    const service = new SettlementService(repository as unknown as SettlementRepository);
+
+    const result = await service.confirmMerchantSettlementStatementOfflinePayout({
+      statementNo: ' MSS-20260606-001 ',
+      paidAt: '2026-06-07T00:00:00.000Z'
+    });
+
+    expect(repository.confirmMerchantSettlementStatementOfflinePayout).toHaveBeenCalledWith({
+      statementNo: 'MSS-20260606-001',
+      paidAt: new Date('2026-06-07T00:00:00.000Z')
+    });
+    expect(result.statement).toEqual(paidStatement);
+  });
+
+  it('rejects blank statement number before confirming offline payout', async () => {
+    const repository = createRepositoryMock();
+    const service = new SettlementService(repository as unknown as SettlementRepository);
+
+    await expect(
+      service.confirmMerchantSettlementStatementOfflinePayout({ statementNo: ' ', paidAt: '2026-06-07T00:00:00.000Z' })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.confirmMerchantSettlementStatementOfflinePayout).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid paidAt before confirming offline payout', async () => {
+    const repository = createRepositoryMock();
+    const service = new SettlementService(repository as unknown as SettlementRepository);
+
+    await expect(
+      service.confirmMerchantSettlementStatementOfflinePayout({ statementNo: 'MSS-20260606-001', paidAt: 'not-a-date' })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.confirmMerchantSettlementStatementOfflinePayout).not.toHaveBeenCalled();
   });
 });

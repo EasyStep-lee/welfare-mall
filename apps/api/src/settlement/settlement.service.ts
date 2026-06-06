@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
+  MerchantSettlementStatementConfirmResult,
   MerchantSettlementBillItemListInput,
   MerchantSettlementBillItemListResult,
   MerchantSettlementStatementGenerateResult,
@@ -14,6 +15,11 @@ export type GenerateMerchantBillItemsInput = {
 
 export type GenerateMerchantSettlementStatementInput = {
   merchantId: string;
+};
+
+export type ConfirmMerchantSettlementStatementOfflinePayoutInput = {
+  statementNo: string;
+  paidAt?: string;
 };
 
 @Injectable()
@@ -57,6 +63,19 @@ export class SettlementService {
       status: normalizeOptionalText(input.status)
     });
   }
+
+  async confirmMerchantSettlementStatementOfflinePayout(
+    input: ConfirmMerchantSettlementStatementOfflinePayoutInput
+  ): Promise<MerchantSettlementStatementConfirmResult> {
+    if (typeof input?.statementNo !== 'string' || input.statementNo.trim().length === 0) {
+      throw new BadRequestException('statementNo is required.');
+    }
+
+    return this.settlementRepository.confirmMerchantSettlementStatementOfflinePayout({
+      statementNo: input.statementNo.trim(),
+      paidAt: normalizeOptionalDate(input.paidAt) ?? new Date()
+    });
+  }
 }
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
@@ -70,4 +89,21 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
 
 function createStatementNo(): string {
   return `MSS-${new Date().toISOString().replace(/[-:.TZ]/g, '')}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+function normalizeOptionalDate(value: string | undefined): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new BadRequestException('paidAt must be a valid ISO date.');
+  }
+
+  const date = new Date(value.trim());
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('paidAt must be a valid ISO date.');
+  }
+
+  return date;
 }
