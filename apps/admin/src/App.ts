@@ -9,12 +9,14 @@ import {
   adminInventoryReservationStatusLabels,
   adminOrderStatusLabels,
   adminSettlementStatementStatusLabels,
+  confirmSettlementOfflinePayout,
   decideProductReview,
   fetchAdminInventoryReservations,
   fetchAdminInventoryStocks,
   fetchAdminOrders,
   fetchAdminSettlementStatements,
   fetchReviewQueue,
+  generateSettlementStatement,
   publishProductToPool,
   statusLabels
 } from './api';
@@ -23,6 +25,9 @@ import { summarizeSettlementStatements } from './settlementSummary';
 
 const adminActorUserId = 'admin-user-001';
 const defaultRejectReason = '资料不完整';
+const localSettlementMerchantId = 'merchant-001';
+const localSettlementPaidAt = '2026-06-06T08:00:00.000Z';
+const localSettlementPayoutRemark = '本地线下打款确认';
 
 export default defineComponent({
   name: 'AdminApp',
@@ -114,6 +119,44 @@ export default defineComponent({
       }
     }
 
+    async function reloadGeneratedSettlementStatements() {
+      const response = await fetchAdminSettlementStatements('generated');
+      statements.value = response.statements;
+    }
+
+    async function generateSettlement() {
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        const response = await generateSettlementStatement({ merchantId: localSettlementMerchantId });
+        message.value = response.statement ? `已生成结算单 ${response.statement.statementNo}` : `${localSettlementMerchantId} 暂无可生成结算单`;
+        await reloadGeneratedSettlementStatements();
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '结算单生成失败';
+      } finally {
+        actionLoading.value = false;
+      }
+    }
+
+    async function confirmOfflinePayout(statement: AdminSettlementStatement) {
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        await confirmSettlementOfflinePayout({
+          statementNo: statement.statementNo,
+          paidAt: localSettlementPaidAt,
+          payoutReference: `LOCAL-PAYOUT-${statement.statementNo}`,
+          payoutRemark: localSettlementPayoutRemark
+        });
+        message.value = `${statement.statementNo} 已确认线下打款`;
+        await reloadGeneratedSettlementStatements();
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '线下打款确认失败';
+      } finally {
+        actionLoading.value = false;
+      }
+    }
+
     onMounted(() => {
       void loadAll();
     });
@@ -137,7 +180,7 @@ export default defineComponent({
           renderOrdersPanel(orders.value),
           renderReservationPanel(reservations.value),
           renderStockPanel(stocks.value),
-          renderSettlementPanel(statements.value)
+          renderSettlementPanel(statements.value, generateSettlement, confirmOfflinePayout, actionLoading.value)
         ])
       ]);
   }
@@ -247,8 +290,16 @@ function renderStockPanel(stocks: AdminInventoryStock[]) {
   ]);
 }
 
-function renderSettlementPanel(statements: AdminSettlementStatement[]) {
+function renderSettlementPanel(
+  statements: AdminSettlementStatement[],
+  generateSettlement: () => Promise<void>,
+  confirmOfflinePayout: (statement: AdminSettlementStatement) => Promise<void>,
+  actionLoading: boolean
+) {
   return panel('结算管理', [
+    h('div', { class: 'panel-action-row' }, [
+      h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: generateSettlement }, () => '生成结算单')
+    ]),
     statements.length === 0
       ? h('p', { class: 'empty-state' }, '暂无结算单')
       : h(
@@ -260,8 +311,13 @@ function renderSettlementPanel(statements: AdminSettlementStatement[]) {
               h('p', `商户 ${statement.merchantId} / 应打款 ${formatMoney(statement.netAmount)}`),
               h(ElSpace, () => [
                 h(ElTag, { type: statement.status === 'generated' ? 'warning' : 'success' }, () => label(adminSettlementStatementStatusLabels, statement.status)),
-                h(ElTag, () => `明细 ${statement.itemCount} 条`)
-              ])
+                h(ElTag, () => `明细 ${statement.itemCount} 条`),
+                statement.status === 'generated'
+                  ? h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => confirmOfflinePayout(statement) }, () => '确认线下打款')
+                  : null
+              ]),
+              statement.payoutReference ? h('p', { class: 'muted' }, `流水 ${statement.payoutReference}`) : null,
+              statement.payoutRemark ? h('p', { class: 'muted' }, `备注 ${statement.payoutRemark}`) : null
             ])
           )
         )
