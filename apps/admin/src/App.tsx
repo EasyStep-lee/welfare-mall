@@ -1,4 +1,4 @@
-import { Banknote, Check, CreditCard, RefreshCw, RotateCcw, Search, Send, X } from 'lucide-react';
+import { Banknote, Check, CreditCard, Download, RefreshCw, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminFulfillmentStatusFilter,
@@ -29,6 +29,7 @@ import {
   publishProductToPool,
   statusLabels
 } from './api';
+import { buildSettlementCsv } from './settlementExport';
 import './styles.css';
 
 const adminActorUserId = 'admin-user-001';
@@ -379,6 +380,19 @@ export default function App() {
     setActiveSettlementMerchantFilter('');
   }
 
+  function exportSettlementStatements() {
+    if (settlementStatements.length === 0) {
+      setMessage(null);
+      setError('暂无可导出的结算单');
+      return;
+    }
+
+    const csv = buildSettlementCsv(settlementStatements);
+    downloadTextFile(createSettlementExportFilename(activeSettlementStatus, activeSettlementMerchantFilter), csv);
+    setError(null);
+    setMessage(`已导出 ${settlementStatements.length} 张结算单`);
+  }
+
   async function runAction(action: () => Promise<void>) {
     setError(null);
     setMessage(null);
@@ -454,6 +468,10 @@ export default function App() {
           <button type="button" onClick={() => void generateSettlementForMerchant()}>
             <Send size={15} />
             生成结算单
+          </button>
+          <button type="button" onClick={exportSettlementStatements} disabled={settlementStatements.length === 0}>
+            <Download size={15} />
+            导出结算CSV
           </button>
           {activeSettlementMerchantFilter ? (
             <button type="button" onClick={clearSettlementMerchantFilter}>
@@ -1153,6 +1171,21 @@ function canRequestRefund(order: AdminOrder) {
 
 function canConfirmSettlementPayout(statement: AdminSettlementStatement) {
   return statement.status === 'generated';
+}
+
+function createSettlementExportFilename(status: AdminSettlementStatementStatusFilter, merchantId: string) {
+  const merchantPart = merchantId ? `-${merchantId}` : '';
+  return `merchant-settlements-${status}${merchantPart}.csv`;
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function canConfirmPayment(order: AdminOrder) {

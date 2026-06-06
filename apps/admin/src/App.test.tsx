@@ -472,6 +472,31 @@ describe('Admin product review workbench', () => {
     expect(within(settlementPanel).getByRole('button', { name: '确认离线打款' })).toBeInTheDocument();
   });
 
+  it('exports currently loaded Admin settlement statements as CSV', async () => {
+    const createObjectUrl = vi.fn((_blob: Blob) => 'blob:admin-settlement-csv');
+    const revokeObjectUrl = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    URL.createObjectURL = createObjectUrl;
+    URL.revokeObjectURL = revokeObjectUrl;
+
+    try {
+      render(<App />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '导出结算CSV' }));
+
+      expect(createObjectUrl).toHaveBeenCalledTimes(1);
+      const blob = createObjectUrl.mock.calls[0]?.[0] as Blob;
+      expect(blob.type).toBe('text/csv;charset=utf-8');
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(revokeObjectUrl).toHaveBeenCalledWith('blob:admin-settlement-csv');
+    } finally {
+      URL.createObjectURL = originalCreateObjectUrl;
+      URL.revokeObjectURL = originalRevokeObjectUrl;
+    }
+  });
+
   it('filters Admin settlement statements by merchant and status', async () => {
     render(<App />);
 
