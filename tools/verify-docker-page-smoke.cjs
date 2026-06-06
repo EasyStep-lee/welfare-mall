@@ -9,7 +9,7 @@ const pageTargets = [
   {
     name: 'Merchant',
     url: 'http://localhost:5174/',
-    expectedAssetSnippets: ['商品提审', '履约订单', 'http://localhost:3000/api']
+    expectedAssetSnippets: ['商户运营工作台', '商品草稿', '履约订单', 'http://localhost:3000/api']
   },
   {
     name: 'Portal',
