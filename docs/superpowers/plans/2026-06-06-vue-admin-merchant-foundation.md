@@ -96,7 +96,7 @@ pnpm run docker:runtime:smoke
 pnpm run docker:page-smoke
 ```
 
-- [ ] **Step 3: Commit, push, open PR, and merge**
+- [x] **Step 3: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -104,6 +104,6 @@ Commit message:
 feat: migrate admin merchant foundation to Vue
 ```
 
-- [ ] **Step 4: Mark plan complete in docs-only follow-up**
+- [x] **Step 4: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark Task 3 complete.
