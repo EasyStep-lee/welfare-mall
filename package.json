@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "verify": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm run lint && pnpm run typecheck && pnpm run test",
+    "verify": "pnpm run verify:frontend-stack && pnpm --filter @welfare-mall/api run prisma:generate && pnpm run lint && pnpm run typecheck && pnpm run test",
     "lint": "pnpm --filter @welfare-mall/api run lint && pnpm --filter @welfare-mall/admin run lint && pnpm --filter @welfare-mall/merchant run lint && pnpm --filter @welfare-mall/portal run lint",
     "typecheck": "pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/admin run typecheck && pnpm --filter @welfare-mall/merchant run typecheck && pnpm --filter @welfare-mall/portal run typecheck",
     "test": "pnpm --filter @welfare-mall/api run test --runInBand && pnpm --filter @welfare-mall/admin run test --run && pnpm --filter @welfare-mall/merchant run test --run && pnpm --filter @welfare-mall/portal run test --run && pnpm --filter @welfare-mall/user-miniprogram run test --run",
@@ -26,6 +26,7 @@
     "target:runtime:env-check": "node tools/verify-target-runtime-env.cjs",
     "target:runtime:smoke": "node tools/verify-target-runtime-smoke.cjs",
     "verify:docker-runtime": "node tools/verify-docker-runtime.cjs",
+    "verify:frontend-stack": "node tools/verify-frontend-stack-boundary.cjs",
     "verify:api": "pnpm --filter @welfare-mall/api run prisma:generate && pnpm --filter @welfare-mall/api run typecheck && pnpm --filter @welfare-mall/api run test && pnpm --filter @welfare-mall/api run prisma:validate && pnpm --filter @welfare-mall/api run openapi:generate",
     "verify:product-save-db": "pnpm --filter @welfare-mall/api run test:db:product-save"
   },

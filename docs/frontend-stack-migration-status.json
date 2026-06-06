@@ -1,0 +1,10 @@
+{
+  "migrationStatus": "in_progress",
+  "targetStack": {
+    "admin": ["Vue 3", "TypeScript", "Vite", "Pinia", "Element Plus"],
+    "merchant": ["Vue 3", "TypeScript", "Vite", "Pinia", "Element Plus"],
+    "portal": ["Vue 3", "TypeScript", "Vite"]
+  },
+  "allowedReactWorkspacePackages": ["@welfare-mall/admin", "@welfare-mall/merchant"],
+  "reason": "Admin and Merchant are legacy React implementations awaiting the Vue 3 + Element Plus parity migration. No new React workspace or React dependency is allowed."
+}
