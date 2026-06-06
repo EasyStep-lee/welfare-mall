@@ -177,6 +177,24 @@ describe('Merchant Vue workbench', () => {
     const wrapper = mount(App);
     await flushPromises();
 
+    for (const label of [
+      '商品编码',
+      '商品名称',
+      '商品分类',
+      '商品品牌',
+      '产地省份',
+      '产地城市',
+      '销售价',
+      '规格',
+      '主图地址',
+      '详情图地址',
+      '资质文件',
+      '商品参数',
+      '图文说明'
+    ]) {
+      expect(wrapper.text()).toContain(label);
+    }
+
     await clickButton(wrapper, '保存草稿');
     await flushPromises();
 
@@ -204,6 +222,49 @@ describe('Merchant Vue workbench', () => {
     });
     expect(wrapper.text()).toContain('东北五常大米福利装 草稿已保存');
   });
+
+  it('saves edited master data fields from the visible Vue draft form', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '产地省份', '吉林');
+    await setFieldValue(wrapper, '产地城市', '长春');
+    await setFieldValue(wrapper, '规格', '10kg 礼盒');
+    await setFieldValue(wrapper, '主图地址', 'https://img.example.com/rice-main-new.jpg');
+    await setFieldValue(wrapper, '详情图地址', 'https://img.example.com/rice-detail-new.jpg');
+    await setFieldValue(wrapper, '资质文件', 'https://img.example.com/certs/rice-new.pdf');
+    await setFieldValue(wrapper, '商品参数', '净含量 10kg');
+    await setFieldValue(wrapper, '图文说明', '升级礼盒装福利说明。');
+
+    await clickButton(wrapper, '保存草稿');
+    await flushPromises();
+
+    const saveCall = findRequest('/products/drafts/save');
+    const requestBody = JSON.parse(String(saveCall?.[1]?.body));
+    expect(requestBody.payload).toMatchObject({
+      originProvince: '吉林',
+      originCity: '长春',
+      originDescription: '吉林长春优选产区'
+    });
+    expect(requestBody.payload.skus[0].specs).toEqual([{ name: '规格', value: '10kg 礼盒' }]);
+    expect(requestBody.payload.media).toEqual([
+      {
+        type: 'main_image',
+        url: 'https://img.example.com/rice-main-new.jpg',
+        sortOrder: 1,
+        altText: '东北五常大米福利装'
+      },
+      {
+        type: 'detail_image',
+        url: 'https://img.example.com/rice-detail-new.jpg',
+        sortOrder: 2,
+        altText: '东北五常大米福利装详情'
+      }
+    ]);
+    expect(requestBody.payload.qualifications[0].fileUrl).toBe('https://img.example.com/certs/rice-new.pdf');
+    expect(requestBody.payload.parameters[0].value).toBe('净含量 10kg');
+    expect(requestBody.payload.detailSections[0].content).toBe('升级礼盒装福利说明。');
+  });
 });
 
 function response(body: unknown) {
@@ -225,6 +286,14 @@ async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
   const button = wrapper.findAll('button').find((candidate) => candidate.text() === text);
   expect(button, `button ${text}`).toBeTruthy();
   await button!.trigger('click');
+}
+
+async function setFieldValue(wrapper: ReturnType<typeof mount>, label: string, value: string) {
+  const labelWrapper = wrapper.findAll('label').find((candidate) => candidate.text().includes(label));
+  expect(labelWrapper, `field ${label}`).toBeTruthy();
+  const control = labelWrapper!.find('input,textarea');
+  expect(control.exists(), `control ${label}`).toBe(true);
+  await control.setValue(value);
 }
 
 async function flushPromises() {

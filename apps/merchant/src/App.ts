@@ -27,6 +27,22 @@ const fixedMerchantContext = {
   brandId: 'brand-rice'
 };
 
+type MerchantDraftForm = {
+  code: string;
+  name: string;
+  categoryName: string;
+  brandName: string;
+  originProvince: string;
+  originCity: string;
+  priceYuan: string;
+  specText: string;
+  mainImageUrl: string;
+  detailImageUrl: string;
+  qualificationFileUrl: string;
+  parameterText: string;
+  detailText: string;
+};
+
 export default defineComponent({
   name: 'MerchantApp',
   setup() {
@@ -40,9 +56,12 @@ export default defineComponent({
     const draftForm = ref({
       code: 'P-RICE-001',
       name: '东北五常大米福利装',
+      categoryName: '粮油副食',
+      brandName: '五常香米',
       originProvince: '黑龙江',
       originCity: '哈尔滨',
       priceYuan: '69.90',
+      specText: '标准装',
       mainImageUrl: 'https://img.example.com/rice-main.jpg',
       detailImageUrl: 'https://img.example.com/rice-detail.jpg',
       qualificationFileUrl: 'https://img.example.com/certs/rice-origin.pdf',
@@ -116,6 +135,10 @@ export default defineComponent({
       }
     }
 
+    function updateDraftField(field: keyof MerchantDraftForm, value: string) {
+      draftForm.value = { ...draftForm.value, [field]: value };
+    }
+
     onMounted(() => {
       void loadAll();
     });
@@ -136,7 +159,7 @@ export default defineComponent({
         ]),
         h('section', { class: 'workspace-grid' }, [
           renderFulfillmentPanel(fulfillmentOrders.value, completeOrder, actionLoading.value),
-          renderDraftPanel(draftItems.value, draftForm.value, saveDraft, submitDraft, actionLoading.value),
+          renderDraftPanel(draftItems.value, draftForm.value, updateDraftField, saveDraft, submitDraft, actionLoading.value),
           renderSettlementPanel(statements.value)
         ])
       ]);
@@ -181,28 +204,30 @@ function renderFulfillmentPanel(
 
 function renderDraftPanel(
   items: SubmissionQueueItem[],
-  draftForm: {
-    code: string;
-    name: string;
-    originProvince: string;
-    originCity: string;
-    priceYuan: string;
-    mainImageUrl: string;
-    detailImageUrl: string;
-    qualificationFileUrl: string;
-    parameterText: string;
-    detailText: string;
-  },
+  draftForm: MerchantDraftForm,
+  updateDraftField: (field: keyof MerchantDraftForm, value: string) => void,
   saveDraft: () => Promise<void>,
   submitDraft: (item: SubmissionQueueItem) => Promise<void>,
   actionLoading: boolean
 ) {
   return panel('商品草稿', [
     h('div', { class: 'draft-form' }, [
-      h('label', ['商品编码', h('input', { value: draftForm.code, readonly: true })]),
-      h('label', ['商品名称', h('input', { value: draftForm.name, readonly: true })]),
-      h('label', ['销售价', h('input', { value: draftForm.priceYuan, readonly: true })]),
-      h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: saveDraft }, () => '保存草稿')
+      draftInput('商品编码', draftForm.code, (value) => updateDraftField('code', value)),
+      draftInput('商品名称', draftForm.name, (value) => updateDraftField('name', value)),
+      draftInput('商品分类', draftForm.categoryName, (value) => updateDraftField('categoryName', value), { readonly: true }),
+      draftInput('商品品牌', draftForm.brandName, (value) => updateDraftField('brandName', value), { readonly: true }),
+      draftInput('产地省份', draftForm.originProvince, (value) => updateDraftField('originProvince', value)),
+      draftInput('产地城市', draftForm.originCity, (value) => updateDraftField('originCity', value)),
+      draftInput('销售价', draftForm.priceYuan, (value) => updateDraftField('priceYuan', value)),
+      draftInput('规格', draftForm.specText, (value) => updateDraftField('specText', value)),
+      draftInput('主图地址', draftForm.mainImageUrl, (value) => updateDraftField('mainImageUrl', value), { wide: true }),
+      draftInput('详情图地址', draftForm.detailImageUrl, (value) => updateDraftField('detailImageUrl', value), { wide: true }),
+      draftInput('资质文件', draftForm.qualificationFileUrl, (value) => updateDraftField('qualificationFileUrl', value), { wide: true }),
+      draftTextarea('商品参数', draftForm.parameterText, (value) => updateDraftField('parameterText', value)),
+      draftTextarea('图文说明', draftForm.detailText, (value) => updateDraftField('detailText', value)),
+      h('div', { class: 'draft-action-row' }, [
+        h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: saveDraft }, () => '保存草稿')
+      ])
     ]),
     items.length === 0
       ? h('p', { class: 'empty-state' }, '暂无商品草稿')
@@ -221,6 +246,32 @@ function renderDraftPanel(
             ])
           )
         )
+  ]);
+}
+
+function draftInput(
+  text: string,
+  value: string,
+  onValue: (value: string) => void,
+  options: { readonly?: boolean; wide?: boolean } = {}
+) {
+  return h('label', { class: options.wide ? 'draft-field wide-field' : 'draft-field' }, [
+    h('span', text),
+    h('input', {
+      value,
+      readonly: options.readonly,
+      onInput: (event: Event) => onValue((event.target as HTMLInputElement).value)
+    })
+  ]);
+}
+
+function draftTextarea(text: string, value: string, onValue: (value: string) => void) {
+  return h('label', { class: 'draft-field wide-field' }, [
+    h('span', text),
+    h('textarea', {
+      value,
+      onInput: (event: Event) => onValue((event.target as HTMLTextAreaElement).value)
+    })
   ]);
 }
 
@@ -264,21 +315,12 @@ function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
 }
 
-function toProductDraftPayload(input: {
-  code: string;
-  name: string;
-  originProvince: string;
-  originCity: string;
-  priceYuan: string;
-  mainImageUrl: string;
-  detailImageUrl: string;
-  qualificationFileUrl: string;
-  parameterText: string;
-  detailText: string;
-}): ProductDraftPayload {
+function toProductDraftPayload(input: MerchantDraftForm): ProductDraftPayload {
   const code = input.code.trim();
   const name = input.name.trim();
   const priceAmount = Math.round(Number(input.priceYuan) * 100);
+  const originProvince = input.originProvince.trim();
+  const originCity = input.originCity.trim();
 
   return {
     code,
@@ -288,9 +330,9 @@ function toProductDraftPayload(input: {
     categoryId: fixedMerchantContext.categoryId,
     brandId: fixedMerchantContext.brandId,
     originCountry: '中国',
-    originProvince: input.originProvince.trim(),
-    originCity: input.originCity.trim(),
-    originDescription: `${input.originProvince.trim()}${input.originCity.trim()}优选产区`,
+    originProvince,
+    originCity,
+    originDescription: `${originProvince}${originCity}优选产区`,
     skus: [
       {
         code: `SKU-${code}`,
@@ -298,7 +340,7 @@ function toProductDraftPayload(input: {
         marketPriceAmount: priceAmount,
         costPriceAmount: Math.max(0, priceAmount - 1000),
         barcode: `${code}-BARCODE`,
-        specs: [{ name: '规格', value: '标准装' }],
+        specs: [{ name: '规格', value: input.specText.trim() }],
         weightGrams: 5000,
         volumeMilliliters: 5000
       }
