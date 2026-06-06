@@ -1,11 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtTokenService } from './jwt-token.service';
+import { AuthService } from './auth.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtTokenService: JwtTokenService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<{ headers: Record<string, string | string[] | undefined>; user?: unknown }>();
     const token = parseBearerToken(request.headers.authorization);
     if (!token) {
@@ -13,7 +13,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      request.user = this.jwtTokenService.verifyAccessToken(token);
+      request.user = await this.authService.authenticateAccessToken(token);
       return true;
     } catch {
       throw new UnauthorizedException('Invalid Bearer token.');

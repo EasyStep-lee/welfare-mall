@@ -24,6 +24,7 @@ describe('Auth API', () => {
       expect.objectContaining({
         tokenType: 'Bearer',
         expiresIn: 3600,
+        sessionId: expect.any(String),
         user: expect.objectContaining({
           username: 'admin-local',
           subjectType: 'platform',
@@ -55,5 +56,18 @@ describe('Auth API', () => {
 
   it('rejects protected requests with an invalid Bearer token', async () => {
     await request(app.getHttpServer()).get('/api/auth/me').set('Authorization', 'Bearer invalid-token').expect(401);
+  });
+
+  it('revokes the current JWT on logout', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin-local', password: 'local-dev-password' })
+      .expect(201);
+
+    const token = loginResponse.body.accessToken as string;
+
+    await request(app.getHttpServer()).post('/api/auth/logout').set('Authorization', `Bearer ${token}`).expect(201);
+
+    await request(app.getHttpServer()).get('/api/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
   });
 });

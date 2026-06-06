@@ -1,17 +1,29 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { AccessTokenPayload, AuthenticatedUser } from './authenticated-user';
 
 const ACCESS_TOKEN_TTL_SECONDS = 3600;
+export type AccessTokenSessionClaims = {
+  sessionId: string;
+  jti: string;
+};
 
 @Injectable()
 export class JwtTokenService {
   private readonly secret = process.env.JWT_SECRET ?? 'local-development-jwt-secret';
 
-  signAccessToken(user: AuthenticatedUser, now = Math.floor(Date.now() / 1000)): string {
+  signAccessToken(
+    user: AuthenticatedUser,
+    sessionClaims: AccessTokenSessionClaims = {
+      sessionId: randomUUID(),
+      jti: randomUUID()
+    },
+    now = Math.floor(Date.now() / 1000)
+  ): string {
     const header = { alg: 'HS256', typ: 'JWT' };
     const payload: AccessTokenPayload = {
       ...user,
+      ...sessionClaims,
       iat: now,
       exp: now + ACCESS_TOKEN_TTL_SECONDS
     };
@@ -48,6 +60,9 @@ export class JwtTokenService {
     const payload = decodeJson<AccessTokenPayload>(encodedPayload);
     if (typeof payload.exp !== 'number' || payload.exp <= now) {
       throw new Error('Access token expired.');
+    }
+    if (!payload.sessionId || !payload.jti) {
+      throw new Error('Access token session claims are required.');
     }
 
     return payload;
