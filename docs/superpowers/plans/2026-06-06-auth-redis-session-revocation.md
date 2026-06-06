@@ -104,7 +104,7 @@ pnpm run docker:page-smoke
 
 Expected: PASS with API/Admin/Merchant/Portal/MySQL/Redis healthy locally.
 
-- [ ] **Step 3: Commit, push, open PR, and merge**
+- [x] **Step 3: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -112,6 +112,6 @@ Commit message:
 feat: add Redis-backed auth session revocation
 ```
 
-- [ ] **Step 4: Mark plan complete in docs-only follow-up**
+- [x] **Step 4: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark Task 3 complete.
