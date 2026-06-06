@@ -314,16 +314,60 @@ export const adminSettlementStatementStatusLabels: Record<AdminSettlementStateme
 };
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';
+type AccessTokenProvider = () => string | null | undefined;
+type ApiHeaders = Record<string, string>;
 
 function apiBaseUrl() {
   return import.meta.env.VITE_ADMIN_API_BASE_URL ?? defaultApiBaseUrl;
+}
+
+function defaultAdminAccessTokenProvider() {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  return localStorage.getItem('welfareMallAdminAccessToken');
+}
+
+let adminAccessTokenProvider: AccessTokenProvider = defaultAdminAccessTokenProvider;
+
+export function setAdminAccessTokenProvider(provider: AccessTokenProvider) {
+  adminAccessTokenProvider = provider;
+}
+
+export function resetAdminAccessTokenProvider() {
+  adminAccessTokenProvider = defaultAdminAccessTokenProvider;
+}
+
+function withAuthHeaders(headers: ApiHeaders = {}) {
+  const token = adminAccessTokenProvider()?.trim();
+  if (!token) {
+    return headers;
+  }
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`
+  };
+}
+
+function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const token = adminAccessTokenProvider()?.trim();
+  if (!token) {
+    return init ? fetch(input, init) : fetch(input);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers: withAuthHeaders(init?.headers as ApiHeaders | undefined)
+  });
 }
 
 export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<ReviewQueueResponse> {
   const url = new URL(`${apiBaseUrl()}/products/review-queue`);
   url.searchParams.set('status', status);
 
-  const response = await fetch(url);
+  const response = await apiFetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load review queue: ${response.status}`);
   }
@@ -352,7 +396,7 @@ export async function fetchAdminOrders(
     url.searchParams.set('taskNo', taskNo.trim());
   }
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load admin orders: ${response.status}`);
   }
@@ -377,7 +421,7 @@ export async function fetchAdminInventoryReservations(
     url.searchParams.set('orderNo', orderNo.trim());
   }
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load inventory reservations: ${response.status}`);
   }
@@ -402,7 +446,7 @@ export async function fetchAdminInventoryStocks(
     url.searchParams.set('skuId', skuId.trim());
   }
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load inventory stocks: ${response.status}`);
   }
@@ -423,7 +467,7 @@ export async function fetchAdminSettlementStatements(
     url.searchParams.set('status', status);
   }
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load settlement statements: ${response.status}`);
   }
@@ -434,7 +478,7 @@ export async function fetchAdminSettlementStatements(
 export async function generateSettlementStatement(input: {
   merchantId: string;
 }): Promise<GenerateSettlementStatementResponse> {
-  const response = await fetch(`${apiBaseUrl()}/settlements/merchant-statements/generate`, {
+  const response = await apiFetch(`${apiBaseUrl()}/settlements/merchant-statements/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ merchantId: input.merchantId.trim() })
@@ -453,7 +497,7 @@ export async function confirmSettlementOfflinePayout(input: {
   payoutReference: string;
   payoutRemark?: string | null;
 }): Promise<ConfirmSettlementOfflinePayoutResponse> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${apiBaseUrl()}/settlements/merchant-statements/${encodeURIComponent(input.statementNo)}/confirm-offline-payout`,
     {
       method: 'POST',
@@ -474,7 +518,7 @@ export async function confirmSettlementOfflinePayout(input: {
 }
 
 export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/refunds`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/refunds`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -490,7 +534,7 @@ export async function createOrderRefund(input: CreateOrderRefundInput): Promise<
 export async function processOrderPaymentCallback(
   input: ProcessOrderPaymentCallbackInput
 ): Promise<ProcessOrderPaymentCallbackResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -506,7 +550,7 @@ export async function processOrderPaymentCallback(
 export async function processOrderRefundCallback(
   input: ProcessOrderRefundCallbackInput
 ): Promise<ProcessOrderRefundCallbackResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/refunds/callbacks`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/refunds/callbacks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -525,7 +569,7 @@ export async function decideProductReview(input: {
   actorUserId: string;
   reason?: string | null;
 }) {
-  const response = await fetch(`${apiBaseUrl()}/products/${input.productId}/review-decisions`, {
+  const response = await apiFetch(`${apiBaseUrl()}/products/${input.productId}/review-decisions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -543,7 +587,7 @@ export async function decideProductReview(input: {
 }
 
 export async function publishProductToPool(input: { productId: string; actorUserId: string }) {
-  const response = await fetch(`${apiBaseUrl()}/product-pools/items/publish`, {
+  const response = await apiFetch(`${apiBaseUrl()}/product-pools/items/publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
