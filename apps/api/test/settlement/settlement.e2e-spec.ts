@@ -91,6 +91,20 @@ describe('Settlement API contract', () => {
     expect(response.body.items).toEqual([billItem]);
   });
 
+  it('uses JWT merchant identity when listing bill items and ignores conflicting query merchant ID', async () => {
+    const token = await loginAndGetToken(app, 'merchant-local');
+
+    await request(app.getHttpServer())
+      .get('/api/settlements/merchant-bills?merchantId=attacker-merchant&status=pending_settlement')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(settlementService.listMerchantBillItems).toHaveBeenCalledWith({
+      merchantId: 'merchant-local-review',
+      status: 'pending_settlement'
+    });
+  });
+
   it('generates a merchant settlement statement', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/settlements/merchant-statements/generate')
@@ -115,6 +129,20 @@ describe('Settlement API contract', () => {
     expect(response.body.statements).toEqual([statement]);
   });
 
+  it('uses JWT merchant identity when listing statements and ignores conflicting query merchant ID', async () => {
+    const token = await loginAndGetToken(app, 'merchant-local');
+
+    await request(app.getHttpServer())
+      .get('/api/settlements/merchant-statements?merchantId=attacker-merchant&status=generated')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(settlementService.listMerchantSettlementStatements).toHaveBeenCalledWith({
+      merchantId: 'merchant-local-review',
+      status: 'generated'
+    });
+  });
+
   it('confirms a merchant settlement statement offline payout', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout')
@@ -134,3 +162,12 @@ describe('Settlement API contract', () => {
     expect(response.body.statement).toEqual(paidStatement);
   });
 });
+
+async function loginAndGetToken(app: INestApplication, username: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username, password: 'local-dev-password' })
+    .expect(201);
+
+  return response.body.accessToken as string;
+}

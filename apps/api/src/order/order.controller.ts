@@ -1,5 +1,8 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { AuthenticatedUser } from '../auth/authenticated-user';
+import { OptionalAuthGuard } from '../auth/optional-auth.guard';
 import { OrderAmountPreviewInput, OrderAmountService } from './order-amount.service';
 import { CancelOrderInput, OrderCancelService } from './order-cancel.service';
 import { OrderCheckoutInput, OrderCheckoutService } from './order-checkout.service';
@@ -69,10 +72,11 @@ export class OrderController {
       }
     }
   })
-  async listOrders(@Query('buyerUserId') buyerUserId: string) {
-    assertRequiredText(buyerUserId, 'buyerUserId');
+  @UseGuards(OptionalAuthGuard)
+  async listOrders(@Req() request: RequestWithOptionalUser, @Query('buyerUserId') buyerUserId: string) {
+    const resolvedBuyerUserId = resolveBuyerUserId(request, buyerUserId);
 
-    return this.orderReadService.listOrders({ buyerUserId: buyerUserId.trim() });
+    return this.orderReadService.listOrders({ buyerUserId: resolvedBuyerUserId });
   }
 
   @Get('merchant/fulfillment')
@@ -92,16 +96,18 @@ export class OrderController {
       }
     }
   })
+  @UseGuards(OptionalAuthGuard)
   async listMerchantFulfillmentOrders(
+    @Req() request: RequestWithOptionalUser,
     @Query('merchantId') merchantId: string,
     @Query('status') status?: string,
     @Query('orderNo') orderNo?: string,
     @Query('taskNo') taskNo?: string
   ) {
-    assertRequiredText(merchantId, 'merchantId');
+    const resolvedMerchantId = resolveMerchantId(request, merchantId);
 
     return this.orderFulfillmentService.listMerchantFulfillmentOrders({
-      merchantId: merchantId.trim(),
+      merchantId: resolvedMerchantId,
       status: status?.trim() || 'paid',
       orderNo: orderNo?.trim(),
       taskNo: taskNo?.trim()
@@ -214,15 +220,20 @@ export class OrderController {
       }
     }
   })
-  async completeMerchantFulfillmentOrder(@Param('orderNo') orderNo: string, @Body() input: CompleteMerchantFulfillmentOrderRequest) {
+  @UseGuards(OptionalAuthGuard)
+  async completeMerchantFulfillmentOrder(
+    @Req() request: RequestWithOptionalUser,
+    @Param('orderNo') orderNo: string,
+    @Body() input: CompleteMerchantFulfillmentOrderRequest
+  ) {
     assertRequiredText(orderNo, 'orderNo');
-    assertRequiredText(input?.merchantId, 'merchantId');
+    const resolvedMerchantId = resolveMerchantId(request, input?.merchantId);
 
     const pickupCode = input.pickupCode?.trim();
 
     return this.orderFulfillmentService.completeMerchantFulfillmentOrder({
       orderNo: orderNo.trim(),
-      merchantId: input.merchantId.trim(),
+      merchantId: resolvedMerchantId,
       ...(pickupCode ? { pickupCode } : {})
     });
   }
@@ -242,14 +253,15 @@ export class OrderController {
       }
     }
   })
-  async cancelOrder(@Param('orderNo') orderNo: string, @Body() input: CancelOrderRequest) {
+  @UseGuards(OptionalAuthGuard)
+  async cancelOrder(@Req() request: RequestWithOptionalUser, @Param('orderNo') orderNo: string, @Body() input: CancelOrderRequest) {
     assertRequiredText(orderNo, 'orderNo');
-    assertRequiredText(input?.buyerUserId, 'buyerUserId');
     assertRequiredText(input?.reason, 'reason');
+    const resolvedBuyerUserId = resolveBuyerUserId(request, input?.buyerUserId);
 
     return this.orderCancelService.cancelOrder({
       orderNo: orderNo.trim(),
-      buyerUserId: input.buyerUserId.trim(),
+      buyerUserId: resolvedBuyerUserId,
       reason: input.reason.trim()
     });
   }
@@ -269,13 +281,14 @@ export class OrderController {
       }
     }
   })
-  async getOrderDetail(@Param('orderNo') orderNo: string, @Query('buyerUserId') buyerUserId: string) {
+  @UseGuards(OptionalAuthGuard)
+  async getOrderDetail(@Req() request: RequestWithOptionalUser, @Param('orderNo') orderNo: string, @Query('buyerUserId') buyerUserId: string) {
     assertRequiredText(orderNo, 'orderNo');
-    assertRequiredText(buyerUserId, 'buyerUserId');
+    const resolvedBuyerUserId = resolveBuyerUserId(request, buyerUserId);
 
     return this.orderReadService.getOrderDetail({
       orderNo: orderNo.trim(),
-      buyerUserId: buyerUserId.trim()
+      buyerUserId: resolvedBuyerUserId
     });
   }
 
@@ -337,12 +350,14 @@ export class OrderController {
       }
     }
   })
-  async createOrder(@Body() input: OrderCheckoutRequest) {
-    assertOrderCheckoutRequest(input);
+  @UseGuards(OptionalAuthGuard)
+  async createOrder(@Req() request: RequestWithOptionalUser, @Body() input: OrderCheckoutRequest) {
+    assertOrderCheckoutRequest(input, request.user?.subjectType === 'buyer');
+    const resolvedBuyerUserId = resolveBuyerUserId(request, input.buyerUserId);
 
     return this.orderCheckoutService.createOrder({
       requestId: input.requestId.trim(),
-      buyerUserId: input.buyerUserId.trim(),
+      buyerUserId: resolvedBuyerUserId,
       items: input.items.map((item) => ({
         productPoolItemId: item.productPoolItemId.trim(),
         quantity: item.quantity
@@ -504,6 +519,9 @@ type CreateOrderRefundRequest = CreateOrderRefundInput;
 type ProcessOrderRefundCallbackRequest = Omit<ProcessOrderRefundCallbackServiceInput, 'succeededAt'> & {
   succeededAt?: string | Date | null;
 };
+type RequestWithOptionalUser = Request & {
+  user?: AuthenticatedUser;
+};
 
 function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | undefined): asserts input is OrderAmountPreviewRequest {
   const messages: string[] = [];
@@ -534,14 +552,14 @@ function assertOrderAmountPreviewRequest(input: OrderAmountPreviewRequest | unde
   }
 }
 
-function assertOrderCheckoutRequest(input: OrderCheckoutRequest | undefined): asserts input is OrderCheckoutRequest {
+function assertOrderCheckoutRequest(input: OrderCheckoutRequest | undefined, hasAuthenticatedBuyer = false): asserts input is OrderCheckoutRequest {
   const messages: string[] = [];
 
   if (typeof input?.requestId !== 'string' || input.requestId.trim().length === 0) {
     messages.push('requestId is required.');
   }
 
-  if (typeof input?.buyerUserId !== 'string' || input.buyerUserId.trim().length === 0) {
+  if (!hasAuthenticatedBuyer && (typeof input?.buyerUserId !== 'string' || input.buyerUserId.trim().length === 0)) {
     messages.push('buyerUserId is required.');
   }
 
@@ -644,6 +662,24 @@ function assertRequiredText(value: string | undefined, fieldName: string): asser
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new BadRequestException(`${fieldName} is required.`);
   }
+}
+
+function resolveBuyerUserId(request: RequestWithOptionalUser, fallbackBuyerUserId: string | undefined): string {
+  if (request.user?.subjectType === 'buyer') {
+    return request.user.subjectId;
+  }
+
+  assertRequiredText(fallbackBuyerUserId, 'buyerUserId');
+  return fallbackBuyerUserId.trim();
+}
+
+function resolveMerchantId(request: RequestWithOptionalUser, fallbackMerchantId: string | undefined): string {
+  if (request.user?.subjectType === 'merchant') {
+    return request.user.subjectId;
+  }
+
+  assertRequiredText(fallbackMerchantId, 'merchantId');
+  return fallbackMerchantId.trim();
 }
 
 function assertProcessOrderPaymentCallbackRequest(

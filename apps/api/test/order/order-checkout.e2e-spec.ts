@@ -86,6 +86,46 @@ describe('Order checkout API contract', () => {
     expect(response.body.order.orderNo).toBe('ORDER-20260603-001');
   });
 
+  it('uses JWT buyer identity when creating an order and ignores conflicting body buyer ID', async () => {
+    orderCheckoutService.createOrder.mockResolvedValue({
+      idempotentReplay: false,
+      order: {
+        orderNo: 'ORDER-20260603-002',
+        requestId: 'checkout-request-002',
+        buyerUserId: 'user-001',
+        status: 'pending_payment',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 0,
+        cashPayableAmount: 13980,
+        lines: []
+      }
+    });
+    const token = await loginAndGetToken(app, 'buyer-local');
+
+    await request(app.getHttpServer())
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'checkout-request-002',
+        buyerUserId: 'attacker-user',
+        items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }],
+        fulfillment: {
+          type: 'delivery',
+          receiverName: '李雷',
+          receiverPhone: '13800000000',
+          receiverAddress: '上海市浦东新区世纪大道 1 号'
+        }
+      })
+      .expect(201);
+
+    expect(orderCheckoutService.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'checkout-request-002',
+        buyerUserId: 'user-001'
+      })
+    );
+  });
+
   it('rejects invalid checkout request fields before calling service', async () => {
     await request(app.getHttpServer())
       .post('/api/orders')
@@ -105,3 +145,12 @@ describe('Order checkout API contract', () => {
     expect(orderCheckoutService.createOrder).not.toHaveBeenCalled();
   });
 });
+
+async function loginAndGetToken(app: INestApplication, username: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username, password: 'local-dev-password' })
+    .expect(201);
+
+  return response.body.accessToken as string;
+}

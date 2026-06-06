@@ -1,5 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { AuthenticatedUser } from '../auth/authenticated-user';
+import { OptionalAuthGuard } from '../auth/optional-auth.guard';
 import { SettlementService } from './settlement.service';
 
 @ApiTags('settlements')
@@ -15,9 +18,10 @@ export class SettlementController {
   }
 
   @Get('merchant-bills')
-  async listMerchantBillItems(@Query('merchantId') merchantId?: string, @Query('status') status?: string) {
+  @UseGuards(OptionalAuthGuard)
+  async listMerchantBillItems(@Req() request: RequestWithOptionalUser, @Query('merchantId') merchantId?: string, @Query('status') status?: string) {
     return this.settlementService.listMerchantBillItems({
-      merchantId,
+      merchantId: resolveMerchantId(request, merchantId),
       status
     });
   }
@@ -30,9 +34,14 @@ export class SettlementController {
   }
 
   @Get('merchant-statements')
-  async listMerchantSettlementStatements(@Query('merchantId') merchantId?: string, @Query('status') status?: string) {
+  @UseGuards(OptionalAuthGuard)
+  async listMerchantSettlementStatements(
+    @Req() request: RequestWithOptionalUser,
+    @Query('merchantId') merchantId?: string,
+    @Query('status') status?: string
+  ) {
     return this.settlementService.listMerchantSettlementStatements({
-      merchantId,
+      merchantId: resolveMerchantId(request, merchantId),
       status
     });
   }
@@ -64,3 +73,15 @@ type ConfirmMerchantSettlementStatementOfflinePayoutRequest = {
   payoutReference?: string;
   payoutRemark?: string;
 };
+
+type RequestWithOptionalUser = Request & {
+  user?: AuthenticatedUser;
+};
+
+function resolveMerchantId(request: RequestWithOptionalUser, fallbackMerchantId: string | undefined): string | undefined {
+  if (request.user?.subjectType === 'merchant') {
+    return request.user.subjectId;
+  }
+
+  return fallbackMerchantId;
+}

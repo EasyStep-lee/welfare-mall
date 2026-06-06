@@ -73,6 +73,21 @@ describe('Merchant fulfillment order API contract', () => {
     });
   });
 
+  it('uses JWT merchant identity when listing fulfillment orders and ignores conflicting query merchant ID', async () => {
+    orderFulfillmentService.listMerchantFulfillmentOrders.mockResolvedValue({ orders: [] });
+    const token = await loginAndGetToken(app, 'merchant-local');
+
+    await request(app.getHttpServer())
+      .get('/api/orders/merchant/fulfillment?merchantId=attacker-merchant')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(orderFulfillmentService.listMerchantFulfillmentOrders).toHaveBeenCalledWith({
+      merchantId: 'merchant-local-review',
+      status: 'paid'
+    });
+  });
+
   it('filters merchant fulfillment orders by status', async () => {
     orderFulfillmentService.listMerchantFulfillmentOrders.mockResolvedValue({
       orders: [
@@ -180,6 +195,29 @@ describe('Merchant fulfillment order API contract', () => {
     });
   });
 
+  it('uses JWT merchant identity when completing fulfillment and ignores conflicting body merchant ID', async () => {
+    orderFulfillmentService.completeMerchantFulfillmentOrder.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'completed',
+        totalAmount: 13980,
+        lines: []
+      }
+    });
+    const token = await loginAndGetToken(app, 'merchant-local');
+
+    await request(app.getHttpServer())
+      .post('/api/orders/merchant/fulfillment/ORDER-20260603-001/complete')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ merchantId: 'attacker-merchant' })
+      .expect(200);
+
+    expect(orderFulfillmentService.completeMerchantFulfillmentOrder).toHaveBeenCalledWith({
+      merchantId: 'merchant-local-review',
+      orderNo: 'ORDER-20260603-001'
+    });
+  });
+
   it('forwards pickup codes when completing merchant pickup fulfillment', async () => {
     orderFulfillmentService.completeMerchantFulfillmentOrder.mockResolvedValue({
       order: {
@@ -220,3 +258,12 @@ describe('Merchant fulfillment order API contract', () => {
     expect(orderFulfillmentService.completeMerchantFulfillmentOrder).not.toHaveBeenCalled();
   });
 });
+
+async function loginAndGetToken(app: INestApplication, username: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username, password: 'local-dev-password' })
+    .expect(201);
+
+  return response.body.accessToken as string;
+}

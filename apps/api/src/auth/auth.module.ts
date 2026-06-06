@@ -3,10 +3,11 @@ import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { JwtTokenService } from './jwt-token.service';
+import { OptionalAuthGuard } from './optional-auth.guard';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthGuard, AuthService, JwtTokenService],
-  exports: [AuthGuard, AuthService, JwtTokenService]
+  providers: [AuthGuard, OptionalAuthGuard, AuthService, JwtTokenService],
+  exports: [AuthGuard, OptionalAuthGuard, AuthService, JwtTokenService]
 })
 export class AuthModule {}
