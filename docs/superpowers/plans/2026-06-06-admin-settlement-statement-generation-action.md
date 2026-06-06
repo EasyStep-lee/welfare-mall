@@ -55,10 +55,14 @@ Docker verification:
 
 Browser automation note: the Browser plugin's required Node REPL tool was not available in this session, and local `playwright` was not installed. Runtime coverage for this slice therefore uses Docker page smoke plus direct served asset checks.
 
-- [ ] **Step 5: Publish and merge**
+- [x] **Step 5: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/155
+
+Feature merge SHA: `a73f6c7`
+
 ## Completion
 
-- Pending.
+- Completed in PR #155 and marked complete by docs-only follow-up.
