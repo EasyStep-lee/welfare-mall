@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { AuthenticatedUser } from './authenticated-user';
+import { AccessTokenPayload } from './authenticated-user';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
 type RequestWithUser = Request & {
-  user: AuthenticatedUser;
+  user: AccessTokenPayload;
 };
 
 @ApiTags('auth')
@@ -32,6 +32,12 @@ export class AuthController {
   })
   login(@Body() input: { username: string; password: string }) {
     return this.authService.login(input);
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  logout(@Req() request: RequestWithUser) {
+    return this.authService.logout(request.user);
   }
 
   @Get('me')

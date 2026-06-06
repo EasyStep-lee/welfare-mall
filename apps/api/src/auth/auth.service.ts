@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PermissionCodes } from '../iam/permissions';
-import { AuthenticatedUser } from './authenticated-user';
+import { AccessTokenPayload, AuthenticatedUser } from './authenticated-user';
+import { AuthSessionStore } from './auth-session.store';
 import { ACCESS_TOKEN_TTL_SECONDS, JwtTokenService } from './jwt-token.service';
 
 type LocalLoginInput = {
@@ -42,20 +44,53 @@ const localUsers: AuthenticatedUser[] = [
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtTokenService: JwtTokenService) {}
+  constructor(
+    private readonly jwtTokenService: JwtTokenService,
+    private readonly authSessionStore: AuthSessionStore
+  ) {}
 
-  login(input: LocalLoginInput) {
+  async login(input: LocalLoginInput) {
     const user = localUsers.find((candidate) => candidate.username === input.username.trim());
     if (!user || input.password !== localDevelopmentPassword()) {
       throw new UnauthorizedException('Invalid username or password.');
     }
 
+    const session = this.authSessionStore.createSessionRecord({
+      userSub: user.sub,
+      username: user.username
+    });
+    await this.authSessionStore.saveSession(session);
+    const jti = randomUUID();
+
     return {
       tokenType: 'Bearer',
-      accessToken: this.jwtTokenService.signAccessToken(user),
+      accessToken: this.jwtTokenService.signAccessToken(user, {
+        sessionId: session.sessionId,
+        jti
+      }),
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      sessionId: session.sessionId,
       user
     };
+  }
+
+  async authenticateAccessToken(token: string): Promise<AccessTokenPayload> {
+    const payload = this.jwtTokenService.verifyAccessToken(token);
+    const [session, revoked] = await Promise.all([
+      this.authSessionStore.getSession(payload.sessionId),
+      this.authSessionStore.isTokenRevoked(payload.jti)
+    ]);
+    if (revoked || !session || session.userSub !== payload.sub) {
+      throw new UnauthorizedException('Invalid Bearer token.');
+    }
+
+    return payload;
+  }
+
+  async logout(user: AccessTokenPayload) {
+    await Promise.all([this.authSessionStore.revokeToken(user.jti, user.exp), this.authSessionStore.revokeSession(user.sessionId)]);
+
+    return { revoked: true };
   }
 }
 

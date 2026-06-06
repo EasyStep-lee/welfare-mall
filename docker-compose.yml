@@ -39,6 +39,7 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=mysql://welfare_mall:welfare_mall_password@mysql:3306/welfare_mall_v2
+      - REDIS_URL=redis://redis:6379
       - API_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175
     ports:
       - "3000:3000"

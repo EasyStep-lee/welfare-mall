@@ -12,6 +12,8 @@ export type AuthenticatedUser = {
 };
 
 export type AccessTokenPayload = AuthenticatedUser & {
+  sessionId: string;
+  jti: string;
   iat: number;
   exp: number;
 };

@@ -4,14 +4,20 @@ describe('JwtTokenService', () => {
   it('verifies a signed access token payload', () => {
     const service = new JwtTokenService();
 
-    const token = service.signAccessToken({
-      sub: 'user-admin-local',
-      username: 'admin-local',
-      displayName: '本地平台管理员',
-      subjectType: 'platform',
-      subjectId: 'platform',
-      permissions: ['product:audit']
-    });
+    const token = service.signAccessToken(
+      {
+        sub: 'user-admin-local',
+        username: 'admin-local',
+        displayName: '本地平台管理员',
+        subjectType: 'platform',
+        subjectId: 'platform',
+        permissions: ['product:audit']
+      },
+      {
+        sessionId: 'session-001',
+        jti: 'jti-001'
+      }
+    );
 
     expect(service.verifyAccessToken(token)).toEqual(
       expect.objectContaining({
@@ -19,6 +25,8 @@ describe('JwtTokenService', () => {
         username: 'admin-local',
         subjectType: 'platform',
         subjectId: 'platform',
+        sessionId: 'session-001',
+        jti: 'jti-001',
         permissions: ['product:audit']
       })
     );
