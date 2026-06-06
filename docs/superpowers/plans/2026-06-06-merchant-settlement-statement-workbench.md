@@ -109,3 +109,9 @@ Actual: PASS. `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and
 
 - This slice only adds Merchant settlement statement read UI.
 - This slice does not add Merchant payout confirmation, Admin functionality, Portal UI, payout evidence uploads, payout batch export, payout reversal, generated-statement refund reversal, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion
+
+- [x] Feature PR merged: https://github.com/EasyStep-lee/welfare-mall/pull/153
+- [x] Main merge commit: `a3e34add636c07d4de07897e1e3090278fb8e340`
+- [x] Local Docker runtime verified after implementation with API/Admin/Merchant/Portal containers healthy.
