@@ -19,6 +19,7 @@ import {
   submitProductForReview
 } from './api';
 import { buildSettlementCsv } from './settlementExport';
+import { summarizeSettlementStatements } from './settlementSummary';
 import './styles.css';
 
 const merchantActorUserId = 'merchant-user-001';
@@ -65,6 +66,10 @@ export default function App() {
   const selectedItem = useMemo(
     () => items.find((item) => item.productId === selectedProductId) ?? items[0] ?? null,
     [items, selectedProductId]
+  );
+  const settlementSummary = useMemo(
+    () => summarizeSettlementStatements(settlementStatements),
+    [settlementStatements]
   );
 
   async function loadQueue(status: SubmissionQueueStatus) {
@@ -260,6 +265,15 @@ export default function App() {
             <Download size={15} />
             导出结算CSV
           </button>
+        </div>
+        <div className="settlement-summary-panel" aria-label="结算汇总">
+          <strong>结算汇总</strong>
+          <span>汇总结算单 {settlementSummary.statementCount} 张</span>
+          <span>汇总明细 {settlementSummary.itemCount} 条</span>
+          <span>汇总总额 {formatMoney(settlementSummary.grossAmount)}</span>
+          <span>汇总退款抵扣 {formatMoney(settlementSummary.refundOffsetAmount)}</span>
+          <span>汇总调整 {formatSignedMoney(settlementSummary.adjustmentAmount)}</span>
+          <span>汇总应收 {formatMoney(settlementSummary.netAmount)}</span>
         </div>
         <div className="settlement-list">
           {settlementStatements.length === 0 ? <p className="empty-text">暂无结算单</p> : null}

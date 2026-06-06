@@ -301,6 +301,23 @@ tbody tr:hover {
   gap: 12px;
 }
 
+.settlement-summary-panel {
+  background: #f7faf9;
+  border: 1px solid #d9e7df;
+  border-radius: 8px;
+  color: #365160;
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0 0 12px;
+  padding: 10px;
+}
+
+.settlement-summary-panel strong {
+  color: #172421;
+}
+
 .settlement-card {
   border: 1px solid #e0e9e6;
   border-radius: 8px;
@@ -541,6 +558,7 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .settlement-summary-panel,
   .settlement-summary,
   .settlement-bill-row {
     grid-template-columns: 1fr;

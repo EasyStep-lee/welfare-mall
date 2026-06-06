@@ -309,6 +309,23 @@ h2 {
   gap: 12px;
 }
 
+.settlement-summary-panel {
+  background: #f7faf9;
+  border: 1px solid #d9e7df;
+  border-radius: 8px;
+  color: #365160;
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0 0 12px;
+  padding: 10px;
+}
+
+.settlement-summary-panel strong {
+  color: #223a46;
+}
+
 .settlement-card {
   border: 1px solid #e1e8e5;
   border-radius: 8px;
@@ -589,6 +606,7 @@ dd {
   .order-metrics,
   .inventory-list,
   .inventory-grid,
+  .settlement-summary-panel,
   .settlement-summary,
   .settlement-bill-row {
     grid-template-columns: 1fr;
