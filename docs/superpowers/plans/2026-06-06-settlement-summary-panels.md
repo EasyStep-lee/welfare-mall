@@ -47,10 +47,15 @@ GREEN:
 - Served Admin bundle `/assets/index-CpoMVcx0.js` contained `结算汇总`, `汇总结算单`, and `汇总应打款`.
 - Served Merchant bundle `/assets/index-DJPg4XaX.js` contained `结算汇总`, `汇总结算单`, and `汇总应收`.
 
-- [ ] **Step 4: Publish and merge**
+- [x] **Step 4: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Published:
+
+- Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/163
+- Merged commit: `8afe67e feat: add settlement summary panels`
+
 ## Completion
 
-Pending.
+Completed in PR #163 and marked complete by this docs-only follow-up.
