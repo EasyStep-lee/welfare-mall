@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettlementModule } from '../settlement/settlement.module';
 import { OrderAmountRepository } from './order-amount.repository';
@@ -21,7 +22,7 @@ import { OrderRefundService } from './order-refund.service';
 import { OrderStateRepository } from './order-state.repository';
 
 @Module({
-  imports: [SettlementModule],
+  imports: [AuthModule, SettlementModule],
   controllers: [OrderController],
   providers: [
     PrismaService,

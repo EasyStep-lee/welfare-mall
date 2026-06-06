@@ -101,6 +101,27 @@ describe('Order read API contract', () => {
     });
   });
 
+  it('uses JWT buyer identity when listing orders and ignores conflicting query buyer ID', async () => {
+    orderReadService.listOrders.mockResolvedValue({ orders: [] });
+    const token = await loginAndGetToken(app, 'buyer-local');
+
+    await request(app.getHttpServer())
+      .get('/api/orders?buyerUserId=attacker-user')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(orderReadService.listOrders).toHaveBeenCalledWith({ buyerUserId: 'user-001' });
+  });
+
+  it('rejects invalid Bearer tokens on buyer order list requests', async () => {
+    await request(app.getHttpServer())
+      .get('/api/orders?buyerUserId=user-001')
+      .set('Authorization', 'Bearer invalid-token')
+      .expect(401);
+
+    expect(orderReadService.listOrders).not.toHaveBeenCalled();
+  });
+
   it('lists recent orders for Admin order management', async () => {
     orderReadService.listAdminOrders.mockResolvedValue({
       orders: [
@@ -447,6 +468,29 @@ describe('Order read API contract', () => {
     });
   });
 
+  it('uses JWT buyer identity when getting order detail and ignores conflicting query buyer ID', async () => {
+    orderReadService.getOrderDetail.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260603-001',
+        buyerUserId: 'user-001',
+        status: 'pending_payment',
+        totalAmount: 13980,
+        lines: []
+      }
+    });
+    const token = await loginAndGetToken(app, 'buyer-local');
+
+    await request(app.getHttpServer())
+      .get('/api/orders/ORDER-20260603-001?buyerUserId=attacker-user')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(orderReadService.getOrderDetail).toHaveBeenCalledWith({
+      buyerUserId: 'user-001',
+      orderNo: 'ORDER-20260603-001'
+    });
+  });
+
   it('cancels one buyer-scoped pending payment order', async () => {
     orderCancelService.cancelOrder.mockResolvedValue({
       order: {
@@ -477,6 +521,33 @@ describe('Order read API contract', () => {
     });
   });
 
+  it('uses JWT buyer identity when cancelling an order and ignores conflicting body buyer ID', async () => {
+    orderCancelService.cancelOrder.mockResolvedValue({
+      order: {
+        orderNo: 'ORDER-20260605-001',
+        buyerUserId: 'user-001',
+        status: 'cancelled',
+        totalAmount: 6990
+      }
+    });
+    const token = await loginAndGetToken(app, 'buyer-local');
+
+    await request(app.getHttpServer())
+      .post('/api/orders/ORDER-20260605-001/cancel')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        buyerUserId: 'attacker-user',
+        reason: ' user changed mind '
+      })
+      .expect(200);
+
+    expect(orderCancelService.cancelOrder).toHaveBeenCalledWith({
+      orderNo: 'ORDER-20260605-001',
+      buyerUserId: 'user-001',
+      reason: 'user changed mind'
+    });
+  });
+
   it('rejects invalid order cancel requests before calling service', async () => {
     await request(app.getHttpServer())
       .post('/api/orders/ORDER-20260605-001/cancel')
@@ -495,3 +566,12 @@ describe('Order read API contract', () => {
     expect(orderReadService.listOrders).not.toHaveBeenCalled();
   });
 });
+
+async function loginAndGetToken(app: INestApplication, username: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username, password: 'local-dev-password' })
+    .expect(201);
+
+  return response.body.accessToken as string;
+}
