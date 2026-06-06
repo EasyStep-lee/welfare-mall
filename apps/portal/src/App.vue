@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { fetchProductPoolCatalog, type ProductPoolCatalog } from './api';
+import { fetchProductPoolCatalog, fetchProductPoolItemDetail, type ProductPoolCatalog, type ProductPoolCatalogItem, type ProductPoolItemDetail } from './api';
 
 const loading = ref(true);
 const error = ref<string | null>(null);
 const productPools = ref<ProductPoolCatalog[]>([]);
+const detailLoading = ref(false);
+const detailError = ref<string | null>(null);
+const selectedDetail = ref<ProductPoolItemDetail | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
+const originText = computed(() => {
+  const origin = selectedDetail.value?.product.origin;
+  if (!origin) {
+    return '产地信息待补充';
+  }
+
+  return [origin.country, origin.province, origin.city, origin.description].filter(Boolean).join(' / ');
+});
 
 onMounted(() => {
   void loadCatalog();
@@ -25,6 +36,25 @@ async function loadCatalog() {
   } finally {
     loading.value = false;
   }
+}
+
+async function openProductDetail(item: ProductPoolCatalogItem) {
+  detailLoading.value = true;
+  detailError.value = null;
+  selectedDetail.value = null;
+
+  try {
+    selectedDetail.value = await fetchProductPoolItemDetail(item.id);
+  } catch (loadError) {
+    detailError.value = loadError instanceof Error ? loadError.message : '商品详情加载失败';
+  } finally {
+    detailLoading.value = false;
+  }
+}
+
+function closeProductDetail() {
+  detailError.value = null;
+  selectedDetail.value = null;
 }
 
 function formatMoney(amount: number) {
@@ -69,16 +99,95 @@ function formatMoney(amount: number) {
 
         <div v-if="pool.items.length === 0" class="state-text compact">暂无可展示商品</div>
         <div v-else class="product-grid">
-          <article v-for="item in pool.items" :key="item.id" class="product-card">
+          <button
+            v-for="item in pool.items"
+            :key="item.id"
+            type="button"
+            class="product-card"
+            :aria-label="`查看 ${item.displayName} 详情`"
+            @click="openProductDetail(item)"
+          >
             <img :src="item.displayImageUrl" :alt="item.displayName" />
             <div class="product-body">
               <h3>{{ item.displayName }}</h3>
               <p>{{ item.displaySkuCode ?? '默认规格' }}</p>
               <strong>{{ formatMoney(item.displayPriceAmount) }}</strong>
             </div>
-          </article>
+          </button>
         </div>
       </section>
     </div>
+
+    <section v-if="detailLoading || detailError || selectedDetail" class="detail-section" aria-live="polite">
+      <div class="detail-heading">
+        <div>
+          <p class="eyebrow">商品详情</p>
+          <h2>{{ selectedDetail?.displayName ?? '正在加载商品详情' }}</h2>
+        </div>
+        <button type="button" class="close-button" @click="closeProductDetail">关闭详情</button>
+      </div>
+
+      <p v-if="detailLoading" class="state-text compact">详情加载中</p>
+      <p v-else-if="detailError" class="state-text error">{{ detailError }}</p>
+      <div v-else-if="selectedDetail" class="detail-layout">
+        <img :src="selectedDetail.displayImageUrl" :alt="selectedDetail.displayName" class="detail-image" />
+        <div class="detail-content">
+          <div class="detail-price-row">
+            <strong>{{ formatMoney(selectedDetail.displayPriceAmount) }}</strong>
+            <span>{{ selectedDetail.displaySkuCode ?? selectedDetail.sku?.code ?? '默认规格' }}</span>
+          </div>
+          <dl class="detail-facts">
+            <div>
+              <dt>商品编码</dt>
+              <dd>{{ selectedDetail.product.code }}</dd>
+            </div>
+            <div>
+              <dt>品牌</dt>
+              <dd>{{ selectedDetail.product.brand?.name ?? '未设置品牌' }}</dd>
+            </div>
+            <div>
+              <dt>分类</dt>
+              <dd>{{ selectedDetail.product.category?.name ?? '未设置分类' }}</dd>
+            </div>
+            <div>
+              <dt>产地</dt>
+              <dd>{{ originText }}</dd>
+            </div>
+            <div v-if="selectedDetail.sku?.specText">
+              <dt>规格</dt>
+              <dd>{{ selectedDetail.sku.specText }}</dd>
+            </div>
+          </dl>
+
+          <section v-if="selectedDetail.product.parameters.length > 0" class="detail-block">
+            <h3>商品参数</h3>
+            <ul>
+              <li v-for="parameter in selectedDetail.product.parameters" :key="`${parameter.groupName}-${parameter.name}`">
+                <span>{{ parameter.name }}</span>
+                <strong>{{ parameter.value }}</strong>
+              </li>
+            </ul>
+          </section>
+
+          <section v-if="selectedDetail.product.qualifications.length > 0" class="detail-block">
+            <h3>资质信息</h3>
+            <ul>
+              <li v-for="qualification in selectedDetail.product.qualifications" :key="qualification.title">
+                <span>{{ qualification.title }}</span>
+                <strong>{{ qualification.certificateNo ?? '证书待上传' }}</strong>
+              </li>
+            </ul>
+          </section>
+
+          <section v-if="selectedDetail.product.detailSections.length > 0" class="detail-block">
+            <h3>图文说明</h3>
+            <article v-for="section in selectedDetail.product.detailSections" :key="`${section.title}-${section.sortOrder}`">
+              <h4>{{ section.title ?? '商品说明' }}</h4>
+              <p>{{ section.content }}</p>
+            </article>
+          </section>
+        </div>
+      </div>
+    </section>
   </main>
 </template>
