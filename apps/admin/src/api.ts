@@ -8,6 +8,7 @@ export type AdminOrderStatusFilter =
   | 'completed';
 export type AdminFulfillmentStatusFilter = 'all' | 'pending' | 'completed';
 export type AdminInventoryReservationStatusFilter = 'all' | 'reserved' | 'released';
+export type AdminSettlementStatementStatusFilter = 'all' | 'generated' | 'paid_offline';
 
 export type BusinessParty = {
   id: string;
@@ -164,6 +165,48 @@ export type AdminInventoryStockResponse = {
   stocks: AdminInventoryStock[];
 };
 
+export type AdminSettlementBillItem = {
+  id: string;
+  billItemNo: string;
+  merchantId: string;
+  orderNo: string;
+  orderLineId: string;
+  productId: string;
+  skuId: string | null;
+  source: string;
+  status: string;
+  grossAmount: number;
+  refundOffsetAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  statementId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminSettlementStatement = {
+  id: string;
+  statementNo: string;
+  merchantId: string;
+  status: string;
+  itemCount: number;
+  grossAmount: number;
+  refundOffsetAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  generatedAt: string;
+  paidAt: string | null;
+  items: AdminSettlementBillItem[];
+};
+
+export type AdminSettlementStatementResponse = {
+  statements: AdminSettlementStatement[];
+};
+
+export type ConfirmSettlementOfflinePayoutResponse = {
+  statement: AdminSettlementStatement | null;
+};
+
 export type CreateOrderRefundInput = {
   requestId: string;
   paymentNo: string;
@@ -256,6 +299,12 @@ export const adminInventoryReservationStatusLabels: Record<AdminInventoryReserva
   all: '全部库存',
   reserved: '预占中',
   released: '释放记录'
+};
+
+export const adminSettlementStatementStatusLabels: Record<AdminSettlementStatementStatusFilter, string> = {
+  all: '全部结算',
+  generated: '待打款',
+  paid_offline: '已打款'
 };
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';
@@ -353,6 +402,47 @@ export async function fetchAdminInventoryStocks(
   }
 
   return response.json() as Promise<AdminInventoryStockResponse>;
+}
+
+export async function fetchAdminSettlementStatements(
+  status: AdminSettlementStatementStatusFilter = 'generated',
+  merchantId?: string
+): Promise<AdminSettlementStatementResponse> {
+  const url = new URL(`${apiBaseUrl()}/settlements/merchant-statements`);
+
+  if (merchantId?.trim()) {
+    url.searchParams.set('merchantId', merchantId.trim());
+  }
+  if (status !== 'all') {
+    url.searchParams.set('status', status);
+  }
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load settlement statements: ${response.status}`);
+  }
+
+  return response.json() as Promise<AdminSettlementStatementResponse>;
+}
+
+export async function confirmSettlementOfflinePayout(input: {
+  statementNo: string;
+  paidAt: string;
+}): Promise<ConfirmSettlementOfflinePayoutResponse> {
+  const response = await fetch(
+    `${apiBaseUrl()}/settlements/merchant-statements/${encodeURIComponent(input.statementNo)}/confirm-offline-payout`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paidAt: input.paidAt })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to confirm settlement offline payout: ${response.status}`);
+  }
+
+  return response.json() as Promise<ConfirmSettlementOfflinePayoutResponse>;
 }
 
 export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {

@@ -55,6 +55,7 @@ h2 {
 .status-tabs button,
 .actions button,
 .order-actions button,
+.settlement-actions button,
 .order-filter-row button {
   align-items: center;
   border: 1px solid #cbd6dc;
@@ -148,7 +149,8 @@ h2 {
 }
 
 .order-panel,
-.inventory-panel {
+.inventory-panel,
+.settlement-panel {
   background: #ffffff;
   border: 1px solid #d9e1e6;
   border-radius: 8px;
@@ -300,6 +302,98 @@ h2 {
   gap: 6px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow-wrap: anywhere;
+}
+
+.settlement-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settlement-card {
+  border: 1px solid #e1e8e5;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.settlement-card-header {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.settlement-card-header div {
+  display: grid;
+  gap: 3px;
+}
+
+.settlement-card-header strong {
+  overflow-wrap: anywhere;
+}
+
+.settlement-card-header div span {
+  color: #637885;
+  font-size: 13px;
+}
+
+.settlement-status {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.settlement-status.generated {
+  background: #e7f1fb;
+  color: #123c69;
+}
+
+.settlement-status.paid_offline {
+  background: #e8f6ef;
+  color: #1f6b42;
+}
+
+.settlement-summary {
+  color: #365160;
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.settlement-bill-list {
+  display: grid;
+  gap: 6px;
+}
+
+.settlement-bill-row {
+  align-items: center;
+  background: #f7faf9;
+  border: 1px solid #e1e8e5;
+  border-radius: 6px;
+  color: #637885;
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(90px, auto) minmax(90px, auto);
+  overflow-wrap: anywhere;
+  padding: 8px;
+}
+
+.settlement-bill-row strong {
+  color: #223a46;
+}
+
+.settlement-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settlement-actions button {
+  padding: 0 10px;
 }
 
 .workbench {
@@ -494,7 +588,9 @@ dd {
   .order-list,
   .order-metrics,
   .inventory-list,
-  .inventory-grid {
+  .inventory-grid,
+  .settlement-summary,
+  .settlement-bill-row {
     grid-template-columns: 1fr;
   }
 
