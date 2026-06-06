@@ -45,10 +45,14 @@ GREEN:
 - `docker compose ps` showed API/Admin/Merchant/Portal/MySQL/Redis healthy with Merchant mapped on `5174`.
 - Served Merchant bundle `/assets/index-Bgwjt79x.js` contained `导出结算CSV`, `merchant-settlements-`, `merchant-001`, `statementNo`, `payoutReference`, and `billItemNetAmount`.
 
-- [ ] **Step 4: Publish and merge**
+- [x] **Step 4: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Feature PR: <https://github.com/EasyStep-lee/welfare-mall/pull/161>
+
+Merged as `23a3c7a feat: export merchant settlement statements as csv`.
+
 ## Completion
 
-Pending.
+Completed in PR #161 and marked complete by this docs-only follow-up.
