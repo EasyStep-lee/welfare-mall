@@ -10,6 +10,7 @@ import {
   adminOrderStatusLabels,
   adminSettlementStatementStatusLabels,
   confirmSettlementOfflinePayout,
+  createOrderRefund,
   decideProductReview,
   fetchAdminInventoryReservations,
   fetchAdminInventoryStocks,
@@ -17,6 +18,8 @@ import {
   fetchAdminSettlementStatements,
   fetchReviewQueue,
   generateSettlementStatement,
+  processOrderPaymentCallback,
+  processOrderRefundCallback,
   publishProductToPool,
   statusLabels
 } from './api';
@@ -28,6 +31,8 @@ const defaultRejectReason = '资料不完整';
 const localSettlementMerchantId = 'merchant-001';
 const localSettlementPaidAt = '2026-06-06T08:00:00.000Z';
 const localSettlementPayoutRemark = '本地线下打款确认';
+const localPaymentPaidAt = '2026-06-06T08:10:00.000Z';
+const localRefundSucceededAt = '2026-06-06T08:20:00.000Z';
 
 export default defineComponent({
   name: 'AdminApp',
@@ -157,6 +162,95 @@ export default defineComponent({
       }
     }
 
+    async function reloadOrderReadModels() {
+      const [orderResponse, reservationResponse, stockResponse] = await Promise.all([
+        fetchAdminOrders(),
+        fetchAdminInventoryReservations(),
+        fetchAdminInventoryStocks()
+      ]);
+      orders.value = orderResponse.orders;
+      reservations.value = reservationResponse.reservations;
+      stocks.value = stockResponse.stocks;
+    }
+
+    async function confirmPayment(order: AdminOrder) {
+      const payment = order.latestPayment;
+      if (!payment) {
+        return;
+      }
+
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        await processOrderPaymentCallback({
+          providerEventId: `LOCAL-PAYMENT-${order.orderNo}`,
+          paymentNo: payment.paymentNo,
+          providerPaymentNo: `LOCAL-PROVIDER-${payment.paymentNo}`,
+          status: 'paid',
+          paidAt: localPaymentPaidAt,
+          payload: { source: 'admin-vue-local' }
+        });
+        message.value = `${order.orderNo} 已确认支付成功`;
+        await reloadOrderReadModels();
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '确认支付失败';
+      } finally {
+        actionLoading.value = false;
+      }
+    }
+
+    async function requestRefund(order: AdminOrder) {
+      const payment = order.latestPayment;
+      if (!payment) {
+        return;
+      }
+
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        const response = await createOrderRefund({
+          requestId: `LOCAL-REFUND-${order.orderNo}`,
+          paymentNo: payment.paymentNo,
+          orderNo: order.orderNo,
+          channel: payment.channel,
+          refundAmount: order.totalAmount,
+          reason: 'after_sale'
+        });
+        message.value = `${order.orderNo} 已提交退款申请 ${response.refund.refundNo}`;
+        await reloadOrderReadModels();
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '提交退款失败';
+      } finally {
+        actionLoading.value = false;
+      }
+    }
+
+    async function confirmRefund(order: AdminOrder) {
+      const refund = order.latestRefund;
+      if (!refund) {
+        return;
+      }
+
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        await processOrderRefundCallback({
+          providerEventId: `LOCAL-REFUND-CALLBACK-${order.orderNo}`,
+          refundNo: refund.refundNo,
+          providerRefundNo: `LOCAL-PROVIDER-${refund.refundNo}`,
+          status: 'succeeded',
+          succeededAt: localRefundSucceededAt,
+          payload: { source: 'admin-vue-local' }
+        });
+        message.value = `${order.orderNo} 已确认退款成功`;
+        await reloadOrderReadModels();
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '确认退款失败';
+      } finally {
+        actionLoading.value = false;
+      }
+    }
+
     onMounted(() => {
       void loadAll();
     });
@@ -177,7 +271,7 @@ export default defineComponent({
         ]),
         h('section', { class: 'workspace-grid' }, [
           renderReviewPanel(reviewItems.value, { approveReview, rejectReview, publishProduct }, actionLoading.value),
-          renderOrdersPanel(orders.value),
+          renderOrdersPanel(orders.value, { confirmPayment, requestRefund, confirmRefund }, actionLoading.value),
           renderReservationPanel(reservations.value),
           renderStockPanel(stocks.value),
           renderSettlementPanel(statements.value, generateSettlement, confirmOfflinePayout, actionLoading.value)
@@ -229,7 +323,15 @@ function renderReviewPanel(
   ]);
 }
 
-function renderOrdersPanel(orders: AdminOrder[]) {
+function renderOrdersPanel(
+  orders: AdminOrder[],
+  actions: {
+    confirmPayment: (order: AdminOrder) => Promise<void>;
+    requestRefund: (order: AdminOrder) => Promise<void>;
+    confirmRefund: (order: AdminOrder) => Promise<void>;
+  },
+  actionLoading: boolean
+) {
   return panel('订单管理', [
     orders.length === 0
       ? h('p', { class: 'empty-state' }, '暂无订单')
@@ -244,7 +346,18 @@ function renderOrdersPanel(orders: AdminOrder[]) {
                 h(ElTag, () => `履约 ${order.fulfillmentSummary.totalTasks} 项`),
                 h(ElTag, () => `待履约 ${order.fulfillmentSummary.pendingTasks}`)
               ]),
-              h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / '))
+              h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / ')),
+              h(ElSpace, { wrap: true }, () => [
+                canConfirmPayment(order)
+                  ? h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => actions.confirmPayment(order) }, () => '确认支付')
+                  : null,
+                canRequestRefund(order)
+                  ? h(ElButton, { size: 'small', type: 'warning', loading: actionLoading, onClick: () => actions.requestRefund(order) }, () => '提交退款')
+                  : null,
+                canConfirmRefund(order)
+                  ? h(ElButton, { size: 'small', type: 'primary', loading: actionLoading, onClick: () => actions.confirmRefund(order) }, () => '确认退款')
+                  : null
+              ])
             ])
           )
         )
@@ -341,4 +454,16 @@ function formatMoney(amount: number) {
 
 function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
+}
+
+function canConfirmPayment(order: AdminOrder) {
+  return order.status === 'pending_payment' && order.latestPayment?.status === 'pending';
+}
+
+function canRequestRefund(order: AdminOrder) {
+  return order.status === 'paid' && order.latestPayment?.status === 'paid';
+}
+
+function canConfirmRefund(order: AdminOrder) {
+  return order.latestRefund?.status === 'processing';
 }

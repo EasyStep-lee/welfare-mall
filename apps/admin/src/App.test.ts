@@ -33,6 +33,24 @@ const reviewQueueResponse = {
 const adminOrdersResponse = {
   orders: [
     {
+      orderNo: 'ORDER-20260603-PENDING',
+      buyerUserId: 'user-pending',
+      status: 'pending_payment',
+      totalAmount: 6990,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 6990,
+      fulfillmentType: 'delivery',
+      receiverName: 'Han Mei',
+      receiverPhone: '13900000000',
+      receiverAddress: 'Century Avenue 2',
+      pickupStoreName: null,
+      latestPayment: { paymentNo: 'PAY-20260603-PENDING', status: 'pending', channel: 'wechat' },
+      latestRefund: null,
+      fulfillmentSummary: { totalTasks: 0, pendingTasks: 0, completedTasks: 0, taskNos: [] },
+      fulfillmentTasks: [],
+      lines: [{ displayName: 'Pending Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 1, lineTotalAmount: 6990 }]
+    },
+    {
       orderNo: 'ORDER-20260603-001',
       buyerUserId: 'user-001',
       status: 'paid',
@@ -49,6 +67,30 @@ const adminOrdersResponse = {
       fulfillmentSummary: { totalTasks: 1, pendingTasks: 1, completedTasks: 0, taskNos: ['FT-001'] },
       fulfillmentTasks: [],
       lines: [{ displayName: 'Local Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 2, lineTotalAmount: 13980 }]
+    },
+    {
+      orderNo: 'ORDER-20260603-REFUND',
+      buyerUserId: 'user-refund',
+      status: 'refund_processing',
+      totalAmount: 13980,
+      welfareCardPayableAmount: 5000,
+      cashPayableAmount: 8980,
+      fulfillmentType: 'delivery',
+      receiverName: 'Wang Fang',
+      receiverPhone: '13700000000',
+      receiverAddress: 'Zhangjiang Road 3',
+      pickupStoreName: null,
+      latestPayment: { paymentNo: 'PAY-20260603-REFUND', status: 'paid', channel: 'wechat' },
+      latestRefund: {
+        refundNo: 'REF-20260603-001',
+        status: 'processing',
+        channel: 'wechat',
+        refundAmount: 13980,
+        reason: 'after_sale'
+      },
+      fulfillmentSummary: { totalTasks: 1, pendingTasks: 0, completedTasks: 1, taskNos: ['FT-REFUND-001'] },
+      fulfillmentTasks: [],
+      lines: [{ displayName: 'Refund Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 2, lineTotalAmount: 13980 }]
     }
   ]
 };
@@ -113,10 +155,48 @@ describe('Admin Vue workbench', () => {
   beforeEach(() => {
     let reviewQueueLoads = 0;
     let settlementLoads = 0;
+    let orderLoads = 0;
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/orders/payments/callbacks')) {
+          return response({
+            duplicate: false,
+            payment: {
+              paymentNo: 'PAY-20260603-PENDING',
+              status: 'paid',
+              providerPaymentNo: 'LOCAL-PROVIDER-PAY-20260603-PENDING'
+            },
+            callback: { providerEventId: 'LOCAL-PAYMENT-ORDER-20260603-PENDING', status: 'paid' }
+          });
+        }
+        if (url.includes('/orders/refunds/callbacks')) {
+          return response({
+            duplicate: false,
+            refund: {
+              refundNo: 'REF-20260603-001',
+              status: 'succeeded',
+              providerRefundNo: 'LOCAL-PROVIDER-REF-20260603-001'
+            },
+            callback: { providerEventId: 'LOCAL-REFUND-CALLBACK-ORDER-20260603-REFUND', status: 'succeeded' }
+          });
+        }
+        if (url.includes('/orders/refunds')) {
+          return response({
+            idempotentReplay: false,
+            refund: {
+              refundNo: 'REF-20260603-NEW',
+              requestId: 'LOCAL-REFUND-ORDER-20260603-001',
+              paymentNo: 'PAY-20260603-001',
+              orderNo: 'ORDER-20260603-001',
+              status: 'processing',
+              channel: 'wechat',
+              refundAmount: 13980,
+              reason: 'after_sale'
+            }
+          });
+        }
         if (url.includes('/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout')) {
           return response({
             statement: {
@@ -163,7 +243,8 @@ describe('Admin Vue workbench', () => {
           return response(adminInventoryReservationsResponse);
         }
         if (url.includes('/orders/admin')) {
-          return response(adminOrdersResponse);
+          orderLoads += 1;
+          return response(orderLoads === 1 ? adminOrdersResponse : { orders: [] });
         }
         if (url.includes('/products/review-queue')) {
           reviewQueueLoads += 1;
@@ -296,6 +377,76 @@ describe('Admin Vue workbench', () => {
       payoutRemark: '本地线下打款确认'
     });
     expect(wrapper.text()).toContain('MSS-20260606-001 已确认线下打款');
+  });
+
+  it('confirms a pending order payment from the Vue order panel', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '确认支付');
+    await flushPromises();
+
+    const callbackCall = findRequest('/orders/payments/callbacks');
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(callbackCall?.[1]?.body))).toEqual({
+      providerEventId: 'LOCAL-PAYMENT-ORDER-20260603-PENDING',
+      paymentNo: 'PAY-20260603-PENDING',
+      providerPaymentNo: 'LOCAL-PROVIDER-PAY-20260603-PENDING',
+      status: 'paid',
+      paidAt: '2026-06-06T08:10:00.000Z',
+      payload: { source: 'admin-vue-local' }
+    });
+    expect(wrapper.text()).toContain('ORDER-20260603-PENDING 已确认支付成功');
+    expect(wrapper.text()).toContain('暂无订单');
+  });
+
+  it('requests a refund for a paid order from the Vue order panel', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '提交退款');
+    await flushPromises();
+
+    const refundCall = findRequest('/orders/refunds');
+    expect(refundCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(refundCall?.[1]?.body))).toEqual({
+      requestId: 'LOCAL-REFUND-ORDER-20260603-001',
+      paymentNo: 'PAY-20260603-001',
+      orderNo: 'ORDER-20260603-001',
+      channel: 'wechat',
+      refundAmount: 13980,
+      reason: 'after_sale'
+    });
+    expect(wrapper.text()).toContain('ORDER-20260603-001 已提交退款申请 REF-20260603-NEW');
+  });
+
+  it('confirms a processing refund from the Vue order panel', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '确认退款');
+    await flushPromises();
+
+    const callbackCall = findRequest('/orders/refunds/callbacks');
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(callbackCall?.[1]?.body))).toEqual({
+      providerEventId: 'LOCAL-REFUND-CALLBACK-ORDER-20260603-REFUND',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'LOCAL-PROVIDER-REF-20260603-001',
+      status: 'succeeded',
+      succeededAt: '2026-06-06T08:20:00.000Z',
+      payload: { source: 'admin-vue-local' }
+    });
+    expect(wrapper.text()).toContain('ORDER-20260603-REFUND 已确认退款成功');
   });
 });
 
