@@ -348,6 +348,31 @@ describe('Merchant product submission workbench', () => {
     expect(within(settlementPanel).getByText('product-002 / 默认规格')).toBeInTheDocument();
   });
 
+  it('exports currently loaded merchant settlement statements as CSV', async () => {
+    const createObjectUrl = vi.fn((_blob: Blob) => 'blob:merchant-settlement-csv');
+    const revokeObjectUrl = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    URL.createObjectURL = createObjectUrl;
+    URL.revokeObjectURL = revokeObjectUrl;
+
+    try {
+      render(<App />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '导出结算CSV' }));
+
+      expect(createObjectUrl).toHaveBeenCalledTimes(1);
+      const blob = createObjectUrl.mock.calls[0]?.[0] as Blob;
+      expect(blob.type).toBe('text/csv;charset=utf-8');
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(revokeObjectUrl).toHaveBeenCalledWith('blob:merchant-settlement-csv');
+    } finally {
+      URL.createObjectURL = originalCreateObjectUrl;
+      URL.revokeObjectURL = originalRevokeObjectUrl;
+    }
+  });
+
   it('filters merchant settlement statements by status while preserving merchant context', async () => {
     render(<App />);
 
