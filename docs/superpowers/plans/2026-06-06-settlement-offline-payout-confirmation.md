@@ -115,3 +115,13 @@ Actual: PASS.
 
 - This slice only confirms offline payout state after a statement has already been generated.
 - This slice does not implement bank transfer evidence uploads, payout batch files, payout reversal, generated-statement refund reversal, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion Evidence
+
+- Feature branch: `codex/settlement-offline-payout-confirmation`
+- Feature PR: #149 `feat: confirm settlement offline payouts`
+- Feature merge commit: `1298b5379d8b74b3ae018d33e6d9d61e615180b8`
+- Focused tests: `pnpm --filter @welfare-mall/api run test -- test/settlement --runInBand` PASS with 3 suites / 24 tests.
+- Full verification: `pnpm run verify` PASS with API 61 suites / 249 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Docker runtime: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` PASS.
+- Live API smoke: order `ORDER-20260606022539075-R2SEBH` generated statement `MSS-20260606022539201-2LZTQ4`; offline payout confirmation moved both the statement and linked merchant bill item to `paid_offline`.
