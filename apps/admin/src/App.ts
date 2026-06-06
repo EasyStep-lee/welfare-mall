@@ -316,11 +316,123 @@ function renderReviewPanel(
               ]),
               item.primarySku
                 ? h('p', { class: 'muted' }, `${item.primarySku.code} / 销售价 ${formatMoney(item.primarySku.priceAmount)}`)
-                : null
+                : null,
+              renderReviewMasterData(item)
             ])
           )
         )
   ]);
+}
+
+function renderReviewMasterData(item: ReviewQueueItem) {
+  return h('div', { class: 'review-detail-sections' }, [
+    h('div', { class: 'review-detail-summary' }, [
+      h(ElTag, { type: 'info' }, () => item.category.name),
+      h(ElTag, { type: 'info' }, () => item.brand?.name ?? '无品牌'),
+      h(ElTag, { type: 'info' }, () => formatOrigin(item.origin))
+    ]),
+    item.primarySku
+      ? h('section', { class: 'review-detail-section' }, [
+          h('h3', 'SKU'),
+          h('div', { class: 'detail-card' }, [
+            h('strong', item.primarySku.code),
+            h('span', item.primarySku.specText),
+            h('span', `销售价 ${formatMoney(item.primarySku.priceAmount)}`),
+            h('span', `市场价 ${formatMoney(item.primarySku.marketPriceAmount)}`)
+          ])
+        ])
+      : renderEmptyDetailSection('SKU', '暂无 SKU 明细'),
+    renderMediaSection(item),
+    renderQualificationSection(item),
+    renderParameterSection(item),
+    renderDetailSectionSnapshots(item)
+  ]);
+}
+
+function renderMediaSection(item: ReviewQueueItem) {
+  if (item.media.length === 0) {
+    return renderEmptyDetailSection('图片', '暂无图片');
+  }
+
+  return h('section', { class: 'review-detail-section' }, [
+    h('h3', '图片'),
+    h(
+      'ul',
+      { class: 'detail-list' },
+      item.media.map((media) =>
+        h('li', { key: `${media.type}-${media.sortOrder}` }, [
+          h('strong', mediaTypeLabel(media.type)),
+          h('span', media.url),
+          h('span', `排序 ${media.sortOrder}`)
+        ])
+      )
+    )
+  ]);
+}
+
+function renderQualificationSection(item: ReviewQueueItem) {
+  if (item.qualifications.length === 0) {
+    return renderEmptyDetailSection('资质', '暂无资质');
+  }
+
+  return h('section', { class: 'review-detail-section' }, [
+    h('h3', '资质'),
+    h(
+      'ul',
+      { class: 'detail-list' },
+      item.qualifications.map((qualification) =>
+        h('li', { key: `${qualification.type}-${qualification.title}` }, [
+          h('strong', qualification.title),
+          h('span', qualification.certificateNo ? `证书号 ${qualification.certificateNo}` : '无证书号'),
+          qualification.fileUrl ? h('span', qualification.fileUrl) : null
+        ])
+      )
+    )
+  ]);
+}
+
+function renderParameterSection(item: ReviewQueueItem) {
+  if (item.parameters.length === 0) {
+    return renderEmptyDetailSection('参数', '暂无参数');
+  }
+
+  return h('section', { class: 'review-detail-section' }, [
+    h('h3', '参数'),
+    h(
+      'ul',
+      { class: 'detail-list' },
+      item.parameters.map((parameter) =>
+        h('li', { key: `${parameter.groupName}-${parameter.name}-${parameter.sortOrder}` }, [
+          h('strong', parameter.groupName),
+          h('span', `${parameter.name}: ${parameter.value}`)
+        ])
+      )
+    )
+  ]);
+}
+
+function renderDetailSectionSnapshots(item: ReviewQueueItem) {
+  if (item.detailSections.length === 0) {
+    return renderEmptyDetailSection('图文说明', '暂无图文说明');
+  }
+
+  return h('section', { class: 'review-detail-section' }, [
+    h('h3', '图文说明'),
+    h(
+      'ul',
+      { class: 'detail-list' },
+      item.detailSections.map((section) =>
+        h('li', { key: `${section.type}-${section.sortOrder}` }, [
+          h('strong', section.title ?? '未命名图文'),
+          section.content ? h('span', section.content) : h('span', '暂无内容')
+        ])
+      )
+    )
+  ]);
+}
+
+function renderEmptyDetailSection(title: string, text: string) {
+  return h('section', { class: 'review-detail-section' }, [h('h3', title), h('p', { class: 'empty-text' }, text)]);
 }
 
 function renderOrdersPanel(
@@ -454,6 +566,20 @@ function formatMoney(amount: number) {
 
 function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
+}
+
+function formatOrigin(origin: ReviewQueueItem['origin']) {
+  return origin.description ?? [origin.country, origin.province, origin.city].filter(Boolean).join('');
+}
+
+function mediaTypeLabel(type: string) {
+  if (type === 'main_image') {
+    return '主图';
+  }
+  if (type === 'detail_image') {
+    return '详情图';
+  }
+  return type;
 }
 
 function canConfirmPayment(order: AdminOrder) {
