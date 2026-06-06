@@ -394,6 +394,14 @@ describe('Admin product review workbench', () => {
     expect(await screen.findByText('订单管理')).toBeInTheDocument();
     const orderManagement = screen.getByLabelText('订单管理');
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders/admin');
+    expect(within(orderManagement).getByText('订单汇总')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('汇总订单 1 单')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('汇总商品 2 件')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('汇总总额 ¥139.80')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('汇总福利卡 ¥50.00')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('汇总现金 ¥89.80')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('待履约任务 1 项')).toBeInTheDocument();
+    expect(within(orderManagement).getByText('已完成任务 1 项')).toBeInTheDocument();
     expect(within(orderManagement).getByText('ORDER-20260603-001')).toBeInTheDocument();
     expect(within(orderManagement).getByText('user-001')).toBeInTheDocument();
     expect(within(orderManagement).getAllByText('已支付').length).toBeGreaterThan(0);

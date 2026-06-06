@@ -278,19 +278,28 @@ describe('Merchant product submission workbench', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: '履约订单' })).toBeInTheDocument();
+    const fulfillmentPanel = screen.getByLabelText('履约订单');
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=paid'
     );
-    expect(screen.getByText('ORDER-20260603-001')).toBeInTheDocument();
-    expect(screen.getByText('任务 FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
-    expect(screen.getByText('任务状态 待履约')).toBeInTheDocument();
-    expect(screen.getByText('创建 2026-06-03 08:10')).toBeInTheDocument();
-    expect(screen.getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
-    expect(screen.getByText('微信支付 已支付')).toBeInTheDocument();
-    expect(screen.getByText('Local Rice x2')).toBeInTheDocument();
-    expect(screen.getByText('合计 ¥139.80')).toBeInTheDocument();
-    expect(screen.getByText('现金 ¥89.80')).toBeInTheDocument();
-    expect(screen.getByText('福利卡 ¥50.00')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('履约汇总')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('汇总任务 1 单')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('汇总商品 2 件')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('汇总总额 ¥139.80')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('汇总福利卡 ¥50.00')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('汇总现金 ¥89.80')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('配送任务 1 单')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('自提任务 0 单')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('ORDER-20260603-001')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('任务 FT-ORDER-20260603-001-MERCHANT-001-001')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('任务状态 待履约')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('创建 2026-06-03 08:10')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('Li Lei / 13800000000 / Pudong Avenue 1')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('微信支付 已支付')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('Local Rice x2')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('合计 ¥139.80')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('现金 ¥89.80')).toBeInTheDocument();
+    expect(within(fulfillmentPanel).getByText('福利卡 ¥50.00')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '确认完成' }));
 
