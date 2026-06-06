@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
 import { FranchiseModule } from './franchise/franchise.module';
 import { HealthModule } from './health/health.module';
 import { IamModule } from './iam/iam.module';
@@ -12,6 +13,7 @@ import { SettlementModule } from './settlement/settlement.module';
 @Module({
   imports: [
     HealthModule,
+    AuthModule,
     IamModule,
     FranchiseModule,
     MerchantModule,
