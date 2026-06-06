@@ -1,4 +1,4 @@
-import { Check, CreditCard, RefreshCw, RotateCcw, Search, Send, X } from 'lucide-react';
+import { Banknote, Check, CreditCard, RefreshCw, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AdminFulfillmentStatusFilter,
@@ -7,16 +7,21 @@ import {
   AdminInventoryStock,
   AdminOrder,
   AdminOrderStatusFilter,
+  AdminSettlementStatement,
+  AdminSettlementStatementStatusFilter,
   ReviewQueueItem,
   ReviewQueueStatus,
   adminFulfillmentStatusLabels,
   adminInventoryReservationStatusLabels,
   adminOrderStatusLabels,
+  adminSettlementStatementStatusLabels,
+  confirmSettlementOfflinePayout,
   createOrderRefund,
   decideProductReview,
   fetchAdminInventoryReservations,
   fetchAdminInventoryStocks,
   fetchAdminOrders,
+  fetchAdminSettlementStatements,
   fetchReviewQueue,
   processOrderPaymentCallback,
   processOrderRefundCallback,
@@ -37,6 +42,7 @@ const orderStatuses: AdminOrderStatusFilter[] = [
 ];
 const fulfillmentStatuses: AdminFulfillmentStatusFilter[] = ['all', 'pending', 'completed'];
 const inventoryStatuses: AdminInventoryReservationStatusFilter[] = ['all', 'reserved', 'released'];
+const settlementStatementStatuses: AdminSettlementStatementStatusFilter[] = ['generated', 'paid_offline', 'all'];
 
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<ReviewQueueStatus>('pending_review');
@@ -57,10 +63,15 @@ export default function App() {
   const [activeStockProductFilter, setActiveStockProductFilter] = useState('');
   const [stockSkuFilterInput, setStockSkuFilterInput] = useState('');
   const [activeStockSkuFilter, setActiveStockSkuFilter] = useState('');
+  const [activeSettlementStatus, setActiveSettlementStatus] =
+    useState<AdminSettlementStatementStatusFilter>('generated');
+  const [settlementMerchantFilterInput, setSettlementMerchantFilterInput] = useState('');
+  const [activeSettlementMerchantFilter, setActiveSettlementMerchantFilter] = useState('');
   const [items, setItems] = useState<ReviewQueueItem[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [inventoryReservations, setInventoryReservations] = useState<AdminInventoryReservation[]>([]);
   const [inventoryStocks, setInventoryStocks] = useState<AdminInventoryStock[]>([]);
+  const [settlementStatements, setSettlementStatements] = useState<AdminSettlementStatement[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -130,6 +141,19 @@ export default function App() {
     }
   }
 
+  async function loadSettlementStatements(
+    status: AdminSettlementStatementStatusFilter = activeSettlementStatus,
+    merchantId: string = activeSettlementMerchantFilter
+  ) {
+    try {
+      const response = await fetchAdminSettlementStatements(status, merchantId);
+      setSettlementStatements(response.statements);
+    } catch (loadError) {
+      setSettlementStatements([]);
+      setError(loadError instanceof Error ? loadError.message : '结算单列表加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
@@ -145,6 +169,10 @@ export default function App() {
   useEffect(() => {
     void loadInventoryStocks(activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter);
   }, [activeStockMerchantFilter, activeStockProductFilter, activeStockSkuFilter]);
+
+  useEffect(() => {
+    void loadSettlementStatements(activeSettlementStatus, activeSettlementMerchantFilter);
+  }, [activeSettlementStatus, activeSettlementMerchantFilter]);
 
   async function approve(item: ReviewQueueItem) {
     await runAction(async () => {
@@ -249,6 +277,17 @@ export default function App() {
     });
   }
 
+  async function confirmSettlementPayout(statement: AdminSettlementStatement) {
+    await runAction(async () => {
+      await confirmSettlementOfflinePayout({
+        statementNo: statement.statementNo,
+        paidAt: new Date().toISOString()
+      });
+      setMessage(`${statement.statementNo} 已确认离线打款`);
+      await loadSettlementStatements(activeSettlementStatus, activeSettlementMerchantFilter);
+    });
+  }
+
   function applyMerchantFilter() {
     setActiveMerchantFilter(merchantFilterInput.trim());
   }
@@ -300,6 +339,15 @@ export default function App() {
     setActiveStockSkuFilter('');
   }
 
+  function applySettlementMerchantFilter() {
+    setActiveSettlementMerchantFilter(settlementMerchantFilterInput.trim());
+  }
+
+  function clearSettlementMerchantFilter() {
+    setSettlementMerchantFilterInput('');
+    setActiveSettlementMerchantFilter('');
+  }
+
   async function runAction(action: () => Promise<void>) {
     setError(null);
     setMessage(null);
@@ -337,6 +385,92 @@ export default function App() {
 
       {message ? <div className="notice success">{message}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
+
+      <section className="settlement-panel" aria-label="结算管理">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">结算域</p>
+            <h2>结算管理</h2>
+          </div>
+          <span className="queue-count">{settlementStatements.length} 张</span>
+        </div>
+        <nav className="status-tabs panel-status-tabs" aria-label="结算状态">
+          {settlementStatementStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeSettlementStatus === status ? 'active' : ''}
+              onClick={() => setActiveSettlementStatus(status)}
+            >
+              {adminSettlementStatementStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
+        <div className="order-filter-row">
+          <label>
+            <span>结算商户</span>
+            <input
+              aria-label="结算商户"
+              value={settlementMerchantFilterInput}
+              placeholder="merchant-001"
+              onChange={(event) => setSettlementMerchantFilterInput(event.target.value)}
+            />
+          </label>
+          <button type="button" onClick={applySettlementMerchantFilter}>
+            <Search size={15} />
+            筛选结算商户
+          </button>
+          {activeSettlementMerchantFilter ? (
+            <button type="button" onClick={clearSettlementMerchantFilter}>
+              <X size={15} />
+              清除结算商户
+            </button>
+          ) : null}
+        </div>
+        <div className="settlement-list">
+          {settlementStatements.length === 0 ? <p className="empty-text">暂无结算单</p> : null}
+          {settlementStatements.map((statement) => (
+            <article className="settlement-card" key={statement.statementNo}>
+              <div className="settlement-card-header">
+                <div>
+                  <strong>{statement.statementNo}</strong>
+                  <span>商户 {statement.merchantId}</span>
+                </div>
+                <span className={`settlement-status ${statement.status}`}>
+                  {settlementStatementStatusLabel(statement.status)}
+                </span>
+              </div>
+              <div className="settlement-summary">
+                <span>生成 {formatDateTime(statement.generatedAt)}</span>
+                {statement.paidAt ? <span>打款 {formatDateTime(statement.paidAt)}</span> : null}
+                <span>明细 {statement.itemCount} 条</span>
+                <span>总额 {formatMoney(statement.grossAmount)}</span>
+                <span>退款抵扣 {formatMoney(statement.refundOffsetAmount)}</span>
+                <span>调整 {formatSignedMoney(statement.adjustmentAmount)}</span>
+                <span>应打款 {formatMoney(statement.netAmount)}</span>
+              </div>
+              <div className="settlement-bill-list">
+                {statement.items.map((item) => (
+                  <div className="settlement-bill-row" key={item.id}>
+                    <strong>{item.orderNo}</strong>
+                    <span>{`${item.productId} / ${item.skuId ?? '默认规格'}`}</span>
+                    <span>账单 {formatMoney(item.netAmount)}</span>
+                    <span>{settlementBillItemStatusLabel(item.status)}</span>
+                  </div>
+                ))}
+              </div>
+              {canConfirmSettlementPayout(statement) ? (
+                <div className="settlement-actions">
+                  <button type="button" onClick={() => void confirmSettlementPayout(statement)}>
+                    <Banknote size={15} />
+                    确认离线打款
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="order-panel" aria-label="订单管理">
         <div className="panel-heading">
@@ -867,6 +1001,14 @@ function formatMoney(amount: number) {
   return `¥${(amount / 100).toFixed(2)}`;
 }
 
+function formatSignedMoney(amount: number) {
+  if (amount < 0) {
+    return `-¥${Math.abs(amount / 100).toFixed(2)}`;
+  }
+
+  return formatMoney(amount);
+}
+
 function formatReceiver(order: AdminOrder) {
   if (order.fulfillmentType === 'pickup') {
     return order.pickupStoreName ?? '到店自提';
@@ -948,8 +1090,32 @@ function orderStatusLabel(status: string) {
   return orderStatusLabels[status] ?? status;
 }
 
+function settlementStatementStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    generated: '待打款',
+    paid_offline: '已线下打款'
+  };
+
+  return labels[status] ?? status;
+}
+
+function settlementBillItemStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending_settlement: '待结算',
+    statement_generated: '已出结算单',
+    paid_offline: '已线下打款',
+    reversed: '已冲销'
+  };
+
+  return labels[status] ?? status;
+}
+
 function canRequestRefund(order: AdminOrder) {
   return order.status === 'paid' && order.latestPayment !== null && order.latestPayment.status === 'paid';
+}
+
+function canConfirmSettlementPayout(statement: AdminSettlementStatement) {
+  return statement.status === 'generated';
 }
 
 function canConfirmPayment(order: AdminOrder) {
