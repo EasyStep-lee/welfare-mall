@@ -458,6 +458,13 @@ describe('Admin product review workbench', () => {
     expect(within(settlementPanel).getByText('MSS-20260606-001')).toBeInTheDocument();
     expect(within(settlementPanel).getByText('商户 merchant-001')).toBeInTheDocument();
     expect(within(settlementPanel).getAllByText('待打款').length).toBeGreaterThan(0);
+    expect(within(settlementPanel).getByText('结算汇总')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总结算单 1 张')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总明细 2 条')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总总额 ¥189.80')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总退款抵扣 ¥10.00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总调整 -¥5.00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('汇总应打款 ¥174.80')).toBeInTheDocument();
     expect(within(settlementPanel).getByText('生成 2026-06-06 00:00')).toBeInTheDocument();
     expect(within(settlementPanel).getByText('明细 2 条')).toBeInTheDocument();
     expect(within(settlementPanel).getByText('总额 ¥189.80')).toBeInTheDocument();
