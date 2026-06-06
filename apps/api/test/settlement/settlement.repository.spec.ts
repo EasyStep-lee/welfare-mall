@@ -34,6 +34,7 @@ const billItems = [
     refundOffsetAmount: 0,
     adjustmentAmount: 0,
     netAmount: 13980,
+    statementId: null,
     createdAt: new Date('2026-06-05T00:00:00.000Z'),
     updatedAt: new Date('2026-06-05T00:00:00.000Z')
   },
@@ -51,6 +52,7 @@ const billItems = [
     refundOffsetAmount: 0,
     adjustmentAmount: 0,
     netAmount: 5000,
+    statementId: null,
     createdAt: new Date('2026-06-05T00:00:00.000Z'),
     updatedAt: new Date('2026-06-05T00:00:00.000Z')
   }
@@ -71,12 +73,29 @@ const statementRecord = {
   createdAt: new Date('2026-06-06T00:00:00.000Z'),
   updatedAt: new Date('2026-06-06T00:00:00.000Z'),
   items: [
-    billItems[0],
+    {
+      ...billItems[0],
+      status: 'statement_generated',
+      statementId: 'statement-001'
+    },
     {
       ...billItems[1],
-      merchantId: 'merchant-001'
+      merchantId: 'merchant-001',
+      status: 'statement_generated',
+      statementId: 'statement-001'
     }
   ]
+};
+
+const paidStatementRecord = {
+  ...statementRecord,
+  status: 'paid_offline',
+  paidAt: new Date('2026-06-07T00:00:00.000Z'),
+  updatedAt: new Date('2026-06-07T00:00:00.000Z'),
+  items: statementRecord.items.map((item) => ({
+    ...item,
+    status: 'paid_offline'
+  }))
 };
 
 function createPrismaMock() {
@@ -98,6 +117,8 @@ function createPrismaMock() {
     },
     merchantSettlementStatement: {
       create: jest.fn().mockResolvedValue(statementRecord),
+      findFirst: jest.fn().mockResolvedValue(statementRecord),
+      update: jest.fn().mockResolvedValue(paidStatementRecord),
       findMany: jest.fn().mockResolvedValue([statementRecord])
     }
   };
@@ -350,5 +371,58 @@ describe('SettlementRepository', () => {
       select: expect.any(Object)
     });
     expect(result.statements).toEqual([statementRecord]);
+  });
+
+  it('confirms a generated merchant settlement statement as paid offline', async () => {
+    const prisma = createPrismaMock();
+    prisma.merchantSettlementStatement.findMany.mockResolvedValue([paidStatementRecord]);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.confirmMerchantSettlementStatementOfflinePayout({
+      statementNo: 'MSS-20260606-001',
+      paidAt: new Date('2026-06-07T00:00:00.000Z')
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.merchantSettlementStatement.findFirst).toHaveBeenCalledWith({
+      where: {
+        statementNo: 'MSS-20260606-001',
+        status: 'generated'
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementStatement.update).toHaveBeenCalledWith({
+      where: { id: 'statement-001' },
+      data: {
+        status: 'paid_offline',
+        paidAt: new Date('2026-06-07T00:00:00.000Z')
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementBillItem.updateMany).toHaveBeenCalledWith({
+      where: {
+        statementId: 'statement-001',
+        status: 'statement_generated'
+      },
+      data: {
+        status: 'paid_offline'
+      }
+    });
+    expect(result.statement).toEqual(paidStatementRecord);
+  });
+
+  it('returns no paid statement when the statement is not generated', async () => {
+    const prisma = createPrismaMock();
+    prisma.merchantSettlementStatement.findFirst.mockResolvedValue(null);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.confirmMerchantSettlementStatementOfflinePayout({
+      statementNo: 'MSS-20260606-001',
+      paidAt: new Date('2026-06-07T00:00:00.000Z')
+    });
+
+    expect(prisma.merchantSettlementStatement.update).not.toHaveBeenCalled();
+    expect(prisma.merchantSettlementBillItem.updateMany).not.toHaveBeenCalled();
+    expect(result.statement).toBeNull();
   });
 });

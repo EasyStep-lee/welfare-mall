@@ -26,11 +26,19 @@ const statement = {
   items: [billItem]
 };
 
+const paidStatement = {
+  ...statement,
+  status: 'paid_offline',
+  paidAt: '2026-06-07T00:00:00.000Z',
+  items: [{ ...billItem, status: 'paid_offline' }]
+};
+
 function createSettlementServiceMock() {
   return {
     generateMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] }),
     listMerchantBillItems: jest.fn().mockResolvedValue({ items: [billItem] }),
     generateMerchantSettlementStatement: jest.fn().mockResolvedValue({ statement }),
+    confirmMerchantSettlementStatementOfflinePayout: jest.fn().mockResolvedValue({ statement: paidStatement }),
     listMerchantSettlementStatements: jest.fn().mockResolvedValue({ statements: [statement] })
   };
 }
@@ -103,5 +111,18 @@ describe('Settlement API contract', () => {
       status: 'generated'
     });
     expect(response.body.statements).toEqual([statement]);
+  });
+
+  it('confirms a merchant settlement statement offline payout', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout')
+      .send({ paidAt: '2026-06-07T00:00:00.000Z' })
+      .expect(201);
+
+    expect(settlementService.confirmMerchantSettlementStatementOfflinePayout).toHaveBeenCalledWith({
+      statementNo: 'MSS-20260606-001',
+      paidAt: '2026-06-07T00:00:00.000Z'
+    });
+    expect(response.body.statement).toEqual(paidStatement);
   });
 });

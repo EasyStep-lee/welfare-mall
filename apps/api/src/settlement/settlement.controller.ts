@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SettlementService } from './settlement.service';
 
@@ -36,6 +36,17 @@ export class SettlementController {
       status
     });
   }
+
+  @Post('merchant-statements/:statementNo/confirm-offline-payout')
+  async confirmMerchantSettlementStatementOfflinePayout(
+    @Param('statementNo') statementNo: string,
+    @Body() input: ConfirmMerchantSettlementStatementOfflinePayoutRequest
+  ) {
+    return this.settlementService.confirmMerchantSettlementStatementOfflinePayout({
+      statementNo,
+      paidAt: input.paidAt
+    });
+  }
 }
 
 type GenerateMerchantBillItemsRequest = {
@@ -44,4 +55,8 @@ type GenerateMerchantBillItemsRequest = {
 
 type GenerateMerchantSettlementStatementRequest = {
   merchantId: string;
+};
+
+type ConfirmMerchantSettlementStatementOfflinePayoutRequest = {
+  paidAt?: string;
 };

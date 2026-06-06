@@ -59,6 +59,11 @@ export type GenerateMerchantSettlementStatementInput = {
   generatedAt: Date;
 };
 
+export type ConfirmMerchantSettlementStatementOfflinePayoutInput = {
+  statementNo: string;
+  paidAt: Date;
+};
+
 export type MerchantSettlementStatementListInput = {
   merchantId?: string;
   status?: string;
@@ -69,6 +74,10 @@ export type MerchantSettlementBillItemListResult = {
 };
 
 export type MerchantSettlementStatementGenerateResult = {
+  statement: MerchantSettlementStatementRecord | null;
+};
+
+export type MerchantSettlementStatementConfirmResult = {
   statement: MerchantSettlementStatementRecord | null;
 };
 
@@ -253,6 +262,51 @@ export class SettlementRepository {
     });
 
     return { statements: statements as MerchantSettlementStatementRecord[] };
+  }
+
+  async confirmMerchantSettlementStatementOfflinePayout(
+    input: ConfirmMerchantSettlementStatementOfflinePayoutInput
+  ): Promise<MerchantSettlementStatementConfirmResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const statement = await tx.merchantSettlementStatement.findFirst({
+        where: {
+          statementNo: input.statementNo,
+          status: MerchantSettlementStatementStatuses.Generated
+        },
+        select: merchantSettlementStatementSelect()
+      });
+
+      if (!statement) {
+        return { statement: null };
+      }
+
+      await tx.merchantSettlementStatement.update({
+        where: { id: statement.id },
+        data: {
+          status: MerchantSettlementStatementStatuses.PaidOffline,
+          paidAt: input.paidAt
+        },
+        select: merchantSettlementStatementSelect()
+      });
+
+      await tx.merchantSettlementBillItem.updateMany({
+        where: {
+          statementId: statement.id,
+          status: MerchantSettlementBillStatuses.StatementGenerated
+        },
+        data: {
+          status: MerchantSettlementBillStatuses.PaidOffline
+        }
+      });
+
+      const statements = await tx.merchantSettlementStatement.findMany({
+        where: { id: statement.id },
+        take: 1,
+        select: merchantSettlementStatementSelect()
+      });
+
+      return { statement: (statements[0] ?? null) as MerchantSettlementStatementRecord | null };
+    });
   }
 
   private async buildBillItems(order: PaidOrderForSettlement) {
