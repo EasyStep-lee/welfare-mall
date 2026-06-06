@@ -73,18 +73,40 @@ const merchantSettlementStatementsResponse = {
 
 describe('Merchant Vue workbench', () => {
   beforeEach(() => {
+    let fulfillmentLoads = 0;
+    let draftLoads = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-001/complete')) {
+          return response({ order: { orderNo: 'ORDER-20260603-001', status: 'completed' } });
+        }
+        if (url.includes('/products/product-001/review-submissions')) {
+          return response({
+            productId: 'product-001',
+            action: 'submit_review',
+            fromStatus: 'draft',
+            toStatus: 'pending_review'
+          });
+        }
+        if (url.includes('/products/drafts/save')) {
+          return response({
+            productId: 'product-001',
+            draftSnapshotId: 'snapshot-001',
+            payload: JSON.parse(String(init?.body)).payload
+          });
+        }
         if (url.includes('/settlements/merchant-statements')) {
           return response(merchantSettlementStatementsResponse);
         }
         if (url.includes('/orders/merchant/fulfillment')) {
-          return response(fulfillmentQueueResponse);
+          fulfillmentLoads += 1;
+          return response(fulfillmentLoads === 1 ? fulfillmentQueueResponse : { orders: [] });
         }
         if (url.includes('/products/review-queue')) {
-          return response(draftQueueResponse);
+          draftLoads += 1;
+          return response(draftLoads === 1 ? draftQueueResponse : { status: 'draft', items: [] });
         }
         throw new Error(`Unexpected request: ${url}`);
       })
@@ -116,6 +138,72 @@ describe('Merchant Vue workbench', () => {
       'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=generated'
     );
   });
+
+  it('completes a fulfillment order and refreshes the Vue list', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '确认完成');
+    await flushPromises();
+
+    const completeCall = findRequest('/orders/merchant/fulfillment/ORDER-20260603-001/complete');
+    expect(completeCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
+    expect(wrapper.text()).toContain('ORDER-20260603-001 已确认完成');
+    expect(wrapper.text()).toContain('暂无待履约订单');
+  });
+
+  it('submits a draft product for review from the Vue workbench', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '提交审核');
+    await flushPromises();
+
+    const submitCall = findRequest('/products/product-001/review-submissions');
+    expect(submitCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-001' });
+    expect(wrapper.text()).toContain('东北五常大米福利装 已提交审核');
+    expect(wrapper.text()).toContain('暂无商品草稿');
+  });
+
+  it('saves a complete draft payload from visible Vue fields', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '保存草稿');
+    await flushPromises();
+
+    const saveCall = findRequest('/products/drafts/save');
+    expect(saveCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const requestBody = JSON.parse(String(saveCall?.[1]?.body));
+    expect(requestBody.actorUserId).toBe('merchant-user-001');
+    expect(requestBody.productId).toBeNull();
+    expect(requestBody.payload).toMatchObject({
+      code: 'P-RICE-001',
+      name: '东北五常大米福利装',
+      merchantId: 'merchant-001',
+      franchiseId: 'franchise-001',
+      categoryId: 'category-rice',
+      brandId: 'brand-rice',
+      originCountry: '中国'
+    });
+    expect(requestBody.payload.skus[0]).toMatchObject({
+      code: 'SKU-P-RICE-001',
+      priceAmount: 6990,
+      specs: [{ name: '规格', value: '标准装' }]
+    });
+    expect(wrapper.text()).toContain('东北五常大米福利装 草稿已保存');
+  });
 });
 
 function response(body: unknown) {
@@ -127,6 +215,16 @@ function response(body: unknown) {
 
 function requestUrls() {
   return vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+}
+
+function findRequest(urlPart: string) {
+  return vi.mocked(fetch).mock.calls.find(([input]) => String(input).includes(urlPart));
+}
+
+async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
+  const button = wrapper.findAll('button').find((candidate) => candidate.text() === text);
+  expect(button, `button ${text}`).toBeTruthy();
+  await button!.trigger('click');
 }
 
 async function flushPromises() {
