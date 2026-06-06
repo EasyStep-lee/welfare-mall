@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { OrderRefundRepository } from '../../src/order/order-refund.repository';
 import { OrderRefundService } from '../../src/order/order-refund.service';
+import { SettlementRepository } from '../../src/settlement/settlement.repository';
 
 const refundRecord = {
   id: 'refund-001',
@@ -35,10 +36,30 @@ function createRepositoryMock() {
   };
 }
 
+function createSettlementRepositoryMock() {
+  return {
+    applyRefundOffsetForSucceededRefund: jest.fn().mockResolvedValue({ items: [] })
+  };
+}
+
+function createServiceFixture() {
+  const repository = createRepositoryMock();
+  const settlementRepository = createSettlementRepositoryMock();
+  const service = new OrderRefundService(
+    repository as unknown as OrderRefundRepository,
+    settlementRepository as unknown as SettlementRepository
+  );
+
+  return {
+    repository,
+    settlementRepository,
+    service
+  };
+}
+
 describe('OrderRefundService', () => {
   it('creates a processing refund order', async () => {
-    const repository = createRepositoryMock();
-    const service = new OrderRefundService(repository as unknown as OrderRefundRepository);
+    const { repository, service } = createServiceFixture();
 
     const result = await service.createRefund({
       requestId: 'refund-request-001',
@@ -63,9 +84,8 @@ describe('OrderRefundService', () => {
   });
 
   it('returns existing refund for the same idempotent request', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.findRefundByRequestId.mockResolvedValue(refundRecord);
-    const service = new OrderRefundService(repository as unknown as OrderRefundRepository);
 
     const result = await service.createRefund({
       requestId: 'refund-request-001',
@@ -81,9 +101,8 @@ describe('OrderRefundService', () => {
   });
 
   it('rejects a reused request ID with different refund amount', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.findRefundByRequestId.mockResolvedValue(refundRecord);
-    const service = new OrderRefundService(repository as unknown as OrderRefundRepository);
 
     await expect(
       service.createRefund({
@@ -98,8 +117,7 @@ describe('OrderRefundService', () => {
   });
 
   it('processes refund callback through repository idempotency', async () => {
-    const repository = createRepositoryMock();
-    const service = new OrderRefundService(repository as unknown as OrderRefundRepository);
+    const { repository, settlementRepository, service } = createServiceFixture();
 
     const result = await service.processCallback({
       providerEventId: 'refund-event-001',
@@ -119,12 +137,65 @@ describe('OrderRefundService', () => {
       payload: { event: 'refund.succeeded' }
     });
     expect(result).toEqual(expect.objectContaining({ duplicate: false }));
+    expect(settlementRepository.applyRefundOffsetForSucceededRefund).toHaveBeenCalledWith({
+      orderNo: 'ORDER-20260603-001',
+      refundAmount: 5000
+    });
+  });
+
+  it('does not apply settlement refund offset for duplicate callbacks', async () => {
+    const { repository, settlementRepository, service } = createServiceFixture();
+    repository.processCallback.mockResolvedValue({
+      duplicate: true,
+      refund: { ...refundRecord, status: 'succeeded', providerRefundNo: 'wx-refund-001' },
+      callback: {
+        id: 'refund-callback-001',
+        refundNo: refundRecord.refundNo,
+        providerEventId: 'refund-event-001',
+        status: 'succeeded'
+      }
+    });
+
+    await service.processCallback({
+      providerEventId: 'refund-event-001',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001',
+      status: 'succeeded',
+      succeededAt: new Date('2026-06-03T00:15:00.000Z'),
+      payload: { event: 'refund.succeeded' }
+    });
+
+    expect(settlementRepository.applyRefundOffsetForSucceededRefund).not.toHaveBeenCalled();
+  });
+
+  it('does not apply settlement refund offset for failed callbacks', async () => {
+    const { repository, settlementRepository, service } = createServiceFixture();
+    repository.processCallback.mockResolvedValue({
+      duplicate: false,
+      refund: { ...refundRecord, status: 'failed', providerRefundNo: 'wx-refund-001' },
+      callback: {
+        id: 'refund-callback-001',
+        refundNo: refundRecord.refundNo,
+        providerEventId: 'refund-event-001',
+        status: 'failed'
+      }
+    });
+
+    await service.processCallback({
+      providerEventId: 'refund-event-001',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001',
+      status: 'failed',
+      succeededAt: null,
+      payload: { event: 'refund.failed' }
+    });
+
+    expect(settlementRepository.applyRefundOffsetForSucceededRefund).not.toHaveBeenCalled();
   });
 
   it('returns not found when callback references a missing refund', async () => {
-    const repository = createRepositoryMock();
+    const { repository, service } = createServiceFixture();
     repository.processCallback.mockResolvedValue(null);
-    const service = new OrderRefundService(repository as unknown as OrderRefundRepository);
 
     await expect(
       service.processCallback({

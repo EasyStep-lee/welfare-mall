@@ -8,6 +8,7 @@ import {
   OrderRefundStatus,
   OrderRefundStatuses
 } from './order-refund-status';
+import { SettlementRepository } from '../settlement/settlement.repository';
 
 export type CreateOrderRefundInput = {
   requestId: string;
@@ -34,7 +35,10 @@ export type ProcessOrderRefundCallbackServiceInput = {
 
 @Injectable()
 export class OrderRefundService {
-  constructor(private readonly orderRefundRepository: OrderRefundRepository) {}
+  constructor(
+    private readonly orderRefundRepository: OrderRefundRepository,
+    private readonly settlementRepository: SettlementRepository
+  ) {}
 
   async createRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResult> {
     assertCreateRefundInput(input);
@@ -78,6 +82,13 @@ export class OrderRefundService {
 
     if (!result) {
       throw new NotFoundException(`Refund ${input.refundNo} not found.`);
+    }
+
+    if (!result.duplicate && result.refund.status === OrderRefundStatuses.Succeeded) {
+      await this.settlementRepository.applyRefundOffsetForSucceededRefund({
+        orderNo: result.refund.orderNo,
+        refundAmount: result.refund.refundAmount
+      });
     }
 
     return result;
