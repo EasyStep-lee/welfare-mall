@@ -38,6 +38,8 @@ export type MerchantSettlementStatementRecord = {
   netAmount: number;
   generatedAt: Date;
   paidAt: Date | null;
+  payoutReference: string | null;
+  payoutRemark: string | null;
   createdAt: Date;
   updatedAt: Date;
   items: MerchantSettlementBillItemRecord[];
@@ -62,6 +64,8 @@ export type GenerateMerchantSettlementStatementInput = {
 export type ConfirmMerchantSettlementStatementOfflinePayoutInput = {
   statementNo: string;
   paidAt: Date;
+  payoutReference?: string | null;
+  payoutRemark?: string | null;
 };
 
 export type MerchantSettlementStatementListInput = {
@@ -284,7 +288,9 @@ export class SettlementRepository {
         where: { id: statement.id },
         data: {
           status: MerchantSettlementStatementStatuses.PaidOffline,
-          paidAt: input.paidAt
+          paidAt: input.paidAt,
+          payoutReference: input.payoutReference ?? null,
+          payoutRemark: input.payoutRemark ?? null
         },
         select: merchantSettlementStatementSelect()
       });
@@ -392,6 +398,8 @@ function merchantSettlementStatementSelect(): Prisma.MerchantSettlementStatement
     netAmount: true,
     generatedAt: true,
     paidAt: true,
+    payoutReference: true,
+    payoutRemark: true,
     createdAt: true,
     updatedAt: true,
     items: {

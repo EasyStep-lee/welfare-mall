@@ -252,6 +252,8 @@ export default function App() {
               <div className="settlement-summary">
                 <span>生成 {formatDateTime(statement.generatedAt)}</span>
                 {statement.paidAt ? <span>打款 {formatDateTime(statement.paidAt)}</span> : null}
+                {statement.payoutReference ? <span>流水 {statement.payoutReference}</span> : null}
+                {statement.payoutRemark ? <span>备注 {statement.payoutRemark}</span> : null}
                 <span>明细 {statement.itemCount} 条</span>
                 <span>总额 {formatMoney(statement.grossAmount)}</span>
                 <span>退款抵扣 {formatMoney(statement.refundOffsetAmount)}</span>

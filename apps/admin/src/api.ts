@@ -196,6 +196,8 @@ export type AdminSettlementStatement = {
   netAmount: number;
   generatedAt: string;
   paidAt: string | null;
+  payoutReference: string | null;
+  payoutRemark: string | null;
   items: AdminSettlementBillItem[];
 };
 
@@ -448,13 +450,19 @@ export async function generateSettlementStatement(input: {
 export async function confirmSettlementOfflinePayout(input: {
   statementNo: string;
   paidAt: string;
+  payoutReference: string;
+  payoutRemark?: string | null;
 }): Promise<ConfirmSettlementOfflinePayoutResponse> {
   const response = await fetch(
     `${apiBaseUrl()}/settlements/merchant-statements/${encodeURIComponent(input.statementNo)}/confirm-offline-payout`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paidAt: input.paidAt })
+      body: JSON.stringify({
+        paidAt: input.paidAt,
+        payoutReference: input.payoutReference.trim(),
+        payoutRemark: input.payoutRemark?.trim() || null
+      })
     }
   );
 

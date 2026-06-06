@@ -160,6 +160,8 @@ export type MerchantSettlementStatement = {
   netAmount: number;
   generatedAt: string;
   paidAt: string | null;
+  payoutReference: string | null;
+  payoutRemark: string | null;
   items: MerchantSettlementBillItem[];
 };
 

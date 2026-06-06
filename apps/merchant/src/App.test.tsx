@@ -199,6 +199,8 @@ const paidMerchantSettlementStatementsResponse = {
       ...generatedSettlementStatement,
       status: 'paid_offline',
       paidAt: '2026-06-07T00:00:00.000Z',
+      payoutReference: 'BANK-20260607-001',
+      payoutRemark: 'June welfare payout',
       items: generatedSettlementStatement.items.map((item) => ({
         ...item,
         status: 'paid_offline'
@@ -392,6 +394,8 @@ describe('Merchant product submission workbench', () => {
     const settlementPanel = await screen.findByLabelText('商户结算');
     expect(within(settlementPanel).getAllByText('已线下打款').length).toBeGreaterThan(0);
     expect(within(settlementPanel).getByText('打款 2026-06-07 00:00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('流水 BANK-20260607-001')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('备注 June welfare payout')).toBeInTheDocument();
     expect(within(settlementPanel).queryByRole('button', { name: '确认离线打款' })).not.toBeInTheDocument();
   });
 

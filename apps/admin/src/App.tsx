@@ -279,10 +279,21 @@ export default function App() {
   }
 
   async function confirmSettlementPayout(statement: AdminSettlementStatement) {
+    const payoutReference = window.prompt('打款流水号', statement.payoutReference ?? '');
+    if (!payoutReference?.trim()) {
+      setMessage(null);
+      setError('请填写打款流水号');
+      return;
+    }
+
+    const payoutRemark = window.prompt('打款备注', statement.payoutRemark ?? '')?.trim() ?? null;
+
     await runAction(async () => {
       await confirmSettlementOfflinePayout({
         statementNo: statement.statementNo,
-        paidAt: new Date().toISOString()
+        paidAt: new Date().toISOString(),
+        payoutReference: payoutReference.trim(),
+        payoutRemark
       });
       setMessage(`${statement.statementNo} 已确认离线打款`);
       await loadSettlementStatements(activeSettlementStatus, activeSettlementMerchantFilter);
@@ -467,6 +478,8 @@ export default function App() {
               <div className="settlement-summary">
                 <span>生成 {formatDateTime(statement.generatedAt)}</span>
                 {statement.paidAt ? <span>打款 {formatDateTime(statement.paidAt)}</span> : null}
+                {statement.payoutReference ? <span>流水 {statement.payoutReference}</span> : null}
+                {statement.payoutRemark ? <span>备注 {statement.payoutRemark}</span> : null}
                 <span>明细 {statement.itemCount} 条</span>
                 <span>总额 {formatMoney(statement.grossAmount)}</span>
                 <span>退款抵扣 {formatMoney(statement.refundOffsetAmount)}</span>
