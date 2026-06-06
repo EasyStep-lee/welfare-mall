@@ -48,10 +48,15 @@ GREEN:
 - Served Admin bundle `/assets/index-D57uI-5w.js` contained `订单汇总`, `汇总订单`, and `待履约任务`.
 - Served Merchant bundle `/assets/index-DpSpYTya.js` contained `履约汇总`, `汇总任务`, and `自提任务`.
 
-- [ ] **Step 4: Publish and merge**
+- [x] **Step 4: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Published:
+
+- Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/165
+- Merged commit: `51abb34 feat: add fulfillment summary panels`
+
 ## Completion
 
-Awaiting publish and merge.
+Completed in PR #165 and marked complete by this docs-only follow-up.
