@@ -69,6 +69,7 @@ function createPrismaMock() {
     },
     merchantSettlementBillItem: {
       createMany: jest.fn().mockResolvedValue({ count: 2 }),
+      update: jest.fn(),
       findMany: jest.fn().mockResolvedValue(billItems)
     }
   };
@@ -156,5 +157,81 @@ describe('SettlementRepository', () => {
       select: expect.any(Object)
     });
     expect(result.items).toEqual(billItems);
+  });
+
+  it('allocates a successful refund across pending merchant bill items', async () => {
+    const prisma = createPrismaMock();
+    const updatedItems = [
+      {
+        ...billItems[0],
+        status: 'reversed',
+        refundOffsetAmount: 13980,
+        netAmount: 0
+      },
+      {
+        ...billItems[1],
+        refundOffsetAmount: 1020,
+        netAmount: 3980
+      }
+    ];
+    prisma.merchantSettlementBillItem.findMany.mockResolvedValue(billItems);
+    prisma.merchantSettlementBillItem.update
+      .mockResolvedValueOnce(updatedItems[0])
+      .mockResolvedValueOnce(updatedItems[1]);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.applyRefundOffsetForSucceededRefund({
+      orderNo: 'ORDER-20260605-001',
+      refundAmount: 15000
+    });
+
+    expect(prisma.merchantSettlementBillItem.findMany).toHaveBeenCalledWith({
+      where: {
+        orderNo: 'ORDER-20260605-001',
+        status: 'pending_settlement'
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementBillItem.update).toHaveBeenNthCalledWith(1, {
+      where: { id: 'bill-item-001' },
+      data: {
+        refundOffsetAmount: { increment: 13980 },
+        netAmount: { decrement: 13980 },
+        status: 'reversed'
+      },
+      select: expect.any(Object)
+    });
+    expect(prisma.merchantSettlementBillItem.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'bill-item-002' },
+      data: {
+        refundOffsetAmount: { increment: 1020 },
+        netAmount: { decrement: 1020 },
+        status: 'pending_settlement'
+      },
+      select: expect.any(Object)
+    });
+    expect(result.items).toEqual(updatedItems);
+  });
+
+  it('does not offset bill items when no pending settlement amount remains', async () => {
+    const prisma = createPrismaMock();
+    prisma.merchantSettlementBillItem.findMany.mockResolvedValue([
+      {
+        ...billItems[0],
+        status: 'reversed',
+        refundOffsetAmount: 13980,
+        netAmount: 0
+      }
+    ]);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.applyRefundOffsetForSucceededRefund({
+      orderNo: 'ORDER-20260605-001',
+      refundAmount: 5000
+    });
+
+    expect(prisma.merchantSettlementBillItem.update).not.toHaveBeenCalled();
+    expect(result.items).toEqual([]);
   });
 });

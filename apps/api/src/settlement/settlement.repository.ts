@@ -25,6 +25,11 @@ export type MerchantSettlementBillItemListInput = {
   status?: string;
 };
 
+export type ApplyRefundOffsetInput = {
+  orderNo: string;
+  refundAmount: number;
+};
+
 export type MerchantSettlementBillItemListResult = {
   items: MerchantSettlementBillItemRecord[];
 };
@@ -82,6 +87,48 @@ export class SettlementRepository {
     });
 
     return { items };
+  }
+
+  async applyRefundOffsetForSucceededRefund(input: ApplyRefundOffsetInput): Promise<MerchantSettlementBillItemListResult> {
+    const billItems = await this.prisma.merchantSettlementBillItem.findMany({
+      where: {
+        orderNo: input.orderNo,
+        status: MerchantSettlementBillStatuses.PendingSettlement
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: merchantSettlementBillItemSelect()
+    });
+    let remainingRefundAmount = input.refundAmount;
+    const updatedItems: MerchantSettlementBillItemRecord[] = [];
+
+    for (const billItem of billItems) {
+      if (remainingRefundAmount <= 0) {
+        break;
+      }
+
+      const offsetAmount = Math.min(remainingRefundAmount, billItem.netAmount);
+      if (offsetAmount <= 0) {
+        continue;
+      }
+
+      remainingRefundAmount -= offsetAmount;
+      const nextNetAmount = billItem.netAmount - offsetAmount;
+      const updatedItem = await this.prisma.merchantSettlementBillItem.update({
+        where: { id: billItem.id },
+        data: {
+          refundOffsetAmount: { increment: offsetAmount },
+          netAmount: { decrement: offsetAmount },
+          status:
+            nextNetAmount === 0
+              ? MerchantSettlementBillStatuses.Reversed
+              : MerchantSettlementBillStatuses.PendingSettlement
+        },
+        select: merchantSettlementBillItemSelect()
+      });
+      updatedItems.push(updatedItem);
+    }
+
+    return { items: updatedItems };
   }
 
   private async buildBillItems(order: PaidOrderForSettlement) {
