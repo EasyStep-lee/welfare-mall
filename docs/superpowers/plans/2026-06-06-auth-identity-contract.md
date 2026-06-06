@@ -125,7 +125,7 @@ pnpm run verify
 
 Expected: PASS.
 
-- [ ] **Step 2: Commit, push, open PR, and merge**
+- [x] **Step 2: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -133,6 +133,6 @@ Commit message:
 feat: derive buyer and merchant identity from JWT
 ```
 
-- [ ] **Step 3: Mark plan complete in docs-only follow-up**
+- [x] **Step 3: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark Task 4 complete.
