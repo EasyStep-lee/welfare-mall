@@ -1,5 +1,6 @@
 export type SubmissionQueueStatus = 'draft' | 'rejected';
 export type MerchantFulfillmentStatusFilter = 'paid' | 'completed';
+export type MerchantSettlementStatementStatusFilter = 'generated' | 'paid_offline' | 'all';
 
 export type BusinessParty = {
   id: string;
@@ -128,6 +129,44 @@ export type MerchantFulfillmentQueueResponse = {
   orders: MerchantFulfillmentOrder[];
 };
 
+export type MerchantSettlementBillItem = {
+  id: string;
+  billItemNo: string;
+  merchantId: string;
+  orderNo: string;
+  orderLineId: string;
+  productId: string;
+  skuId: string | null;
+  source: string;
+  status: string;
+  grossAmount: number;
+  refundOffsetAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  statementId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MerchantSettlementStatement = {
+  id: string;
+  statementNo: string;
+  merchantId: string;
+  status: string;
+  itemCount: number;
+  grossAmount: number;
+  refundOffsetAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  generatedAt: string;
+  paidAt: string | null;
+  items: MerchantSettlementBillItem[];
+};
+
+export type MerchantSettlementStatementResponse = {
+  statements: MerchantSettlementStatement[];
+};
+
 export type MerchantFulfillmentLookupFilters = {
   orderNo?: string;
   taskNo?: string;
@@ -141,6 +180,12 @@ export const statusLabels: Record<SubmissionQueueStatus, string> = {
 export const merchantFulfillmentStatusLabels: Record<MerchantFulfillmentStatusFilter, string> = {
   paid: '待履约',
   completed: '已完成'
+};
+
+export const merchantSettlementStatementStatusLabels: Record<MerchantSettlementStatementStatusFilter, string> = {
+  generated: '待打款',
+  paid_offline: '已打款',
+  all: '全部结算'
 };
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';
@@ -210,6 +255,24 @@ export async function fetchMerchantFulfillmentOrders(
   }
 
   return response.json() as Promise<MerchantFulfillmentQueueResponse>;
+}
+
+export async function fetchMerchantSettlementStatements(
+  merchantId: string,
+  status: MerchantSettlementStatementStatusFilter = 'generated'
+): Promise<MerchantSettlementStatementResponse> {
+  const url = new URL(`${apiBaseUrl()}/settlements/merchant-statements`);
+  url.searchParams.set('merchantId', merchantId.trim());
+  if (status !== 'all') {
+    url.searchParams.set('status', status);
+  }
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load merchant settlement statements: ${response.status}`);
+  }
+
+  return response.json() as Promise<MerchantSettlementStatementResponse>;
 }
 
 function setOptionalSearchParam(url: URL, key: string, value: string | undefined) {

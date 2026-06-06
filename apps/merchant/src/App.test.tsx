@@ -135,6 +135,78 @@ const pickupFulfillmentQueueResponse = {
   ]
 };
 
+const merchantSettlementStatementsResponse = {
+  statements: [
+    {
+      id: 'statement-001',
+      statementNo: 'MSS-20260606-001',
+      merchantId: 'merchant-001',
+      status: 'generated',
+      itemCount: 2,
+      grossAmount: 18980,
+      refundOffsetAmount: 1000,
+      adjustmentAmount: -500,
+      netAmount: 17480,
+      generatedAt: '2026-06-06T00:00:00.000Z',
+      paidAt: null,
+      items: [
+        {
+          id: 'bill-item-001',
+          billItemNo: 'MSBI-ORDER-20260605-001-ORDER-LINE-001',
+          merchantId: 'merchant-001',
+          orderNo: 'ORDER-20260605-001',
+          orderLineId: 'order-line-001',
+          productId: 'product-001',
+          skuId: 'sku-001',
+          source: 'order_paid',
+          status: 'statement_generated',
+          grossAmount: 13980,
+          refundOffsetAmount: 1000,
+          adjustmentAmount: -500,
+          netAmount: 12480,
+          statementId: 'statement-001',
+          createdAt: '2026-06-05T00:00:00.000Z',
+          updatedAt: '2026-06-06T00:00:00.000Z'
+        },
+        {
+          id: 'bill-item-002',
+          billItemNo: 'MSBI-ORDER-20260605-002-ORDER-LINE-002',
+          merchantId: 'merchant-001',
+          orderNo: 'ORDER-20260605-002',
+          orderLineId: 'order-line-002',
+          productId: 'product-002',
+          skuId: null,
+          source: 'order_paid',
+          status: 'statement_generated',
+          grossAmount: 5000,
+          refundOffsetAmount: 0,
+          adjustmentAmount: 0,
+          netAmount: 5000,
+          statementId: 'statement-001',
+          createdAt: '2026-06-05T00:10:00.000Z',
+          updatedAt: '2026-06-06T00:00:00.000Z'
+        }
+      ]
+    }
+  ]
+};
+
+const generatedSettlementStatement = merchantSettlementStatementsResponse.statements[0]!;
+
+const paidMerchantSettlementStatementsResponse = {
+  statements: [
+    {
+      ...generatedSettlementStatement,
+      status: 'paid_offline',
+      paidAt: '2026-06-07T00:00:00.000Z',
+      items: generatedSettlementStatement.items.map((item) => ({
+        ...item,
+        status: 'paid_offline'
+      }))
+    }
+  ]
+};
+
 describe('Merchant product submission workbench', () => {
   beforeEach(() => {
     let fulfillmentQueueLoads = 0;
@@ -142,6 +214,13 @@ describe('Merchant product submission workbench', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/settlements/merchant-statements')) {
+          return {
+            ok: true,
+            json: async () => merchantSettlementStatementsResponse
+          };
+        }
+
         if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-001/complete')) {
           return {
             ok: true,
@@ -244,6 +323,78 @@ describe('Merchant product submission workbench', () => {
     expect(await screen.findByText('东北五常大米福利装 已提交审核')).toBeInTheDocument();
   });
 
+  it('renders merchant settlement statements with bill item details', async () => {
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '商户结算' })).toBeInTheDocument();
+    const settlementPanel = screen.getByLabelText('商户结算');
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=generated'
+    );
+    expect(within(settlementPanel).getByText('MSS-20260606-001')).toBeInTheDocument();
+    expect(within(settlementPanel).getAllByText('待打款').length).toBeGreaterThan(0);
+    expect(within(settlementPanel).getByText('生成 2026-06-06 00:00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('明细 2 条')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('总额 ¥189.80')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('退款抵扣 ¥10.00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('调整 -¥5.00')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('应收 ¥174.80')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('ORDER-20260605-001')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('product-001 / sku-001')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('账单 ¥124.80')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('ORDER-20260605-002')).toBeInTheDocument();
+    expect(within(settlementPanel).getByText('product-002 / 默认规格')).toBeInTheDocument();
+  });
+
+  it('filters merchant settlement statements by status while preserving merchant context', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '已打款' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=paid_offline'
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: '全部结算' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001');
+    });
+  });
+
+  it('renders paid merchant settlement history as read-only', async () => {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/settlements/merchant-statements')) {
+        return {
+          ok: true,
+          json: async () => paidMerchantSettlementStatementsResponse
+        } as Response;
+      }
+
+      if (url.includes('/orders/merchant/fulfillment')) {
+        return {
+          ok: true,
+          json: async () => fulfillmentQueueResponse
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        json: async () => draftQueueResponse
+      } as Response;
+    });
+
+    render(<App />);
+
+    const settlementPanel = await screen.findByLabelText('商户结算');
+    expect(within(settlementPanel).getAllByText('已线下打款').length).toBeGreaterThan(0);
+    expect(within(settlementPanel).getByText('打款 2026-06-07 00:00')).toBeInTheDocument();
+    expect(within(settlementPanel).queryByRole('button', { name: '确认离线打款' })).not.toBeInTheDocument();
+  });
+
   it('filters merchant fulfillment orders by status tab', async () => {
     render(<App />);
 
@@ -298,6 +449,13 @@ describe('Merchant product submission workbench', () => {
   it('submits the entered pickup code when completing pickup fulfillment', async () => {
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url.includes('/settlements/merchant-statements')) {
+        return {
+          ok: true,
+          json: async () => merchantSettlementStatementsResponse
+        } as Response;
+      }
+
       if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-003/complete')) {
         return {
           ok: true,
