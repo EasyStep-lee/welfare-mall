@@ -49,10 +49,14 @@ Docker verification:
 - `docker compose ps`: API/Admin/Merchant/Portal/MySQL/Redis all healthy.
 - Served Admin asset at `http://localhost:5173/assets/index-DHniBIAQ.js` contains `导出结算CSV`, `merchant-settlements-`, `statementNo`, `payoutReference`, and `billItemNetAmount`.
 
-- [ ] **Step 4: Publish and merge**
+- [x] **Step 4: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/159
+
+Feature merge SHA: `16cb908`
+
 ## Completion
 
-Pending.
+- Completed in PR #159 and marked complete by docs-only follow-up.
