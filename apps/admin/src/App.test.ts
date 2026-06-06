@@ -102,6 +102,8 @@ const adminSettlementStatementsResponse = {
       netAmount: 17480,
       generatedAt: '2026-06-06T00:00:00.000Z',
       paidAt: null,
+      payoutReference: null,
+      payoutRemark: null,
       items: []
     }
   ]
@@ -110,10 +112,30 @@ const adminSettlementStatementsResponse = {
 describe('Admin Vue workbench', () => {
   beforeEach(() => {
     let reviewQueueLoads = 0;
+    let settlementLoads = 0;
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout')) {
+          return response({
+            statement: {
+              ...adminSettlementStatementsResponse.statements[0],
+              status: 'paid_offline',
+              paidAt: '2026-06-06T08:00:00.000Z',
+              payoutReference: 'LOCAL-PAYOUT-MSS-20260606-001',
+              payoutRemark: '本地线下打款确认'
+            }
+          });
+        }
+        if (url.includes('/settlements/merchant-statements/generate')) {
+          return response({
+            statement: {
+              ...adminSettlementStatementsResponse.statements[0],
+              statementNo: 'MSS-20260606-002'
+            }
+          });
+        }
         if (url.includes('/products/product-001/review-decisions')) {
           return response({
             productId: 'product-001',
@@ -128,6 +150,10 @@ describe('Admin Vue workbench', () => {
           });
         }
         if (url.includes('/settlements/merchant-statements')) {
+          settlementLoads += 1;
+          if (settlementLoads > 1) {
+            return response({ statements: [] });
+          }
           return response(adminSettlementStatementsResponse);
         }
         if (url.includes('/orders/admin/inventory-stocks')) {
@@ -233,6 +259,43 @@ describe('Admin Vue workbench', () => {
       actorUserId: 'admin-user-001'
     });
     expect(wrapper.text()).toContain('东北五常大米福利装 已发布到商品池');
+  });
+
+  it('generates a settlement statement from the Vue settlement panel', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '生成结算单');
+    await flushPromises();
+
+    const generateCall = findRequest('/settlements/merchant-statements/generate');
+    expect(generateCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
+    expect(wrapper.text()).toContain('已生成结算单 MSS-20260606-002');
+    expect(requestUrls().filter((url) => url.includes('/settlements/merchant-statements?status=generated')).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('confirms offline payout for a generated settlement statement', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '确认线下打款');
+    await flushPromises();
+
+    const payoutCall = findRequest('/settlements/merchant-statements/MSS-20260606-001/confirm-offline-payout');
+    expect(payoutCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(payoutCall?.[1]?.body))).toEqual({
+      paidAt: '2026-06-06T08:00:00.000Z',
+      payoutReference: 'LOCAL-PAYOUT-MSS-20260606-001',
+      payoutRemark: '本地线下打款确认'
+    });
+    expect(wrapper.text()).toContain('MSS-20260606-001 已确认线下打款');
   });
 });
 
