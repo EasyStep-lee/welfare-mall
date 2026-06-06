@@ -23,9 +23,16 @@ const reviewQueueResponse = {
       detailSectionCount: 2,
       primarySku: { code: 'SKU-RICE-5KG', priceAmount: 6990, marketPriceAmount: 7990, specText: '规格: 5kg' },
       media: [{ type: 'main_image', url: 'https://img.example.com/rice-cover.jpg', sortOrder: 1 }],
-      qualifications: [],
-      parameters: [],
-      detailSections: []
+      qualifications: [
+        {
+          type: 'origin_certificate',
+          title: '产地证明',
+          certificateNo: 'CERT-RICE-001',
+          fileUrl: 'https://img.example.com/certs/rice.pdf'
+        }
+      ],
+      parameters: [{ groupName: '基础参数', name: '净含量', value: '5kg', valueType: 'text', sortOrder: 1 }],
+      detailSections: [{ type: 'text', title: '福利说明', content: '适合企业福利发放', sortOrder: 1 }]
     }
   ]
 };
@@ -273,6 +280,18 @@ describe('Admin Vue workbench', () => {
     expect(wrapper.text()).toContain('ORDER-20260603-001');
     expect(wrapper.text()).toContain('product-001:sku-001');
     expect(wrapper.text()).toContain('MSS-20260606-001');
+    expect(wrapper.text()).toContain('粮油副食');
+    expect(wrapper.text()).toContain('五常香米');
+    expect(wrapper.text()).toContain('五常核心产区');
+    expect(wrapper.text()).toContain('SKU-RICE-5KG');
+    expect(wrapper.text()).toContain('销售价 ¥69.90');
+    expect(wrapper.text()).toContain('主图');
+    expect(wrapper.text()).toContain('https://img.example.com/rice-cover.jpg');
+    expect(wrapper.text()).toContain('产地证明');
+    expect(wrapper.text()).toContain('CERT-RICE-001');
+    expect(wrapper.text()).toContain('净含量: 5kg');
+    expect(wrapper.text()).toContain('福利说明');
+    expect(wrapper.text()).toContain('适合企业福利发放');
 
     expect(requestUrls()).toContain('http://localhost:3000/api/products/review-queue?status=pending_review');
     expect(requestUrls()).toContain('http://localhost:3000/api/orders/admin');
