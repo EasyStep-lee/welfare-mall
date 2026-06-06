@@ -191,16 +191,60 @@ export const merchantSettlementStatementStatusLabels: Record<MerchantSettlementS
 };
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';
+type AccessTokenProvider = () => string | null | undefined;
+type ApiHeaders = Record<string, string>;
 
 function apiBaseUrl() {
   return import.meta.env.VITE_MERCHANT_API_BASE_URL ?? defaultApiBaseUrl;
+}
+
+function defaultMerchantAccessTokenProvider() {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  return localStorage.getItem('welfareMallMerchantAccessToken');
+}
+
+let merchantAccessTokenProvider: AccessTokenProvider = defaultMerchantAccessTokenProvider;
+
+export function setMerchantAccessTokenProvider(provider: AccessTokenProvider) {
+  merchantAccessTokenProvider = provider;
+}
+
+export function resetMerchantAccessTokenProvider() {
+  merchantAccessTokenProvider = defaultMerchantAccessTokenProvider;
+}
+
+function withAuthHeaders(headers: ApiHeaders = {}) {
+  const token = merchantAccessTokenProvider()?.trim();
+  if (!token) {
+    return headers;
+  }
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`
+  };
+}
+
+function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const token = merchantAccessTokenProvider()?.trim();
+  if (!token) {
+    return init ? fetch(input, init) : fetch(input);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers: withAuthHeaders(init?.headers as ApiHeaders | undefined)
+  });
 }
 
 export async function fetchMerchantSubmissionQueue(status: SubmissionQueueStatus): Promise<SubmissionQueueResponse> {
   const url = new URL(`${apiBaseUrl()}/products/review-queue`);
   url.searchParams.set('status', status);
 
-  const response = await fetch(url);
+  const response = await apiFetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load merchant product queue: ${response.status}`);
   }
@@ -209,7 +253,7 @@ export async function fetchMerchantSubmissionQueue(status: SubmissionQueueStatus
 }
 
 export async function submitProductForReview(input: { productId: string; actorUserId: string }) {
-  const response = await fetch(`${apiBaseUrl()}/products/${input.productId}/review-submissions`, {
+  const response = await apiFetch(`${apiBaseUrl()}/products/${input.productId}/review-submissions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ actorUserId: input.actorUserId })
@@ -223,7 +267,7 @@ export async function submitProductForReview(input: { productId: string; actorUs
 }
 
 export async function saveProductDraft(input: { payload: ProductDraftPayload; actorUserId: string; productId?: string | null }) {
-  const response = await fetch(`${apiBaseUrl()}/products/drafts/save`, {
+  const response = await apiFetch(`${apiBaseUrl()}/products/drafts/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -251,7 +295,7 @@ export async function fetchMerchantFulfillmentOrders(
   setOptionalSearchParam(url, 'orderNo', filters.orderNo);
   setOptionalSearchParam(url, 'taskNo', filters.taskNo);
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load merchant fulfillment orders: ${response.status}`);
   }
@@ -269,7 +313,7 @@ export async function fetchMerchantSettlementStatements(
     url.searchParams.set('status', status);
   }
 
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load merchant settlement statements: ${response.status}`);
   }
@@ -286,7 +330,7 @@ function setOptionalSearchParam(url: URL, key: string, value: string | undefined
 
 export async function completeMerchantFulfillmentOrder(input: { merchantId: string; orderNo: string; pickupCode?: string }) {
   const pickupCode = input.pickupCode?.trim();
-  const response = await fetch(`${apiBaseUrl()}/orders/merchant/fulfillment/${input.orderNo}/complete`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/merchant/fulfillment/${input.orderNo}/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

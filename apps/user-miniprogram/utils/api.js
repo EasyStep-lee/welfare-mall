@@ -46,12 +46,18 @@ function orderDetailUrl(orderNo, buyerUserId, baseUrl) {
 function requestJson(path, options = {}) {
   const app = typeof getApp === 'function' ? getApp() : null;
   const baseUrl = options.baseUrl || app?.globalData?.apiBaseUrl || DEFAULT_API_BASE_URL;
+  const accessToken = (options.accessToken || app?.globalData?.accessToken || '').trim();
+  const header = {
+    ...(options.header || {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+  };
 
   return new Promise((resolve, reject) => {
     wx.request({
       url: apiUrl(path, baseUrl),
       method: options.method || 'GET',
       data: options.data,
+      header,
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data);

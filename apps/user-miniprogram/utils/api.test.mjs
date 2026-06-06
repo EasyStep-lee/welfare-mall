@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const {
@@ -12,7 +12,8 @@ const {
   orderRefundUrl,
   orderPaymentUrl,
   productPoolCatalogUrl,
-  productPoolItemDetailUrl
+  productPoolItemDetailUrl,
+  requestJson
 } = require('./api.js');
 
 describe('user mini-program API helpers', () => {
@@ -44,5 +45,62 @@ describe('user mini-program API helpers', () => {
     expect(orderDetailUrl('ORDER 001', 'local user 001', 'https://api.example.com/api/')).toBe(
       'https://api.example.com/api/orders/ORDER%20001?buyerUserId=local%20user%20001'
     );
+  });
+
+  describe('requestJson auth headers', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('adds the app global access token as a JWT bearer header', async () => {
+      const request = vi.fn((options) => options.success({ statusCode: 200, data: { ok: true } }));
+      vi.stubGlobal('getApp', () => ({
+        globalData: {
+          apiBaseUrl: 'https://api.example.com/api',
+          accessToken: 'buyer-token-001'
+        }
+      }));
+      vi.stubGlobal('wx', { request });
+
+      await expect(requestJson('/orders')).resolves.toEqual({ ok: true });
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: { Authorization: 'Bearer buyer-token-001' }
+        })
+      );
+    });
+
+    it('prefers an explicit request token over the app global token', async () => {
+      const request = vi.fn((options) => options.success({ statusCode: 200, data: { ok: true } }));
+      vi.stubGlobal('getApp', () => ({
+        globalData: {
+          accessToken: 'buyer-token-global'
+        }
+      }));
+      vi.stubGlobal('wx', { request });
+
+      await expect(requestJson('/orders', { accessToken: 'buyer-token-explicit' })).resolves.toEqual({ ok: true });
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: { Authorization: 'Bearer buyer-token-explicit' }
+        })
+      );
+    });
+
+    it('omits Authorization when no access token is available', async () => {
+      const request = vi.fn((options) => options.success({ statusCode: 200, data: { ok: true } }));
+      vi.stubGlobal('getApp', () => ({ globalData: {} }));
+      vi.stubGlobal('wx', { request });
+
+      await expect(requestJson('/orders')).resolves.toEqual({ ok: true });
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: {}
+        })
+      );
+    });
   });
 });
