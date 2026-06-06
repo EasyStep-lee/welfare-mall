@@ -105,3 +105,14 @@ Actual: PASS.
 
 - This slice only offsets pending settlement bill items for succeeded refund callbacks.
 - This slice does not implement line-level refund allocation, adjustment commands, statement reversal, payout reversal, franchise settlement, target-environment deployment, true-device checks, or formal business acceptance.
+
+## Completion Evidence
+
+- Feature PR: [#145](https://github.com/EasyStep-lee/welfare-mall/pull/145) `feat: offset settlement bills on refund success`.
+- Merge commit: `a721e069a4507b778790ebc1aa65c42f0290e9f9`.
+- Local RED verification: `pnpm --filter @welfare-mall/api run test -- test/order/order-refund.service.spec.ts test/settlement/settlement.repository.spec.ts --runInBand` failed as expected before implementation because settlement refund offset did not exist and the refund service did not call it.
+- Local focused verification: `pnpm --filter @welfare-mall/api run test -- test/order/order-refund.service.spec.ts test/settlement --runInBand` passed with 4 suites / 17 tests.
+- Local full verification: `pnpm run verify` passed with API 61 suites / 235 tests, Admin 14 tests, Merchant 6 tests, Portal 2 tests, and user mini-program 9 files / 32 tests.
+- Local diff check: `git diff --check` passed, with Windows LF-to-CRLF warnings only.
+- Docker runtime verification: `pnpm run docker:runtime:up`, `pnpm run docker:runtime:smoke`, and `pnpm run docker:page-smoke` passed.
+- Live API smoke: order `ORDER-20260606013250461-1EGZH6`, payment `PAY-20260606013250524-NEMRJD`, refund `REF-20260606013250672-I44JV9`, and bill item `MSBI-ORDER-20260606013250461-1EGZH6-CMQ1OI2750001O31TEK81566H` ended with `refundOffsetAmount=6990`, `netAmount=0`, `status=reversed`.
