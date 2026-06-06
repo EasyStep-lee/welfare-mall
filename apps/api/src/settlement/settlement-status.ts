@@ -9,7 +9,14 @@ export const MerchantSettlementBillStatuses = {
   Reversed: 'reversed'
 } as const;
 
+export const MerchantSettlementStatementStatuses = {
+  Generated: 'generated',
+  PaidOffline: 'paid_offline'
+} as const;
+
 export type MerchantSettlementBillSource =
   (typeof MerchantSettlementBillSources)[keyof typeof MerchantSettlementBillSources];
 export type MerchantSettlementBillStatus =
   (typeof MerchantSettlementBillStatuses)[keyof typeof MerchantSettlementBillStatuses];
+export type MerchantSettlementStatementStatus =
+  (typeof MerchantSettlementStatementStatuses)[keyof typeof MerchantSettlementStatementStatuses];

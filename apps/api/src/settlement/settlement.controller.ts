@@ -21,8 +21,27 @@ export class SettlementController {
       status
     });
   }
+
+  @Post('merchant-statements/generate')
+  async generateMerchantSettlementStatement(@Body() input: GenerateMerchantSettlementStatementRequest) {
+    return this.settlementService.generateMerchantSettlementStatement({
+      merchantId: input.merchantId
+    });
+  }
+
+  @Get('merchant-statements')
+  async listMerchantSettlementStatements(@Query('merchantId') merchantId?: string, @Query('status') status?: string) {
+    return this.settlementService.listMerchantSettlementStatements({
+      merchantId,
+      status
+    });
+  }
 }
 
 type GenerateMerchantBillItemsRequest = {
   orderNo: string;
+};
+
+type GenerateMerchantSettlementStatementRequest = {
+  merchantId: string;
 };
