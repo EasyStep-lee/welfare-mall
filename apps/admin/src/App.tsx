@@ -23,6 +23,7 @@ import {
   fetchAdminOrders,
   fetchAdminSettlementStatements,
   fetchReviewQueue,
+  generateSettlementStatement,
   processOrderPaymentCallback,
   processOrderRefundCallback,
   publishProductToPool,
@@ -288,6 +289,25 @@ export default function App() {
     });
   }
 
+  async function generateSettlementForMerchant() {
+    const merchantId = settlementMerchantFilterInput.trim() || activeSettlementMerchantFilter.trim();
+
+    if (!merchantId) {
+      setMessage(null);
+      setError('请先填写结算商户');
+      return;
+    }
+
+    await runAction(async () => {
+      const result = await generateSettlementStatement({ merchantId });
+      setSettlementMerchantFilterInput(merchantId);
+      setActiveSettlementMerchantFilter(merchantId);
+      setActiveSettlementStatus('generated');
+      setMessage(result.statement ? `已生成结算单 ${result.statement.statementNo}` : `${merchantId} 暂无可生成结算单`);
+      await loadSettlementStatements('generated', merchantId);
+    });
+  }
+
   function applyMerchantFilter() {
     setActiveMerchantFilter(merchantFilterInput.trim());
   }
@@ -419,6 +439,10 @@ export default function App() {
           <button type="button" onClick={applySettlementMerchantFilter}>
             <Search size={15} />
             筛选结算商户
+          </button>
+          <button type="button" onClick={() => void generateSettlementForMerchant()}>
+            <Send size={15} />
+            生成结算单
           </button>
           {activeSettlementMerchantFilter ? (
             <button type="button" onClick={clearSettlementMerchantFilter}>

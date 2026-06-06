@@ -491,6 +491,143 @@ describe('Admin product review workbench', () => {
     });
   });
 
+  it('generates Admin settlement statement for a merchant and refreshes generated list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.includes('/settlements/merchant-statements/generate')) {
+          return {
+            ok: true,
+            json: async () => ({ statement: generatedSettlementStatement })
+          };
+        }
+
+        if (url.includes('/settlements/merchant-statements')) {
+          return {
+            ok: true,
+            json: async () => adminSettlementStatementsResponse
+          };
+        }
+
+        if (url.includes('/orders/admin/inventory-stocks')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryStocksResponse
+          };
+        }
+
+        if (url.includes('/orders/admin/inventory-reservations')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryReservationsResponse
+          };
+        }
+
+        if (url.includes('/orders/admin')) {
+          return {
+            ok: true,
+            json: async () => adminOrdersResponse
+          };
+        }
+
+        if (url.includes('/products/review-queue')) {
+          return {
+            ok: true,
+            json: async () => reviewQueueResponse
+          };
+        }
+
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('结算商户'), { target: { value: ' merchant-001 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '生成结算单' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/settlements/merchant-statements/generate',
+        expect.any(Object)
+      );
+    });
+    const generateCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).includes('/generate'));
+    expect(generateCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
+    expect(await screen.findByText('已生成结算单 MSS-20260606-001')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=generated'
+      );
+    });
+  });
+
+  it('shows empty Admin settlement generation result when no bill items are available', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.includes('/settlements/merchant-statements/generate')) {
+          return {
+            ok: true,
+            json: async () => ({ statement: null })
+          };
+        }
+
+        if (url.includes('/settlements/merchant-statements')) {
+          return {
+            ok: true,
+            json: async () => ({ statements: [] })
+          };
+        }
+
+        if (url.includes('/orders/admin/inventory-stocks')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryStocksResponse
+          };
+        }
+
+        if (url.includes('/orders/admin/inventory-reservations')) {
+          return {
+            ok: true,
+            json: async () => adminInventoryReservationsResponse
+          };
+        }
+
+        if (url.includes('/orders/admin')) {
+          return {
+            ok: true,
+            json: async () => adminOrdersResponse
+          };
+        }
+
+        if (url.includes('/products/review-queue')) {
+          return {
+            ok: true,
+            json: async () => reviewQueueResponse
+          };
+        }
+
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('结算商户'), { target: { value: ' merchant-empty ' } });
+    fireEvent.click(screen.getByRole('button', { name: '生成结算单' }));
+
+    expect(await screen.findByText('merchant-empty 暂无可生成结算单')).toBeInTheDocument();
+  });
+
   it('confirms Admin settlement offline payout and refreshes statements', async () => {
     let settlementLoads = 0;
     vi.stubGlobal(

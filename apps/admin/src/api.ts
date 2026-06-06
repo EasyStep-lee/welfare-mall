@@ -207,6 +207,10 @@ export type ConfirmSettlementOfflinePayoutResponse = {
   statement: AdminSettlementStatement | null;
 };
 
+export type GenerateSettlementStatementResponse = {
+  statement: AdminSettlementStatement | null;
+};
+
 export type CreateOrderRefundInput = {
   requestId: string;
   paymentNo: string;
@@ -423,6 +427,22 @@ export async function fetchAdminSettlementStatements(
   }
 
   return response.json() as Promise<AdminSettlementStatementResponse>;
+}
+
+export async function generateSettlementStatement(input: {
+  merchantId: string;
+}): Promise<GenerateSettlementStatementResponse> {
+  const response = await fetch(`${apiBaseUrl()}/settlements/merchant-statements/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchantId: input.merchantId.trim() })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate settlement statement: ${response.status}`);
+  }
+
+  return response.json() as Promise<GenerateSettlementStatementResponse>;
 }
 
 export async function confirmSettlementOfflinePayout(input: {
