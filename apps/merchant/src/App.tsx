@@ -3,10 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   completeMerchantFulfillmentOrder,
   fetchMerchantFulfillmentOrders,
+  fetchMerchantSettlementStatements,
   merchantFulfillmentStatusLabels,
+  merchantSettlementStatementStatusLabels,
   ProductDraftPayload,
   MerchantFulfillmentOrder,
   MerchantFulfillmentStatusFilter,
+  MerchantSettlementStatement,
+  MerchantSettlementStatementStatusFilter,
   SubmissionQueueItem,
   SubmissionQueueStatus,
   fetchMerchantSubmissionQueue,
@@ -19,6 +23,7 @@ import './styles.css';
 const merchantActorUserId = 'merchant-user-001';
 const statuses: SubmissionQueueStatus[] = ['draft', 'rejected'];
 const fulfillmentStatuses: MerchantFulfillmentStatusFilter[] = ['paid', 'completed'];
+const settlementStatementStatuses: MerchantSettlementStatementStatusFilter[] = ['generated', 'paid_offline', 'all'];
 const fixedMerchantContext = {
   merchantId: 'merchant-001',
   franchiseId: 'franchise-001',
@@ -29,6 +34,8 @@ const fixedMerchantContext = {
 export default function App() {
   const [activeStatus, setActiveStatus] = useState<SubmissionQueueStatus>('draft');
   const [activeFulfillmentStatus, setActiveFulfillmentStatus] = useState<MerchantFulfillmentStatusFilter>('paid');
+  const [activeSettlementStatus, setActiveSettlementStatus] =
+    useState<MerchantSettlementStatementStatusFilter>('generated');
   const [orderNoLookupInput, setOrderNoLookupInput] = useState('');
   const [taskNoLookupInput, setTaskNoLookupInput] = useState('');
   const [activeOrderNoLookup, setActiveOrderNoLookup] = useState('');
@@ -36,6 +43,7 @@ export default function App() {
   const [items, setItems] = useState<SubmissionQueueItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [fulfillmentOrders, setFulfillmentOrders] = useState<MerchantFulfillmentOrder[]>([]);
+  const [settlementStatements, setSettlementStatements] = useState<MerchantSettlementStatement[]>([]);
   const [pickupCodeInputs, setPickupCodeInputs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -89,6 +97,17 @@ export default function App() {
     }
   }
 
+  async function loadSettlementStatements(status: MerchantSettlementStatementStatusFilter = activeSettlementStatus) {
+    setError(null);
+    try {
+      const response = await fetchMerchantSettlementStatements(fixedMerchantContext.merchantId, status);
+      setSettlementStatements(response.statements);
+    } catch (loadError) {
+      setSettlementStatements([]);
+      setError(loadError instanceof Error ? loadError.message : '结算单列表加载失败');
+    }
+  }
+
   useEffect(() => {
     void loadQueue(activeStatus);
   }, [activeStatus]);
@@ -96,6 +115,10 @@ export default function App() {
   useEffect(() => {
     void loadFulfillmentOrders(activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup);
   }, [activeFulfillmentStatus, activeOrderNoLookup, activeTaskNoLookup]);
+
+  useEffect(() => {
+    void loadSettlementStatements(activeSettlementStatus);
+  }, [activeSettlementStatus]);
 
   async function submit(item: SubmissionQueueItem) {
     setError(null);
@@ -197,6 +220,58 @@ export default function App() {
 
       {message ? <div className="notice success">{message}</div> : null}
       {error ? <div className="notice error">{error}</div> : null}
+
+      <section className="settlement-panel" aria-label="商户结算">
+        <div className="editor-heading">
+          <div>
+            <p className="eyebrow">结算对账</p>
+            <h2>商户结算</h2>
+          </div>
+          <span className="queue-count">{settlementStatements.length} 张</span>
+        </div>
+        <nav className="status-tabs panel-status-tabs" aria-label="结算状态">
+          {settlementStatementStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={activeSettlementStatus === status ? 'active' : ''}
+              onClick={() => setActiveSettlementStatus(status)}
+            >
+              {merchantSettlementStatementStatusLabels[status]}
+            </button>
+          ))}
+        </nav>
+        <div className="settlement-list">
+          {settlementStatements.length === 0 ? <p className="empty-text">暂无结算单</p> : null}
+          {settlementStatements.map((statement) => (
+            <article className="settlement-card" key={statement.statementNo}>
+              <div className="settlement-card-header">
+                <strong>{statement.statementNo}</strong>
+                <span className={`settlement-status ${statement.status}`}>{settlementStatementStatusLabel(statement.status)}</span>
+              </div>
+              <div className="settlement-summary">
+                <span>生成 {formatDateTime(statement.generatedAt)}</span>
+                {statement.paidAt ? <span>打款 {formatDateTime(statement.paidAt)}</span> : null}
+                <span>明细 {statement.itemCount} 条</span>
+                <span>总额 {formatMoney(statement.grossAmount)}</span>
+                <span>退款抵扣 {formatMoney(statement.refundOffsetAmount)}</span>
+                <span>调整 {formatSignedMoney(statement.adjustmentAmount)}</span>
+                <span>应收 {formatMoney(statement.netAmount)}</span>
+              </div>
+              <div className="settlement-bill-list">
+                {statement.items.map((item) => (
+                  <div className="settlement-bill-row" key={item.id}>
+                    <strong>{item.orderNo}</strong>
+                    <span>{`${item.productId} / ${item.skuId ?? '默认规格'}`}</span>
+                    <span>账单 {formatMoney(item.netAmount)}</span>
+                    <span>{settlementBillItemStatusLabel(item.status)}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="fulfillment-panel" aria-label="履约订单">
         <div className="editor-heading">
@@ -491,6 +566,14 @@ function formatMoney(amount: number) {
   return `¥${(amount / 100).toFixed(2)}`;
 }
 
+function formatSignedMoney(amount: number) {
+  if (amount < 0) {
+    return `-¥${Math.abs(amount / 100).toFixed(2)}`;
+  }
+
+  return formatMoney(amount);
+}
+
 function formatFulfillmentTaskStatus(order: MerchantFulfillmentOrder) {
   return merchantFulfillmentStatusLabels[order.status as MerchantFulfillmentStatusFilter] ?? order.status;
 }
@@ -512,6 +595,26 @@ const paymentStatusLabels: Record<string, string> = {
   closed: '已关闭',
   refunded: '已退款'
 };
+
+function settlementStatementStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    generated: '待打款',
+    paid_offline: '已线下打款'
+  };
+
+  return labels[status] ?? status;
+}
+
+function settlementBillItemStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending_settlement: '待结算',
+    statement_generated: '已出结算单',
+    paid_offline: '已线下打款',
+    reversed: '已冲销'
+  };
+
+  return labels[status] ?? status;
+}
 
 function toDraftPayload(form: {
   code: string;
