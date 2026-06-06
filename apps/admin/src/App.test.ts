@@ -109,10 +109,24 @@ const adminSettlementStatementsResponse = {
 
 describe('Admin Vue workbench', () => {
   beforeEach(() => {
+    let reviewQueueLoads = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/products/product-001/review-decisions')) {
+          return response({
+            productId: 'product-001',
+            decision: JSON.parse(String(init?.body))
+          });
+        }
+        if (url.includes('/product-pools/items/publish')) {
+          return response({
+            itemId: 'pool-item-001',
+            productId: 'product-001',
+            status: 'published'
+          });
+        }
         if (url.includes('/settlements/merchant-statements')) {
           return response(adminSettlementStatementsResponse);
         }
@@ -126,7 +140,8 @@ describe('Admin Vue workbench', () => {
           return response(adminOrdersResponse);
         }
         if (url.includes('/products/review-queue')) {
-          return response(reviewQueueResponse);
+          reviewQueueLoads += 1;
+          return response(reviewQueueLoads === 1 ? reviewQueueResponse : { status: 'pending_review', items: [] });
         }
         throw new Error(`Unexpected request: ${url}`);
       })
@@ -158,6 +173,67 @@ describe('Admin Vue workbench', () => {
     expect(requestUrls()).toContain('http://localhost:3000/api/orders/admin/inventory-stocks');
     expect(requestUrls()).toContain('http://localhost:3000/api/settlements/merchant-statements?status=generated');
   });
+
+  it('approves a pending product review and refreshes the Vue queue', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '通过审核');
+    await flushPromises();
+
+    const decisionCall = findRequest('/products/product-001/review-decisions');
+    expect(decisionCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(decisionCall?.[1]?.body))).toEqual({
+      action: 'approve',
+      actorUserId: 'admin-user-001',
+      reason: null
+    });
+    expect(wrapper.text()).toContain('东北五常大米福利装 已通过审核');
+    expect(wrapper.text()).toContain('暂无待审核商品');
+  });
+
+  it('rejects a pending product review with the Admin default reason', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '驳回审核');
+    await flushPromises();
+
+    const decisionCall = findRequest('/products/product-001/review-decisions');
+    expect(decisionCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(decisionCall?.[1]?.body))).toEqual({
+      action: 'reject',
+      actorUserId: 'admin-user-001',
+      reason: '资料不完整'
+    });
+    expect(wrapper.text()).toContain('东北五常大米福利装 已驳回审核');
+    expect(wrapper.text()).toContain('暂无待审核商品');
+  });
+
+  it('publishes a reviewed product to the product pool', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '发布商品池');
+    await flushPromises();
+
+    const publishCall = findRequest('/product-pools/items/publish');
+    expect(publishCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(publishCall?.[1]?.body))).toEqual({
+      productId: 'product-001',
+      actorUserId: 'admin-user-001'
+    });
+    expect(wrapper.text()).toContain('东北五常大米福利装 已发布到商品池');
+  });
 });
 
 function response(body: unknown) {
@@ -169,6 +245,16 @@ function response(body: unknown) {
 
 function requestUrls() {
   return vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+}
+
+function findRequest(urlPart: string) {
+  return vi.mocked(fetch).mock.calls.find(([input]) => String(input).includes(urlPart));
+}
+
+async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
+  const button = wrapper.findAll('button').find((candidate) => candidate.text() === text);
+  expect(button, `button ${text}`).toBeTruthy();
+  await button!.trigger('click');
 }
 
 async function flushPromises() {
