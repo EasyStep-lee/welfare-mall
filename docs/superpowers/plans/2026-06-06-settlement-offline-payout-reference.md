@@ -65,10 +65,14 @@ Docker verification:
 - Served Merchant asset at `http://localhost:5174/assets/index-BWfDl_EO.js` contains `流水 ` and `payoutReference`.
 - Container API read check: `GET /api/settlements/merchant-statements?status=generated` returned `payoutReference` and `payoutRemark` properties.
 
-- [ ] **Step 6: Publish and merge**
+- [x] **Step 6: Publish and merge**
 
 Commit, push, open PR, merge to `main`, then mark this plan complete in a docs-only branch.
 
+Feature PR: https://github.com/EasyStep-lee/welfare-mall/pull/157
+
+Feature merge SHA: `4583273`
+
 ## Completion
 
-- Pending.
+- Completed in PR #157 and marked complete by docs-only follow-up.
