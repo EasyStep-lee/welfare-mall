@@ -144,6 +144,7 @@ describe('Merchant Vue workbench', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -167,6 +168,52 @@ describe('Merchant Vue workbench', () => {
     expect(requestUrls()).toContain(
       'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=generated'
     );
+  });
+
+  it('filters merchant settlement statements by status from visible controls', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '已打款');
+    await flushPromises();
+
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=paid_offline'
+    );
+  });
+
+  it('exports currently loaded merchant settlement statements as csv', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn((blob: Blob) => {
+      expect(blob).toBeInstanceOf(Blob);
+      return 'blob:merchant-settlements';
+    });
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+
+    try {
+      const wrapper = mount(App);
+      await flushPromises();
+
+      await clickButton(wrapper, '导出结算CSV');
+      await flushPromises();
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const firstCreateObjectURLCall = createObjectURL.mock.calls[0];
+      expect(firstCreateObjectURLCall).toBeTruthy();
+      const csv = await readBlobText(firstCreateObjectURLCall![0]);
+      expect(csv).toContain('MSS-20260606-001');
+      expect(csv).toContain('merchant-001');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:merchant-settlements');
+    } finally {
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: originalCreateObjectURL });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: originalRevokeObjectURL });
+    }
   });
 
   it('completes a fulfillment order and refreshes the Vue list', async () => {
@@ -457,6 +504,15 @@ async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
 
 function findButton(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((candidate) => candidate.text() === text);
+}
+
+function readBlobText(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
 }
 
 async function setFieldValue(wrapper: ReturnType<typeof mount>, label: string, value: string) {
