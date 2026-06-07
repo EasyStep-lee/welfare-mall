@@ -4,7 +4,10 @@ import {
   createPortalOrder,
   fetchProductPoolCatalog,
   fetchProductPoolItemDetail,
+  fetchPortalOrderDetail,
+  fetchPortalOrders,
   type PortalCheckoutOrder,
+  type PortalOrderRecord,
   type ProductPoolCatalog,
   type ProductPoolCatalogItem,
   type ProductPoolItemDetail
@@ -26,6 +29,12 @@ const selectedDetail = ref<ProductPoolItemDetail | null>(null);
 const checkoutLoading = ref(false);
 const checkoutError = ref<string | null>(null);
 const createdOrder = ref<PortalCheckoutOrder | null>(null);
+const ordersLoading = ref(true);
+const ordersError = ref<string | null>(null);
+const orders = ref<PortalOrderRecord[]>([]);
+const orderDetailLoading = ref(false);
+const orderDetailError = ref<string | null>(null);
+const selectedOrder = ref<PortalOrderRecord | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -38,7 +47,7 @@ const originText = computed(() => {
 });
 
 onMounted(() => {
-  void loadCatalog();
+  void Promise.all([loadCatalog(), loadLocalOrders()]);
 });
 
 async function loadCatalog() {
@@ -53,6 +62,21 @@ async function loadCatalog() {
     error.value = loadError instanceof Error ? loadError.message : '商品池加载失败';
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadLocalOrders() {
+  ordersLoading.value = true;
+  ordersError.value = null;
+
+  try {
+    const response = await fetchPortalOrders(localBuyerUserId);
+    orders.value = response.orders ?? [];
+  } catch (loadError) {
+    orders.value = [];
+    ordersError.value = loadError instanceof Error ? loadError.message : '订单列表加载失败';
+  } finally {
+    ordersLoading.value = false;
   }
 }
 
@@ -72,6 +96,29 @@ async function openProductDetail(item: ProductPoolCatalogItem) {
   }
 }
 
+async function openOrderDetail(order: PortalOrderRecord) {
+  orderDetailLoading.value = true;
+  orderDetailError.value = null;
+  selectedOrder.value = null;
+
+  try {
+    const response = await fetchPortalOrderDetail({
+      orderNo: order.orderNo,
+      buyerUserId: localBuyerUserId
+    });
+    selectedOrder.value = response.order;
+  } catch (loadError) {
+    orderDetailError.value = loadError instanceof Error ? loadError.message : '订单详情加载失败';
+  } finally {
+    orderDetailLoading.value = false;
+  }
+}
+
+function closeOrderDetail() {
+  orderDetailError.value = null;
+  selectedOrder.value = null;
+}
+
 function closeProductDetail() {
   detailError.value = null;
   checkoutError.value = null;
@@ -84,7 +131,16 @@ function formatMoney(amount: number) {
 }
 
 function statusText(status: string) {
-  return status === 'pending_payment' ? '待支付' : status;
+  const labels: Record<string, string> = {
+    pending_payment: '待支付',
+    paid: '已支付',
+    completed: '已完成',
+    cancelled: '已取消',
+    refund_processing: '退款中',
+    refunded: '已退款'
+  };
+
+  return labels[status] ?? status;
 }
 
 function createCheckoutRequestId(itemId: string) {
@@ -115,6 +171,7 @@ async function submitLocalOrder() {
       }
     });
     createdOrder.value = result.order;
+    await loadLocalOrders();
   } catch (submitError) {
     checkoutError.value = submitError instanceof Error ? submitError.message : '订单创建失败';
   } finally {
@@ -141,6 +198,79 @@ async function submitLocalOrder() {
       <div>
         <span>启用商品池</span>
         <strong>{{ productPools.length }}</strong>
+      </div>
+    </section>
+
+    <section class="orders-section" aria-live="polite">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">本地用户</p>
+          <h2>我的订单</h2>
+        </div>
+        <button type="button" class="secondary-button" :disabled="ordersLoading" @click="loadLocalOrders">
+          {{ ordersLoading ? '刷新中' : '刷新订单' }}
+        </button>
+      </div>
+
+      <p v-if="ordersLoading" class="state-text compact">订单加载中</p>
+      <p v-else-if="ordersError" class="state-text error">{{ ordersError }}</p>
+      <p v-else-if="orders.length === 0" class="state-text compact">暂无订单</p>
+      <div v-else class="order-list">
+        <button
+          v-for="order in orders"
+          :key="order.orderNo"
+          type="button"
+          class="order-row"
+          :aria-label="`查看订单 ${order.orderNo} 详情`"
+          @click="openOrderDetail(order)"
+        >
+          <span>{{ order.orderNo }}</span>
+          <strong>{{ formatMoney(order.totalAmount) }}</strong>
+          <em>{{ statusText(order.status) }}</em>
+        </button>
+      </div>
+    </section>
+
+    <section v-if="orderDetailLoading || orderDetailError || selectedOrder" class="order-detail-section" aria-live="polite">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">订单详情</p>
+          <h2>{{ selectedOrder?.orderNo ?? '正在加载订单详情' }}</h2>
+        </div>
+        <button type="button" class="secondary-button" @click="closeOrderDetail">关闭订单</button>
+      </div>
+
+      <p v-if="orderDetailLoading" class="state-text compact">订单详情加载中</p>
+      <p v-else-if="orderDetailError" class="state-text error">{{ orderDetailError }}</p>
+      <div v-else-if="selectedOrder" class="order-detail-body">
+        <div class="order-facts">
+          <div>
+            <span>订单状态</span>
+            <strong>{{ statusText(selectedOrder.status) }}</strong>
+          </div>
+          <div>
+            <span>订单金额</span>
+            <strong>{{ formatMoney(selectedOrder.totalAmount) }}</strong>
+          </div>
+          <div>
+            <span>收货人</span>
+            <strong>{{ selectedOrder.receiverName ?? '待补充' }}</strong>
+          </div>
+          <div>
+            <span>配送地址</span>
+            <strong>{{ selectedOrder.receiverAddress ?? selectedOrder.pickupStoreName ?? '待补充' }}</strong>
+          </div>
+        </div>
+        <div class="order-line-list">
+          <article v-for="line in selectedOrder.lines" :key="line.id" class="order-line">
+            <img :src="line.displayImageUrl" :alt="line.displayName" />
+            <div>
+              <h3>{{ line.displayName }}</h3>
+              <p>{{ line.displaySkuCode ?? '默认规格' }} · x{{ line.quantity }}</p>
+            </div>
+            <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
+          </article>
+        </div>
       </div>
     </section>
 

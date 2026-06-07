@@ -54,6 +54,52 @@ const detailResponse = {
   }
 };
 
+const orderListResponse = {
+  orders: [
+    {
+      id: 'order-local-001',
+      orderNo: 'ORDER-20260607-PORTAL',
+      requestId: 'portal-checkout-pool-item-local-review-001',
+      buyerUserId: 'local-user-001',
+      status: 'pending_payment',
+      subtotalAmount: 6990,
+      discountAmount: 0,
+      totalAmount: 6990,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 6990,
+      fulfillmentType: 'delivery',
+      receiverName: '本地用户',
+      receiverPhone: '13800000000',
+      receiverAddress: '本地联调地址',
+      pickupStoreName: null,
+      createdAt: '2026-06-07T00:00:00.000Z',
+      updatedAt: '2026-06-07T00:00:00.000Z',
+      latestPayment: null,
+      latestRefund: null,
+      lines: [
+        {
+          id: 'order-line-local-001',
+          orderId: 'order-local-001',
+          productPoolItemId: 'pool-item-local-review',
+          productId: 'product-local-review',
+          skuId: 'sku-local-review-5kg',
+          displayName: '本地审核五常大米福利装',
+          displaySkuCode: 'SKU-LOCAL-REVIEW-5KG',
+          displayImageUrl: 'https://img.example.com/local-review/rice-main.jpg',
+          unitPriceAmount: 6990,
+          quantity: 1,
+          lineTotalAmount: 6990,
+          createdAt: '2026-06-07T00:00:00.000Z'
+        }
+      ]
+    }
+  ]
+};
+
+const orderDetailResponse = {
+  order: orderListResponse.orders[0]
+};
+
 describe('Portal product pool catalog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -194,5 +240,77 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('订单创建成功');
     expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
     expect(wrapper.text()).toContain('待支付');
+  });
+
+  it('loads local buyer orders alongside the catalog', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders?buyerUserId=local-user-001');
+    expect(wrapper.text()).toContain('我的订单');
+    expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
+    expect(wrapper.text()).toContain('待支付');
+    expect(wrapper.text()).toContain('¥69.90');
+  });
+
+  it('opens a local buyer order detail from the order list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001'
+    );
+    expect(wrapper.text()).toContain('订单详情');
+    expect(wrapper.text()).toContain('本地审核五常大米福利装');
+    expect(wrapper.text()).toContain('SKU-LOCAL-REVIEW-5KG');
+    expect(wrapper.text()).toContain('本地用户');
+    expect(wrapper.text()).toContain('本地联调地址');
+    expect(wrapper.text()).toContain('¥69.90');
   });
 });
