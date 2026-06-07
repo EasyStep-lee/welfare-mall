@@ -1,12 +1,16 @@
 import { ElButton, ElCard, ElCol, ElRow, ElSpace, ElTag } from 'element-plus';
 import { computed, defineComponent, h, onMounted, ref } from 'vue';
 import {
+  AdminFulfillmentStatusFilter,
   AdminInventoryReservation,
+  AdminInventoryReservationStatusFilter,
   AdminInventoryStock,
   AdminOrder,
+  AdminOrderStatusFilter,
   AdminSettlementStatement,
   ReviewQueueItem,
   ReviewQueueStatus,
+  adminFulfillmentStatusLabels,
   adminInventoryReservationStatusLabels,
   adminOrderStatusLabels,
   adminSettlementStatementStatusLabels,
@@ -35,11 +39,33 @@ const localSettlementPayoutRemark = '本地线下打款确认';
 const localPaymentPaidAt = '2026-06-06T08:10:00.000Z';
 const localRefundSucceededAt = '2026-06-06T08:20:00.000Z';
 
+type OrderLookupForm = {
+  merchantId: string;
+  taskNo: string;
+};
+
+type ReservationLookupForm = {
+  merchantId: string;
+  orderNo: string;
+};
+
+type StockLookupForm = {
+  merchantId: string;
+  productId: string;
+  skuId: string;
+};
+
 export default defineComponent({
   name: 'AdminApp',
   setup() {
     const reviewItems = ref<ReviewQueueItem[]>([]);
     const reviewStatus = ref<ReviewQueueStatus>('pending_review');
+    const orderStatus = ref<AdminOrderStatusFilter>('all');
+    const orderFulfillmentStatus = ref<AdminFulfillmentStatusFilter>('all');
+    const orderFilters = ref<OrderLookupForm>({ merchantId: '', taskNo: '' });
+    const reservationStatus = ref<AdminInventoryReservationStatusFilter>('all');
+    const reservationFilters = ref<ReservationLookupForm>({ merchantId: '', orderNo: '' });
+    const stockFilters = ref<StockLookupForm>({ merchantId: '', productId: '', skuId: '' });
     const orders = ref<AdminOrder[]>([]);
     const reservations = ref<AdminInventoryReservation[]>([]);
     const stocks = ref<AdminInventoryStock[]>([]);
@@ -58,9 +84,9 @@ export default defineComponent({
       try {
         const [queueResponse, orderResponse, reservationResponse, stockResponse, statementResponse] = await Promise.all([
           fetchReviewQueue(reviewStatus.value),
-          fetchAdminOrders(),
-          fetchAdminInventoryReservations(),
-          fetchAdminInventoryStocks(),
+          fetchAdminOrders(orderStatus.value, orderFulfillmentStatus.value, orderFilters.value.merchantId, orderFilters.value.taskNo),
+          fetchAdminInventoryReservations(reservationStatus.value, reservationFilters.value.merchantId, reservationFilters.value.orderNo),
+          fetchAdminInventoryStocks(stockFilters.value.merchantId, stockFilters.value.productId, stockFilters.value.skuId),
           fetchAdminSettlementStatements('generated')
         ]);
         reviewItems.value = queueResponse.items;
@@ -168,13 +194,43 @@ export default defineComponent({
 
     async function reloadOrderReadModels() {
       const [orderResponse, reservationResponse, stockResponse] = await Promise.all([
-        fetchAdminOrders(),
-        fetchAdminInventoryReservations(),
-        fetchAdminInventoryStocks()
+        fetchAdminOrders(orderStatus.value, orderFulfillmentStatus.value, orderFilters.value.merchantId, orderFilters.value.taskNo),
+        fetchAdminInventoryReservations(reservationStatus.value, reservationFilters.value.merchantId, reservationFilters.value.orderNo),
+        fetchAdminInventoryStocks(stockFilters.value.merchantId, stockFilters.value.productId, stockFilters.value.skuId)
       ]);
       orders.value = orderResponse.orders;
       reservations.value = reservationResponse.reservations;
       stocks.value = stockResponse.stocks;
+    }
+
+    async function loadOrders(status: AdminOrderStatusFilter = orderStatus.value, fulfillmentStatus: AdminFulfillmentStatusFilter = orderFulfillmentStatus.value) {
+      orderStatus.value = status;
+      orderFulfillmentStatus.value = fulfillmentStatus;
+      const response = await fetchAdminOrders(status, fulfillmentStatus, orderFilters.value.merchantId, orderFilters.value.taskNo);
+      orders.value = response.orders;
+    }
+
+    async function loadReservations(status: AdminInventoryReservationStatusFilter = reservationStatus.value) {
+      reservationStatus.value = status;
+      const response = await fetchAdminInventoryReservations(status, reservationFilters.value.merchantId, reservationFilters.value.orderNo);
+      reservations.value = response.reservations;
+    }
+
+    async function loadStocks() {
+      const response = await fetchAdminInventoryStocks(stockFilters.value.merchantId, stockFilters.value.productId, stockFilters.value.skuId);
+      stocks.value = response.stocks;
+    }
+
+    function updateOrderFilter(field: keyof OrderLookupForm, value: string) {
+      orderFilters.value = { ...orderFilters.value, [field]: value };
+    }
+
+    function updateReservationFilter(field: keyof ReservationLookupForm, value: string) {
+      reservationFilters.value = { ...reservationFilters.value, [field]: value };
+    }
+
+    function updateStockFilter(field: keyof StockLookupForm, value: string) {
+      stockFilters.value = { ...stockFilters.value, [field]: value };
     }
 
     async function confirmPayment(order: AdminOrder) {
@@ -280,9 +336,16 @@ export default defineComponent({
             { approveReview, rejectReview, publishProduct, loadReviewStatus: reloadReviewQueue },
             actionLoading.value
           ),
-          renderOrdersPanel(orders.value, { confirmPayment, requestRefund, confirmRefund }, actionLoading.value),
-          renderReservationPanel(reservations.value),
-          renderStockPanel(stocks.value),
+          renderOrdersPanel(
+            orders.value,
+            orderStatus.value,
+            orderFulfillmentStatus.value,
+            orderFilters.value,
+            { confirmPayment, requestRefund, confirmRefund, loadOrders, updateOrderFilter },
+            actionLoading.value
+          ),
+          renderReservationPanel(reservations.value, reservationStatus.value, reservationFilters.value, { loadReservations, updateReservationFilter }, actionLoading.value),
+          renderStockPanel(stocks.value, stockFilters.value, { loadStocks, updateStockFilter }, actionLoading.value),
           renderSettlementPanel(statements.value, generateSettlement, confirmOfflinePayout, actionLoading.value)
         ])
       ]);
@@ -459,14 +522,20 @@ function renderEmptyDetailSection(title: string, text: string) {
 
 function renderOrdersPanel(
   orders: AdminOrder[],
+  activeStatus: AdminOrderStatusFilter,
+  activeFulfillmentStatus: AdminFulfillmentStatusFilter,
+  filters: OrderLookupForm,
   actions: {
     confirmPayment: (order: AdminOrder) => Promise<void>;
     requestRefund: (order: AdminOrder) => Promise<void>;
     confirmRefund: (order: AdminOrder) => Promise<void>;
+    loadOrders: (status?: AdminOrderStatusFilter, fulfillmentStatus?: AdminFulfillmentStatusFilter) => Promise<void>;
+    updateOrderFilter: (field: keyof OrderLookupForm, value: string) => void;
   },
   actionLoading: boolean
 ) {
   return panel('订单管理', [
+    renderOrderFilters(activeStatus, activeFulfillmentStatus, filters, actions, actionLoading),
     orders.length === 0
       ? h('p', { class: 'empty-state' }, '暂无订单')
       : h(
@@ -498,8 +567,85 @@ function renderOrdersPanel(
   ]);
 }
 
-function renderReservationPanel(reservations: AdminInventoryReservation[]) {
+function renderOrderFilters(
+  activeStatus: AdminOrderStatusFilter,
+  activeFulfillmentStatus: AdminFulfillmentStatusFilter,
+  filters: OrderLookupForm,
+  actions: {
+    loadOrders: (status?: AdminOrderStatusFilter, fulfillmentStatus?: AdminFulfillmentStatusFilter) => Promise<void>;
+    updateOrderFilter: (field: keyof OrderLookupForm, value: string) => void;
+  },
+  actionLoading: boolean
+) {
+  const orderStatusOptions: Array<{ value: AdminOrderStatusFilter; label: string }> = [
+    { value: 'all', label: '全部订单' },
+    { value: 'pending_payment', label: label(adminOrderStatusLabels, 'pending_payment') },
+    { value: 'paid', label: label(adminOrderStatusLabels, 'paid') },
+    { value: 'refund_processing', label: label(adminOrderStatusLabels, 'refund_processing') },
+    { value: 'refunded', label: label(adminOrderStatusLabels, 'refunded') },
+    { value: 'completed', label: label(adminOrderStatusLabels, 'completed') }
+  ];
+  const fulfillmentOptions: Array<{ value: AdminFulfillmentStatusFilter; label: string }> = [
+    { value: 'all', label: '全部履约' },
+    { value: 'pending', label: label(adminFulfillmentStatusLabels, 'pending') },
+    { value: 'completed', label: label(adminFulfillmentStatusLabels, 'completed') }
+  ];
+
+  return h('div', { class: 'filter-stack' }, [
+    h(
+      'div',
+      { class: 'panel-action-row' },
+      orderStatusOptions.map((option) =>
+        h(
+          ElButton,
+          {
+            size: 'small',
+            type: activeStatus === option.value ? 'primary' : 'default',
+            plain: activeStatus !== option.value,
+            loading: actionLoading,
+            onClick: () => actions.loadOrders(option.value, activeFulfillmentStatus)
+          },
+          () => option.label
+        )
+      )
+    ),
+    h(
+      'div',
+      { class: 'panel-action-row' },
+      fulfillmentOptions.map((option) =>
+        h(
+          ElButton,
+          {
+            size: 'small',
+            type: activeFulfillmentStatus === option.value ? 'primary' : 'default',
+            plain: activeFulfillmentStatus !== option.value,
+            loading: actionLoading,
+            onClick: () => actions.loadOrders(activeStatus, option.value)
+          },
+          () => option.label
+        )
+      )
+    ),
+    h('div', { class: 'lookup-row' }, [
+      textInput('商户ID', filters.merchantId, (value) => actions.updateOrderFilter('merchantId', value)),
+      textInput('任务号', filters.taskNo, (value) => actions.updateOrderFilter('taskNo', value)),
+      h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.loadOrders() }, () => '查询订单')
+    ])
+  ]);
+}
+
+function renderReservationPanel(
+  reservations: AdminInventoryReservation[],
+  activeStatus: AdminInventoryReservationStatusFilter,
+  filters: ReservationLookupForm,
+  actions: {
+    loadReservations: (status?: AdminInventoryReservationStatusFilter) => Promise<void>;
+    updateReservationFilter: (field: keyof ReservationLookupForm, value: string) => void;
+  },
+  actionLoading: boolean
+) {
   return panel('库存预占', [
+    renderReservationFilters(activeStatus, filters, actions, actionLoading),
     reservations.length === 0
       ? h('p', { class: 'empty-state' }, '暂无库存预占')
       : h(
@@ -519,8 +665,63 @@ function renderReservationPanel(reservations: AdminInventoryReservation[]) {
   ]);
 }
 
-function renderStockPanel(stocks: AdminInventoryStock[]) {
+function renderReservationFilters(
+  activeStatus: AdminInventoryReservationStatusFilter,
+  filters: ReservationLookupForm,
+  actions: {
+    loadReservations: (status?: AdminInventoryReservationStatusFilter) => Promise<void>;
+    updateReservationFilter: (field: keyof ReservationLookupForm, value: string) => void;
+  },
+  actionLoading: boolean
+) {
+  const reservationOptions: Array<{ value: AdminInventoryReservationStatusFilter; label: string }> = [
+    { value: 'all', label: '全部预占' },
+    { value: 'reserved', label: label(adminInventoryReservationStatusLabels, 'reserved') },
+    { value: 'released', label: label(adminInventoryReservationStatusLabels, 'released') }
+  ];
+
+  return h('div', { class: 'filter-stack' }, [
+    h(
+      'div',
+      { class: 'panel-action-row' },
+      reservationOptions.map((option) =>
+        h(
+          ElButton,
+          {
+            size: 'small',
+            type: activeStatus === option.value ? 'primary' : 'default',
+            plain: activeStatus !== option.value,
+            loading: actionLoading,
+            onClick: () => actions.loadReservations(option.value)
+          },
+          () => option.label
+        )
+      )
+    ),
+    h('div', { class: 'lookup-row' }, [
+      textInput('预占商户ID', filters.merchantId, (value) => actions.updateReservationFilter('merchantId', value)),
+      textInput('预占订单号', filters.orderNo, (value) => actions.updateReservationFilter('orderNo', value)),
+      h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.loadReservations() }, () => '查询预占')
+    ])
+  ]);
+}
+
+function renderStockPanel(
+  stocks: AdminInventoryStock[],
+  filters: StockLookupForm,
+  actions: {
+    loadStocks: () => Promise<void>;
+    updateStockFilter: (field: keyof StockLookupForm, value: string) => void;
+  },
+  actionLoading: boolean
+) {
   return panel('库存余额', [
+    h('div', { class: 'lookup-row' }, [
+      textInput('库存商户ID', filters.merchantId, (value) => actions.updateStockFilter('merchantId', value)),
+      textInput('商品ID', filters.productId, (value) => actions.updateStockFilter('productId', value)),
+      textInput('SKU ID', filters.skuId, (value) => actions.updateStockFilter('skuId', value)),
+      h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.loadStocks() }, () => '查询库存')
+    ]),
     stocks.length === 0
       ? h('p', { class: 'empty-state' }, '暂无库存余额')
       : h(
@@ -534,6 +735,16 @@ function renderStockPanel(stocks: AdminInventoryStock[]) {
             ])
           )
         )
+  ]);
+}
+
+function textInput(labelText: string, value: string, onValue: (value: string) => void) {
+  return h('label', { class: 'lookup-field' }, [
+    h('span', labelText),
+    h('input', {
+      value,
+      onInput: (event: Event) => onValue((event.target as HTMLInputElement).value)
+    })
   ]);
 }
 

@@ -453,6 +453,48 @@ describe('Admin Vue workbench', () => {
     expect(wrapper.text()).toContain('MSS-20260606-001 已确认线下打款');
   });
 
+  it('filters admin orders by order status, fulfillment progress, merchant, and task number', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '商户ID', 'merchant-001');
+    await setFieldValue(wrapper, '任务号', 'FT-001');
+    await clickButton(wrapper, '已支付');
+    await flushPromises();
+    await clickButton(wrapper, '待履约');
+    await flushPromises();
+
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/admin?status=paid&merchantId=merchant-001&taskNo=FT-001'
+    );
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/admin?status=paid&fulfillmentStatus=pending&merchantId=merchant-001&taskNo=FT-001'
+    );
+  });
+
+  it('filters admin inventory reservations and stock balances from visible controls', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '预占商户ID', 'merchant-001');
+    await setFieldValue(wrapper, '预占订单号', 'ORDER-20260603-001');
+    await clickButton(wrapper, '释放记录');
+    await flushPromises();
+
+    await setFieldValue(wrapper, '库存商户ID', 'merchant-001');
+    await setFieldValue(wrapper, '商品ID', 'product-001');
+    await setFieldValue(wrapper, 'SKU ID', 'sku-001');
+    await clickButton(wrapper, '查询库存');
+    await flushPromises();
+
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/admin/inventory-reservations?status=released&merchantId=merchant-001&orderNo=ORDER-20260603-001'
+    );
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/admin/inventory-stocks?merchantId=merchant-001&productId=product-001&skuId=sku-001'
+    );
+  });
+
   it('confirms a pending order payment from the Vue order panel', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -543,6 +585,14 @@ async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
   const button = findButton(wrapper, text);
   expect(button, `button ${text}`).toBeTruthy();
   await button!.trigger('click');
+}
+
+async function setFieldValue(wrapper: ReturnType<typeof mount>, label: string, value: string) {
+  const labelWrapper = wrapper.findAll('label').find((candidate) => candidate.text().includes(label));
+  expect(labelWrapper, `field ${label}`).toBeTruthy();
+  const control = labelWrapper!.find('input,textarea');
+  expect(control.exists(), `control ${label}`).toBe(true);
+  await control.setValue(value);
 }
 
 function findButton(wrapper: ReturnType<typeof mount>, text: string) {
