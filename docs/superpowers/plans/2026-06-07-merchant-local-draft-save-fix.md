@@ -72,7 +72,7 @@ Evidence:
 - Browser smoke saved `P-LOCAL-BROWSER-*` drafts on port 5174 and verified `提交审核` was visible without a 500 error.
 - Served 5173 and 5174 bundles contain the `*-local-review` IDs.
 
-- [ ] **Step 4: Commit, push, open PR, and merge**
+- [x] **Step 4: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -80,9 +80,14 @@ Commit message:
 fix: align merchant local draft context
 ```
 
-- [ ] **Step 5: Mark plan complete in docs-only follow-up**
+- [x] **Step 5: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Completion:
+- Feature PR: `#205`
+- Feature merge commit: `89807001226496a99dafee1809a7bfc9b58a6896`
+- Docs completion branch: `codex/docs-merchant-local-draft-save-fix-complete`
 
 ## Acceptance Boundary
 
