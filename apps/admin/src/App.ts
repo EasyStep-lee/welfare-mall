@@ -6,6 +6,7 @@ import {
   AdminOrder,
   AdminSettlementStatement,
   ReviewQueueItem,
+  ReviewQueueStatus,
   adminInventoryReservationStatusLabels,
   adminOrderStatusLabels,
   adminSettlementStatementStatusLabels,
@@ -38,6 +39,7 @@ export default defineComponent({
   name: 'AdminApp',
   setup() {
     const reviewItems = ref<ReviewQueueItem[]>([]);
+    const reviewStatus = ref<ReviewQueueStatus>('pending_review');
     const orders = ref<AdminOrder[]>([]);
     const reservations = ref<AdminInventoryReservation[]>([]);
     const stocks = ref<AdminInventoryStock[]>([]);
@@ -55,7 +57,7 @@ export default defineComponent({
       error.value = null;
       try {
         const [queueResponse, orderResponse, reservationResponse, stockResponse, statementResponse] = await Promise.all([
-          fetchReviewQueue('pending_review'),
+          fetchReviewQueue(reviewStatus.value),
           fetchAdminOrders(),
           fetchAdminInventoryReservations(),
           fetchAdminInventoryStocks(),
@@ -73,8 +75,9 @@ export default defineComponent({
       }
     }
 
-    async function reloadReviewQueue() {
-      const response = await fetchReviewQueue('pending_review');
+    async function reloadReviewQueue(status: ReviewQueueStatus = reviewStatus.value) {
+      reviewStatus.value = status;
+      const response = await fetchReviewQueue(status);
       reviewItems.value = response.items;
     }
 
@@ -84,7 +87,7 @@ export default defineComponent({
       try {
         await decideProductReview({ productId: item.productId, action: 'approve', actorUserId: adminActorUserId });
         message.value = `${item.name} 已通过审核`;
-        await reloadReviewQueue();
+        await reloadReviewQueue('approved');
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '商品审核通过失败';
       } finally {
@@ -103,7 +106,7 @@ export default defineComponent({
           reason: defaultRejectReason
         });
         message.value = `${item.name} 已驳回审核`;
-        await reloadReviewQueue();
+        await reloadReviewQueue('rejected');
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '商品审核驳回失败';
       } finally {
@@ -117,6 +120,7 @@ export default defineComponent({
       try {
         await publishProductToPool({ productId: item.productId, actorUserId: adminActorUserId });
         message.value = `${item.name} 已发布到商品池`;
+        await reloadReviewQueue('approved');
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '商品池发布失败';
       } finally {
@@ -270,7 +274,12 @@ export default defineComponent({
           metric('应打款', formatMoney(settlementSummary.value.netAmount))
         ]),
         h('section', { class: 'workspace-grid' }, [
-          renderReviewPanel(reviewItems.value, { approveReview, rejectReview, publishProduct }, actionLoading.value),
+          renderReviewPanel(
+            reviewItems.value,
+            reviewStatus.value,
+            { approveReview, rejectReview, publishProduct, loadReviewStatus: reloadReviewQueue },
+            actionLoading.value
+          ),
           renderOrdersPanel(orders.value, { confirmPayment, requestRefund, confirmRefund }, actionLoading.value),
           renderReservationPanel(reservations.value),
           renderStockPanel(stocks.value),
@@ -291,16 +300,23 @@ function metric(label: string, value: string) {
 
 function renderReviewPanel(
   items: ReviewQueueItem[],
+  activeStatus: ReviewQueueStatus,
   actions: {
     approveReview: (item: ReviewQueueItem) => Promise<void>;
     rejectReview: (item: ReviewQueueItem) => Promise<void>;
     publishProduct: (item: ReviewQueueItem) => Promise<void>;
+    loadReviewStatus: (status: ReviewQueueStatus) => Promise<void>;
   },
   actionLoading: boolean
 ) {
   return panel('商品审核', [
+    h('div', { class: 'panel-action-row' }, [
+      h(ElButton, { type: activeStatus === 'pending_review' ? 'primary' : 'default', plain: activeStatus !== 'pending_review', onClick: () => actions.loadReviewStatus('pending_review') }, () => '待审核'),
+      h(ElButton, { type: activeStatus === 'approved' ? 'primary' : 'default', plain: activeStatus !== 'approved', onClick: () => actions.loadReviewStatus('approved') }, () => '已通过'),
+      h(ElButton, { type: activeStatus === 'rejected' ? 'primary' : 'default', plain: activeStatus !== 'rejected', onClick: () => actions.loadReviewStatus('rejected') }, () => '已驳回')
+    ]),
     items.length === 0
-      ? h('p', { class: 'empty-state' }, '暂无待审核商品')
+      ? h('p', { class: 'empty-state' }, reviewEmptyText(activeStatus))
       : h(
           'div',
           { class: 'item-stack' },
@@ -308,11 +324,17 @@ function renderReviewPanel(
             h('article', { class: 'list-row', key: item.productId }, [
               h('div', [h('strong', item.name), h('p', `${item.code} / ${item.merchant.name} / ${item.franchise.name}`)]),
               h(ElSpace, { wrap: true }, () => [
-                h(ElTag, { type: 'warning' }, () => statusLabels[item.status]),
+                h(ElTag, { type: reviewTagType(item.status) }, () => statusLabels[item.status]),
                 h(ElTag, () => `${item.skuCount} 个 SKU`),
-                h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => actions.approveReview(item) }, () => '通过审核'),
-                h(ElButton, { size: 'small', type: 'danger', plain: true, loading: actionLoading, onClick: () => actions.rejectReview(item) }, () => '驳回审核'),
-                h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.publishProduct(item) }, () => '发布商品池')
+                item.status === 'pending_review'
+                  ? h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => actions.approveReview(item) }, () => '通过审核')
+                  : null,
+                item.status === 'pending_review'
+                  ? h(ElButton, { size: 'small', type: 'danger', plain: true, loading: actionLoading, onClick: () => actions.rejectReview(item) }, () => '驳回审核')
+                  : null,
+                item.status === 'approved'
+                  ? h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.publishProduct(item) }, () => '发布商品池')
+                  : null
               ]),
               item.primarySku
                 ? h('p', { class: 'muted' }, `${item.primarySku.code} / 销售价 ${formatMoney(item.primarySku.priceAmount)}`)
@@ -566,6 +588,26 @@ function formatMoney(amount: number) {
 
 function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
+}
+
+function reviewEmptyText(status: ReviewQueueStatus) {
+  if (status === 'approved') {
+    return '暂无已通过商品';
+  }
+  if (status === 'rejected') {
+    return '暂无已驳回商品';
+  }
+  return '暂无待审核商品';
+}
+
+function reviewTagType(status: ReviewQueueStatus) {
+  if (status === 'approved') {
+    return 'success';
+  }
+  if (status === 'rejected') {
+    return 'danger';
+  }
+  return 'warning';
 }
 
 function formatOrigin(origin: ReviewQueueItem['origin']) {
