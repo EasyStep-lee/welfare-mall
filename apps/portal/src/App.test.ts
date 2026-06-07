@@ -55,6 +55,10 @@ const detailResponse = {
 };
 
 describe('Portal product pool catalog', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('loads and renders product pool item snapshots', async () => {
     vi.stubGlobal(
       'fetch',
@@ -124,5 +128,71 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('产地证明');
     expect(wrapper.text()).toContain('福利说明');
     expect(wrapper.text()).toContain('适合企业福利发放');
+  });
+
+  it('creates a local checkout order from the product detail panel', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        if (url.endsWith('/orders')) {
+          return {
+            ok: true,
+            json: async () => ({
+              idempotentReplay: false,
+              order: {
+                orderNo: 'ORDER-20260607-PORTAL',
+                status: 'pending_payment',
+                totalAmount: 6990,
+                welfareCardPayableAmount: 0,
+                cashPayableAmount: 6990
+              }
+            })
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+
+    const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
+    expect(checkoutCall).toBeTruthy();
+    expect(checkoutCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
+      buyerUserId: 'local-user-001',
+      items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
+      welfareCardPaymentAmount: 0,
+      fulfillment: {
+        type: 'delivery',
+        receiverName: '本地用户',
+        receiverPhone: '13800000000',
+        receiverAddress: '本地联调地址'
+      }
+    });
+    expect(JSON.parse(String(checkoutCall?.[1]?.body)).requestId).toContain('portal-checkout-pool-item-local-review-');
+    expect(wrapper.text()).toContain('订单创建成功');
+    expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
+    expect(wrapper.text()).toContain('待支付');
   });
 });
