@@ -76,6 +76,33 @@ export type ProductPoolItemDetail = ProductPoolCatalogItem & {
   } | null;
 };
 
+export type PortalOrderCheckoutInput = {
+  requestId: string;
+  buyerUserId: string;
+  productPoolItemId: string;
+  quantity: number;
+  welfareCardPaymentAmount: number;
+  fulfillment: {
+    type: 'delivery';
+    receiverName: string;
+    receiverPhone: string;
+    receiverAddress: string;
+  };
+};
+
+export type PortalCheckoutOrder = {
+  orderNo: string;
+  status: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+};
+
+export type PortalOrderCheckoutResponse = {
+  idempotentReplay: boolean;
+  order: PortalCheckoutOrder;
+};
+
 export async function fetchProductPoolCatalog(): Promise<ProductPoolCatalogResponse> {
   const response = await fetch(`${apiBaseUrl()}/product-pools/catalog`);
 
@@ -94,6 +121,26 @@ export async function fetchProductPoolItemDetail(itemId: string): Promise<Produc
   }
 
   return response.json() as Promise<ProductPoolItemDetail>;
+}
+
+export async function createPortalOrder(input: PortalOrderCheckoutInput): Promise<PortalOrderCheckoutResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requestId: input.requestId,
+      buyerUserId: input.buyerUserId,
+      items: [{ productPoolItemId: input.productPoolItemId, quantity: input.quantity }],
+      welfareCardPaymentAmount: input.welfareCardPaymentAmount,
+      fulfillment: input.fulfillment
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create order: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalOrderCheckoutResponse>;
 }
 
 function apiBaseUrl() {
