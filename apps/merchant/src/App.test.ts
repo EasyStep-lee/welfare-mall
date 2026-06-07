@@ -52,6 +52,36 @@ const fulfillmentQueueResponse = {
   ]
 };
 
+const completedFulfillmentQueueResponse = {
+  orders: [
+    {
+      ...fulfillmentQueueResponse.orders[0],
+      id: 'fulfillment-task-completed-001',
+      taskNo: 'FT-ORDER-20260603-COMPLETED-MERCHANT-001-001',
+      orderNo: 'ORDER-20260603-COMPLETED',
+      status: 'completed',
+      completedAt: '2026-06-03T09:20:00.000Z'
+    }
+  ]
+};
+
+const pickupFulfillmentQueueResponse = {
+  orders: [
+    {
+      ...fulfillmentQueueResponse.orders[0],
+      id: 'fulfillment-task-pickup-001',
+      taskNo: 'FT-ORDER-20260603-PICKUP-MERCHANT-001-001',
+      orderNo: 'ORDER-20260603-PICKUP',
+      fulfillmentType: 'pickup',
+      receiverName: null,
+      receiverPhone: null,
+      receiverAddress: null,
+      pickupStoreName: '浦东福利自提点',
+      pickupCode: 'PICKUP-8899'
+    }
+  ]
+};
+
 const merchantSettlementStatementsResponse = {
   statements: [
     {
@@ -154,6 +184,72 @@ describe('Merchant Vue workbench', () => {
     expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
     expect(wrapper.text()).toContain('ORDER-20260603-001 已确认完成');
     expect(wrapper.text()).toContain('暂无待履约订单');
+  });
+
+  it('filters merchant fulfillment orders by status, order number, and task number', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/orders/merchant/fulfillment')) {
+          return response(url.includes('status=completed') ? completedFulfillmentQueueResponse : fulfillmentQueueResponse);
+        }
+        if (url.includes('/products/review-queue')) {
+          return response({ status: 'draft', items: [] });
+        }
+        if (url.includes('/settlements/merchant-statements')) {
+          return response({ statements: [] });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '订单号', 'ORDER-20260603-COMPLETED');
+    await setFieldValue(wrapper, '任务号', 'FT-ORDER-20260603-COMPLETED-MERCHANT-001-001');
+    await clickButton(wrapper, '已完成');
+    await flushPromises();
+
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=completed&orderNo=ORDER-20260603-COMPLETED&taskNo=FT-ORDER-20260603-COMPLETED-MERCHANT-001-001'
+    );
+    expect(wrapper.text()).toContain('ORDER-20260603-COMPLETED');
+    expect(findButton(wrapper, '确认完成')).toBeUndefined();
+  });
+
+  it('requires the visible pickup code when completing pickup fulfillment orders', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/orders/merchant/fulfillment/ORDER-20260603-PICKUP/complete')) {
+          return response({ order: { orderNo: 'ORDER-20260603-PICKUP', status: 'completed' } });
+        }
+        if (url.includes('/orders/merchant/fulfillment')) {
+          return response(pickupFulfillmentQueueResponse);
+        }
+        if (url.includes('/products/review-queue')) {
+          return response({ status: 'draft', items: [] });
+        }
+        if (url.includes('/settlements/merchant-statements')) {
+          return response({ statements: [] });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('浦东福利自提点');
+    await setFieldValue(wrapper, '提货码', 'PICKUP-8899');
+    await clickButton(wrapper, '确认完成');
+    await flushPromises();
+
+    const completeCall = findRequest('/orders/merchant/fulfillment/ORDER-20260603-PICKUP/complete');
+    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001', pickupCode: 'PICKUP-8899' });
   });
 
   it('submits a draft product for review from the Vue workbench', async () => {
@@ -354,9 +450,13 @@ function findRequest(urlPart: string) {
 }
 
 async function clickButton(wrapper: ReturnType<typeof mount>, text: string) {
-  const button = wrapper.findAll('button').find((candidate) => candidate.text() === text);
+  const button = findButton(wrapper, text);
   expect(button, `button ${text}`).toBeTruthy();
   await button!.trigger('click');
+}
+
+function findButton(wrapper: ReturnType<typeof mount>, text: string) {
+  return wrapper.findAll('button').find((candidate) => candidate.text() === text);
 }
 
 async function setFieldValue(wrapper: ReturnType<typeof mount>, label: string, value: string) {
