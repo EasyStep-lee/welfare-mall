@@ -263,6 +263,7 @@ describe('Admin Vue workbench', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -453,6 +454,52 @@ describe('Admin Vue workbench', () => {
     expect(wrapper.text()).toContain('MSS-20260606-001 已确认线下打款');
   });
 
+  it('filters admin settlement statements by status and merchant from visible controls', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '结算商户ID', 'merchant-001');
+    await clickButton(wrapper, '已打款');
+    await flushPromises();
+
+    expect(requestUrls()).toContain('http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=paid_offline');
+  });
+
+  it('exports currently loaded admin settlement statements as csv', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn((blob: Blob) => {
+      expect(blob).toBeInstanceOf(Blob);
+      return 'blob:admin-settlements';
+    });
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+
+    try {
+      const wrapper = mount(App);
+      await flushPromises();
+
+      await clickButton(wrapper, '导出结算CSV');
+      await flushPromises();
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const firstCreateObjectURLCall = createObjectURL.mock.calls[0];
+      expect(firstCreateObjectURLCall).toBeTruthy();
+      const blob = firstCreateObjectURLCall![0];
+      const csv = await readBlobText(blob);
+      expect(csv).toContain('MSS-20260606-001');
+      expect(csv).toContain('merchant-001');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:admin-settlements');
+    } finally {
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: originalCreateObjectURL });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: originalRevokeObjectURL });
+    }
+  });
+
   it('filters admin orders by order status, fulfillment progress, merchant, and task number', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -593,6 +640,15 @@ async function setFieldValue(wrapper: ReturnType<typeof mount>, label: string, v
   const control = labelWrapper!.find('input,textarea');
   expect(control.exists(), `control ${label}`).toBe(true);
   await control.setValue(value);
+}
+
+function readBlobText(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
 }
 
 function findButton(wrapper: ReturnType<typeof mount>, text: string) {
