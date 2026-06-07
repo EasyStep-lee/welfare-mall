@@ -3,6 +3,7 @@ import { computed, defineComponent, h, onMounted, ref } from 'vue';
 import type { ProductDraftPayload } from './api';
 import {
   MerchantFulfillmentOrder,
+  MerchantFulfillmentStatusFilter,
   MerchantSettlementStatement,
   SubmissionQueueItem,
   completeMerchantFulfillmentOrder,
@@ -43,10 +44,18 @@ type MerchantDraftForm = {
   detailText: string;
 };
 
+type FulfillmentLookupForm = {
+  orderNo: string;
+  taskNo: string;
+};
+
 export default defineComponent({
   name: 'MerchantApp',
   setup() {
     const fulfillmentOrders = ref<MerchantFulfillmentOrder[]>([]);
+    const fulfillmentStatus = ref<MerchantFulfillmentStatusFilter>('paid');
+    const fulfillmentFilters = ref<FulfillmentLookupForm>({ orderNo: '', taskNo: '' });
+    const pickupCodes = ref<Record<string, string>>({});
     const draftItems = ref<SubmissionQueueItem[]>([]);
     const statements = ref<MerchantSettlementStatement[]>([]);
     const loading = ref(true);
@@ -72,12 +81,18 @@ export default defineComponent({
     const fulfillmentSummary = computed(() => summarizeMerchantFulfillmentOrders(fulfillmentOrders.value));
     const settlementSummary = computed(() => summarizeSettlementStatements(statements.value));
 
+    async function loadFulfillment(status: MerchantFulfillmentStatusFilter = fulfillmentStatus.value) {
+      fulfillmentStatus.value = status;
+      const response = await fetchMerchantFulfillmentOrders(merchantId, status, fulfillmentFilters.value);
+      fulfillmentOrders.value = response.orders;
+    }
+
     async function loadAll() {
       loading.value = true;
       error.value = null;
       try {
         const [fulfillmentResponse, draftResponse, statementResponse] = await Promise.all([
-          fetchMerchantFulfillmentOrders(merchantId, 'paid'),
+          fetchMerchantFulfillmentOrders(merchantId, fulfillmentStatus.value, fulfillmentFilters.value),
           fetchMerchantSubmissionQueue('draft'),
           fetchMerchantSettlementStatements(merchantId, 'generated')
         ]);
@@ -95,10 +110,9 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        await completeMerchantFulfillmentOrder({ merchantId, orderNo: order.orderNo });
+        await completeMerchantFulfillmentOrder({ merchantId, orderNo: order.orderNo, pickupCode: pickupCodes.value[order.orderNo] });
         message.value = `${order.orderNo} 已确认完成`;
-        const response = await fetchMerchantFulfillmentOrders(merchantId, 'paid');
-        fulfillmentOrders.value = response.orders;
+        await loadFulfillment();
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '履约确认失败';
       } finally {
@@ -141,6 +155,14 @@ export default defineComponent({
       draftForm.value = { ...draftForm.value, [field]: value };
     }
 
+    function updateFulfillmentFilter(field: keyof FulfillmentLookupForm, value: string) {
+      fulfillmentFilters.value = { ...fulfillmentFilters.value, [field]: value };
+    }
+
+    function updatePickupCode(orderNo: string, value: string) {
+      pickupCodes.value = { ...pickupCodes.value, [orderNo]: value };
+    }
+
     onMounted(() => {
       void loadAll();
     });
@@ -160,7 +182,14 @@ export default defineComponent({
           metric('应收结算', formatMoney(settlementSummary.value.netAmount))
         ]),
         h('section', { class: 'workspace-grid' }, [
-          renderFulfillmentPanel(fulfillmentOrders.value, completeOrder, actionLoading.value),
+          renderFulfillmentPanel(
+            fulfillmentOrders.value,
+            fulfillmentStatus.value,
+            fulfillmentFilters.value,
+            pickupCodes.value,
+            { completeOrder, loadFulfillment, updateFulfillmentFilter, updatePickupCode },
+            actionLoading.value
+          ),
           renderDraftPanel(draftItems.value, draftForm.value, updateDraftField, saveDraft, submitDraft, actionLoading.value),
           renderSettlementPanel(statements.value)
         ])
@@ -179,12 +208,31 @@ function metric(label: string, value: string) {
 
 function renderFulfillmentPanel(
   orders: MerchantFulfillmentOrder[],
-  completeOrder: (order: MerchantFulfillmentOrder) => Promise<void>,
+  activeStatus: MerchantFulfillmentStatusFilter,
+  filters: FulfillmentLookupForm,
+  pickupCodes: Record<string, string>,
+  actions: {
+    completeOrder: (order: MerchantFulfillmentOrder) => Promise<void>;
+    loadFulfillment: (status?: MerchantFulfillmentStatusFilter) => Promise<void>;
+    updateFulfillmentFilter: (field: keyof FulfillmentLookupForm, value: string) => void;
+    updatePickupCode: (orderNo: string, value: string) => void;
+  },
   actionLoading: boolean
 ) {
   return panel('履约订单', [
+    h('div', { class: 'panel-action-row' }, [
+      h(ElButton, { type: activeStatus === 'paid' ? 'primary' : 'default', plain: activeStatus !== 'paid', onClick: () => actions.loadFulfillment('paid') }, () => '待履约'),
+      h(ElButton, { type: activeStatus === 'completed' ? 'primary' : 'default', plain: activeStatus !== 'completed', onClick: () => actions.loadFulfillment('completed') }, () => '已完成')
+    ]),
+    h('div', { class: 'draft-form compact-form' }, [
+      draftInput('订单号', filters.orderNo, (value) => actions.updateFulfillmentFilter('orderNo', value)),
+      draftInput('任务号', filters.taskNo, (value) => actions.updateFulfillmentFilter('taskNo', value)),
+      h('div', { class: 'draft-action-row' }, [
+        h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.loadFulfillment() }, () => '查询履约')
+      ])
+    ]),
     orders.length === 0
-      ? h('p', { class: 'empty-state' }, '暂无待履约订单')
+      ? h('p', { class: 'empty-state' }, activeStatus === 'completed' ? '暂无已完成订单' : '暂无待履约订单')
       : h(
           'div',
           { class: 'item-stack' },
@@ -194,10 +242,16 @@ function renderFulfillmentPanel(
               h(ElSpace, { wrap: true }, () => [
                 h(ElTag, { type: order.status === 'paid' ? 'warning' : 'success' }, () => label(merchantFulfillmentStatusLabels, order.status)),
                 h(ElTag, () => formatMoney(order.totalAmount)),
-                h(ElButton, { size: 'small', type: 'primary', loading: actionLoading, onClick: () => completeOrder(order) }, () => '确认完成')
+                order.status === 'paid'
+                  ? h(ElButton, { size: 'small', type: 'primary', loading: actionLoading, onClick: () => actions.completeOrder(order) }, () => '确认完成')
+                  : null
               ]),
               h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / ')),
-              h('p', { class: 'muted' }, order.receiverName ? `${order.receiverName} / ${order.receiverPhone} / ${order.receiverAddress}` : order.pickupStoreName ?? '自提')
+              h('p', { class: 'muted' }, order.receiverName ? `${order.receiverName} / ${order.receiverPhone} / ${order.receiverAddress}` : order.pickupStoreName ?? '自提'),
+              order.fulfillmentType === 'pickup' && order.status === 'paid'
+                ? draftInput('提货码', pickupCodes[order.orderNo] ?? '', (value) => actions.updatePickupCode(order.orderNo, value))
+                : null,
+              order.completedAt ? h('p', { class: 'muted' }, `完成时间 ${order.completedAt}`) : null
             ])
           )
         )
