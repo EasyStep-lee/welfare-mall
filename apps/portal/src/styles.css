@@ -519,16 +519,29 @@ h1 {
   padding: 14px;
 }
 
+.payment-block {
+  background: #f7faf8;
+  border: 1px solid #d7e1dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
 .checkout-block h3,
-.checkout-block p {
+.checkout-block p,
+.payment-block h3,
+.payment-block p {
   margin: 0;
 }
 
-.checkout-block h3 {
+.checkout-block h3,
+.payment-block h3 {
   font-size: 16px;
 }
 
-.checkout-block p {
+.checkout-block p,
+.payment-block p {
   color: #5c7177;
   font-size: 13px;
 }

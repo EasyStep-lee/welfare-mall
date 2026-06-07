@@ -133,6 +133,32 @@ export type PortalOrderDetailResponse = {
   order: PortalOrderRecord;
 };
 
+export type PortalPaymentInput = {
+  requestId: string;
+  orderNo: string;
+  channel: 'wechat';
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+};
+
+export type PortalPayment = {
+  paymentNo: string;
+  requestId: string;
+  orderNo: string;
+  status: string;
+  channel: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+  providerPaymentNo: string | null;
+};
+
+export type PortalPaymentResponse = {
+  idempotentReplay: boolean;
+  payment: PortalPayment;
+};
+
 export type PortalOrderCheckoutResponse = {
   idempotentReplay: boolean;
   order: PortalCheckoutOrder;
@@ -203,6 +229,20 @@ export async function fetchPortalOrderDetail(input: {
   }
 
   return response.json() as Promise<PortalOrderDetailResponse>;
+}
+
+export async function createPortalPayment(input: PortalPaymentInput): Promise<PortalPaymentResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/payments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create payment: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalPaymentResponse>;
 }
 
 function apiBaseUrl() {

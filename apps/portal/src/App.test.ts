@@ -100,6 +100,21 @@ const orderDetailResponse = {
   order: orderListResponse.orders[0]
 };
 
+const paymentResponse = {
+  idempotentReplay: false,
+  payment: {
+    paymentNo: 'PAY-20260607-PORTAL',
+    requestId: 'portal-payment-ORDER-20260607-PORTAL-001',
+    orderNo: 'ORDER-20260607-PORTAL',
+    status: 'pending',
+    channel: 'wechat',
+    totalAmount: 6990,
+    welfareCardPayableAmount: 0,
+    cashPayableAmount: 6990,
+    providerPaymentNo: null
+  }
+};
+
 describe('Portal product pool catalog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -312,5 +327,66 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('本地用户');
     expect(wrapper.text()).toContain('本地联调地址');
     expect(wrapper.text()).toContain('¥69.90');
+  });
+
+  it('creates a WeChat payment from a pending order detail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/orders/payments')) {
+          return {
+            ok: true,
+            json: async () => paymentResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').trigger('click');
+    await flushPromises();
+
+    const paymentCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders/payments'));
+    expect(paymentCall).toBeTruthy();
+    expect(paymentCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(paymentCall?.[1]?.body))).toMatchObject({
+      orderNo: 'ORDER-20260607-PORTAL',
+      channel: 'wechat',
+      totalAmount: 6990,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 6990
+    });
+    expect(JSON.parse(String(paymentCall?.[1]?.body)).requestId).toContain('portal-payment-ORDER-20260607-PORTAL-');
+    expect(wrapper.text()).toContain('支付单创建成功');
+    expect(wrapper.text()).toContain('PAY-20260607-PORTAL');
+    expect(wrapper.text()).toContain('微信支付');
+    expect(wrapper.text()).toContain('待支付');
   });
 });

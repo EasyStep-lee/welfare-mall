@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from 'vue';
 import {
   createPortalOrder,
+  createPortalPayment,
   fetchProductPoolCatalog,
   fetchProductPoolItemDetail,
   fetchPortalOrderDetail,
   fetchPortalOrders,
   type PortalCheckoutOrder,
   type PortalOrderRecord,
+  type PortalPayment,
   type ProductPoolCatalog,
   type ProductPoolCatalogItem,
   type ProductPoolItemDetail
@@ -35,6 +37,9 @@ const orders = ref<PortalOrderRecord[]>([]);
 const orderDetailLoading = ref(false);
 const orderDetailError = ref<string | null>(null);
 const selectedOrder = ref<PortalOrderRecord | null>(null);
+const paymentLoading = ref(false);
+const paymentError = ref<string | null>(null);
+const createdPayment = ref<PortalPayment | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -100,6 +105,8 @@ async function openOrderDetail(order: PortalOrderRecord) {
   orderDetailLoading.value = true;
   orderDetailError.value = null;
   selectedOrder.value = null;
+  paymentError.value = null;
+  createdPayment.value = null;
 
   try {
     const response = await fetchPortalOrderDetail({
@@ -116,7 +123,9 @@ async function openOrderDetail(order: PortalOrderRecord) {
 
 function closeOrderDetail() {
   orderDetailError.value = null;
+  paymentError.value = null;
   selectedOrder.value = null;
+  createdPayment.value = null;
 }
 
 function closeProductDetail() {
@@ -143,9 +152,34 @@ function statusText(status: string) {
   return labels[status] ?? status;
 }
 
+function paymentStatusText(status: string) {
+  const labels: Record<string, string> = {
+    pending: '待支付',
+    paid: '已支付',
+    failed: '支付失败'
+  };
+
+  return labels[status] ?? status;
+}
+
+function paymentChannelText(channel: string) {
+  const labels: Record<string, string> = {
+    wechat: '微信支付',
+    alipay: '支付宝',
+    cash: '现金'
+  };
+
+  return labels[channel] ?? channel;
+}
+
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
+}
+
+function createPaymentRequestId(orderNo: string) {
+  const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `portal-payment-${safeOrderNo}-${Date.now()}`;
 }
 
 async function submitLocalOrder() {
@@ -176,6 +210,33 @@ async function submitLocalOrder() {
     checkoutError.value = submitError instanceof Error ? submitError.message : '订单创建失败';
   } finally {
     checkoutLoading.value = false;
+  }
+}
+
+async function submitLocalPayment() {
+  if (!selectedOrder.value) {
+    paymentError.value = '请先选择订单';
+    return;
+  }
+
+  paymentLoading.value = true;
+  paymentError.value = null;
+  createdPayment.value = null;
+
+  try {
+    const result = await createPortalPayment({
+      requestId: createPaymentRequestId(selectedOrder.value.orderNo),
+      orderNo: selectedOrder.value.orderNo,
+      channel: 'wechat',
+      totalAmount: selectedOrder.value.totalAmount,
+      welfareCardPayableAmount: selectedOrder.value.welfareCardPayableAmount,
+      cashPayableAmount: selectedOrder.value.cashPayableAmount
+    });
+    createdPayment.value = result.payment;
+  } catch (submitError) {
+    paymentError.value = submitError instanceof Error ? submitError.message : '支付单创建失败';
+  } finally {
+    paymentLoading.value = false;
   }
 }
 </script>
@@ -271,6 +332,27 @@ async function submitLocalOrder() {
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>
         </div>
+        <section v-if="selectedOrder.status === 'pending_payment'" class="payment-block">
+          <div>
+            <h3>本地支付</h3>
+            <p>微信支付 · 应付 {{ formatMoney(selectedOrder.cashPayableAmount) }}</p>
+          </div>
+          <button
+            type="button"
+            class="checkout-button"
+            :aria-label="`为订单 ${selectedOrder.orderNo} 发起支付`"
+            :disabled="paymentLoading"
+            @click="submitLocalPayment"
+          >
+            {{ paymentLoading ? '创建中' : '发起支付' }}
+          </button>
+          <p v-if="paymentError" class="checkout-message error">{{ paymentError }}</p>
+          <div v-if="createdPayment" class="checkout-result">
+            <span>支付单创建成功</span>
+            <strong>{{ createdPayment.paymentNo }}</strong>
+            <p>{{ paymentChannelText(createdPayment.channel) }} · {{ paymentStatusText(createdPayment.status) }}</p>
+          </div>
+        </section>
       </div>
     </section>
 
