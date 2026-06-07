@@ -5,6 +5,7 @@ import {
   MerchantFulfillmentOrder,
   MerchantFulfillmentStatusFilter,
   MerchantSettlementStatement,
+  MerchantSettlementStatementStatusFilter,
   SubmissionQueueItem,
   completeMerchantFulfillmentOrder,
   fetchMerchantFulfillmentOrders,
@@ -17,6 +18,7 @@ import {
   submitProductForReview
 } from './api';
 import { summarizeMerchantFulfillmentOrders } from './fulfillmentSummary';
+import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
 const merchantId = 'merchant-001';
@@ -58,6 +60,7 @@ export default defineComponent({
     const pickupCodes = ref<Record<string, string>>({});
     const draftItems = ref<SubmissionQueueItem[]>([]);
     const statements = ref<MerchantSettlementStatement[]>([]);
+    const settlementStatus = ref<MerchantSettlementStatementStatusFilter>('generated');
     const loading = ref(true);
     const actionLoading = ref(false);
     const message = ref<string | null>(null);
@@ -87,6 +90,12 @@ export default defineComponent({
       fulfillmentOrders.value = response.orders;
     }
 
+    async function loadSettlementStatements(status: MerchantSettlementStatementStatusFilter = settlementStatus.value) {
+      settlementStatus.value = status;
+      const response = await fetchMerchantSettlementStatements(merchantId, status);
+      statements.value = response.statements;
+    }
+
     async function loadAll() {
       loading.value = true;
       error.value = null;
@@ -94,7 +103,7 @@ export default defineComponent({
         const [fulfillmentResponse, draftResponse, statementResponse] = await Promise.all([
           fetchMerchantFulfillmentOrders(merchantId, fulfillmentStatus.value, fulfillmentFilters.value),
           fetchMerchantSubmissionQueue('draft'),
-          fetchMerchantSettlementStatements(merchantId, 'generated')
+          fetchMerchantSettlementStatements(merchantId, settlementStatus.value)
         ]);
         fulfillmentOrders.value = fulfillmentResponse.orders;
         draftItems.value = draftResponse.items;
@@ -163,6 +172,17 @@ export default defineComponent({
       pickupCodes.value = { ...pickupCodes.value, [orderNo]: value };
     }
 
+    function exportSettlementCsv() {
+      const csv = buildSettlementCsv(statements.value);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `merchant-settlements-${settlementStatus.value}-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
     onMounted(() => {
       void loadAll();
     });
@@ -191,7 +211,7 @@ export default defineComponent({
             actionLoading.value
           ),
           renderDraftPanel(draftItems.value, draftForm.value, updateDraftField, saveDraft, submitDraft, actionLoading.value),
-          renderSettlementPanel(statements.value)
+          renderSettlementPanel(statements.value, settlementStatus.value, { loadSettlementStatements, exportSettlementCsv }, actionLoading.value)
         ])
       ]);
   }
@@ -331,8 +351,37 @@ function draftTextarea(text: string, value: string, onValue: (value: string) => 
   ]);
 }
 
-function renderSettlementPanel(statements: MerchantSettlementStatement[]) {
+function renderSettlementPanel(
+  statements: MerchantSettlementStatement[],
+  activeStatus: MerchantSettlementStatementStatusFilter,
+  actions: {
+    loadSettlementStatements: (status?: MerchantSettlementStatementStatusFilter) => Promise<void>;
+    exportSettlementCsv: () => void;
+  },
+  actionLoading: boolean
+) {
+  const statusOptions: Array<{ value: MerchantSettlementStatementStatusFilter; label: string }> = [
+    { value: 'generated', label: label(merchantSettlementStatementStatusLabels, 'generated') },
+    { value: 'paid_offline', label: label(merchantSettlementStatementStatusLabels, 'paid_offline') },
+    { value: 'all', label: label(merchantSettlementStatementStatusLabels, 'all') }
+  ];
+
   return panel('商户结算', [
+    h('div', { class: 'panel-action-row' }, [
+      ...statusOptions.map((option) =>
+        h(
+          ElButton,
+          {
+            type: activeStatus === option.value ? 'primary' : 'default',
+            plain: activeStatus !== option.value,
+            loading: actionLoading,
+            onClick: () => actions.loadSettlementStatements(option.value)
+          },
+          () => option.label
+        )
+      ),
+      h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: actions.exportSettlementCsv }, () => '导出结算CSV')
+    ]),
     statements.length === 0
       ? h('p', { class: 'empty-state' }, '暂无结算单')
       : h(
