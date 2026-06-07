@@ -109,7 +109,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -117,9 +117,14 @@ Commit message:
 feat: initiate portal order payments
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Feature branch `codex/portal-payment-initiation` merged through PR #209.
+- Feature merge commit: `91dac54491596942ac2723997652808e63394bbf`.
+- Docs completion branch: `codex/docs-portal-payment-initiation-complete`.
 
 ## Acceptance Boundary
 
