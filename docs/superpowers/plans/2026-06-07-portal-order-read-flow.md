@@ -96,7 +96,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -104,9 +104,14 @@ Commit message:
 feat: add portal order read flow
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Completion:
+- Feature PR: `#207`
+- Feature merge commit: `fdef6c6583dab0d1312cb7c1837ab3c645edd87b`
+- Docs completion branch: `codex/docs-portal-order-read-flow-complete`
 
 ## Acceptance Boundary
 
