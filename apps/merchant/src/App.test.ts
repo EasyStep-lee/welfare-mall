@@ -223,6 +223,77 @@ describe('Merchant Vue workbench', () => {
     expect(wrapper.text()).toContain('东北五常大米福利装 草稿已保存');
   });
 
+  it('refreshes the draft queue after saving so the saved draft can be submitted for review', async () => {
+    let draftLoads = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/products/product-saved-001/review-submissions')) {
+          return response({
+            productId: 'product-saved-001',
+            action: 'submit_review',
+            fromStatus: 'draft',
+            toStatus: 'pending_review'
+          });
+        }
+        if (url.includes('/products/drafts/save')) {
+          return response({
+            productId: 'product-saved-001',
+            draftSnapshotId: 'snapshot-saved-001',
+            payload: JSON.parse(String(init?.body)).payload
+          });
+        }
+        if (url.includes('/products/review-queue')) {
+          draftLoads += 1;
+          return response(
+            draftLoads === 1
+              ? { status: 'draft', items: [] }
+              : {
+                  status: 'draft',
+                  items: [
+                    {
+                      ...draftQueueResponse.items[0],
+                      productId: 'product-saved-001',
+                      code: 'P-RICE-001',
+                      name: '东北五常大米福利装'
+                    }
+                  ]
+                }
+          );
+        }
+        if (url.includes('/orders/merchant/fulfillment')) {
+          return response({ orders: [] });
+        }
+        if (url.includes('/settlements/merchant-statements')) {
+          return response({ statements: [] });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('暂无商品草稿');
+
+    await clickButton(wrapper, '保存草稿');
+    await flushPromises();
+
+    expect(draftLoads).toBe(2);
+    expect(wrapper.text()).toContain('东北五常大米福利装');
+
+    await clickButton(wrapper, '提交审核');
+    await flushPromises();
+
+    const submitCall = findRequest('/products/product-saved-001/review-submissions');
+    expect(submitCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-001' });
+  });
+
   it('saves edited master data fields from the visible Vue draft form', async () => {
     const wrapper = mount(App);
     await flushPromises();
