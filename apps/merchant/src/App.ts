@@ -128,6 +128,8 @@ export default defineComponent({
         const payload = toProductDraftPayload(draftForm.value);
         await saveProductDraft({ payload, actorUserId: merchantActorUserId });
         message.value = `${payload.name} 草稿已保存`;
+        const response = await fetchMerchantSubmissionQueue('draft');
+        draftItems.value = response.items;
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '商品草稿保存失败';
       } finally {
