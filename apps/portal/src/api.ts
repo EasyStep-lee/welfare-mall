@@ -98,6 +98,41 @@ export type PortalCheckoutOrder = {
   cashPayableAmount: number;
 };
 
+export type PortalOrderLine = {
+  id: string;
+  productPoolItemId: string;
+  productId: string;
+  skuId: string | null;
+  displayName: string;
+  displaySkuCode: string | null;
+  displayImageUrl: string;
+  unitPriceAmount: number;
+  quantity: number;
+  lineTotalAmount: number;
+};
+
+export type PortalOrderRecord = PortalCheckoutOrder & {
+  buyerUserId: string;
+  subtotalAmount: number;
+  discountAmount: number;
+  fulfillmentType: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverAddress: string | null;
+  pickupStoreName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lines: PortalOrderLine[];
+};
+
+export type PortalOrderListResponse = {
+  orders: PortalOrderRecord[];
+};
+
+export type PortalOrderDetailResponse = {
+  order: PortalOrderRecord;
+};
+
 export type PortalOrderCheckoutResponse = {
   idempotentReplay: boolean;
   order: PortalCheckoutOrder;
@@ -141,6 +176,33 @@ export async function createPortalOrder(input: PortalOrderCheckoutInput): Promis
   }
 
   return response.json() as Promise<PortalOrderCheckoutResponse>;
+}
+
+export async function fetchPortalOrders(buyerUserId: string): Promise<PortalOrderListResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders`);
+  url.searchParams.set('buyerUserId', buyerUserId);
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Failed to load orders: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalOrderListResponse>;
+}
+
+export async function fetchPortalOrderDetail(input: {
+  orderNo: string;
+  buyerUserId: string;
+}): Promise<PortalOrderDetailResponse> {
+  const url = new URL(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}`);
+  url.searchParams.set('buyerUserId', input.buyerUserId);
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Failed to load order detail: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalOrderDetailResponse>;
 }
 
 function apiBaseUrl() {
