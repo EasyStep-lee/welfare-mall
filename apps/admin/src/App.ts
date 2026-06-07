@@ -8,6 +8,7 @@ import {
   AdminOrder,
   AdminOrderStatusFilter,
   AdminSettlementStatement,
+  AdminSettlementStatementStatusFilter,
   ReviewQueueItem,
   ReviewQueueStatus,
   adminFulfillmentStatusLabels,
@@ -29,6 +30,7 @@ import {
   statusLabels
 } from './api';
 import { summarizeAdminOrders } from './orderSummary';
+import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
 const adminActorUserId = 'admin-user-001';
@@ -66,6 +68,8 @@ export default defineComponent({
     const reservationStatus = ref<AdminInventoryReservationStatusFilter>('all');
     const reservationFilters = ref<ReservationLookupForm>({ merchantId: '', orderNo: '' });
     const stockFilters = ref<StockLookupForm>({ merchantId: '', productId: '', skuId: '' });
+    const settlementStatus = ref<AdminSettlementStatementStatusFilter>('generated');
+    const settlementMerchantId = ref('');
     const orders = ref<AdminOrder[]>([]);
     const reservations = ref<AdminInventoryReservation[]>([]);
     const stocks = ref<AdminInventoryStock[]>([]);
@@ -87,7 +91,7 @@ export default defineComponent({
           fetchAdminOrders(orderStatus.value, orderFulfillmentStatus.value, orderFilters.value.merchantId, orderFilters.value.taskNo),
           fetchAdminInventoryReservations(reservationStatus.value, reservationFilters.value.merchantId, reservationFilters.value.orderNo),
           fetchAdminInventoryStocks(stockFilters.value.merchantId, stockFilters.value.productId, stockFilters.value.skuId),
-          fetchAdminSettlementStatements('generated')
+          fetchAdminSettlementStatements(settlementStatus.value, settlementMerchantId.value)
         ]);
         reviewItems.value = queueResponse.items;
         orders.value = orderResponse.orders;
@@ -154,9 +158,14 @@ export default defineComponent({
       }
     }
 
-    async function reloadGeneratedSettlementStatements() {
-      const response = await fetchAdminSettlementStatements('generated');
+    async function loadSettlementStatements(status: AdminSettlementStatementStatusFilter = settlementStatus.value) {
+      settlementStatus.value = status;
+      const response = await fetchAdminSettlementStatements(status, settlementMerchantId.value);
       statements.value = response.statements;
+    }
+
+    function updateSettlementMerchantId(value: string) {
+      settlementMerchantId.value = value;
     }
 
     async function generateSettlement() {
@@ -165,7 +174,7 @@ export default defineComponent({
       try {
         const response = await generateSettlementStatement({ merchantId: localSettlementMerchantId });
         message.value = response.statement ? `已生成结算单 ${response.statement.statementNo}` : `${localSettlementMerchantId} 暂无可生成结算单`;
-        await reloadGeneratedSettlementStatements();
+        await loadSettlementStatements('generated');
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '结算单生成失败';
       } finally {
@@ -184,12 +193,23 @@ export default defineComponent({
           payoutRemark: localSettlementPayoutRemark
         });
         message.value = `${statement.statementNo} 已确认线下打款`;
-        await reloadGeneratedSettlementStatements();
+        await loadSettlementStatements();
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '线下打款确认失败';
       } finally {
         actionLoading.value = false;
       }
+    }
+
+    function exportSettlementCsv() {
+      const csv = buildSettlementCsv(statements.value);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `admin-settlements-${settlementStatus.value}-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
     }
 
     async function reloadOrderReadModels() {
@@ -346,7 +366,13 @@ export default defineComponent({
           ),
           renderReservationPanel(reservations.value, reservationStatus.value, reservationFilters.value, { loadReservations, updateReservationFilter }, actionLoading.value),
           renderStockPanel(stocks.value, stockFilters.value, { loadStocks, updateStockFilter }, actionLoading.value),
-          renderSettlementPanel(statements.value, generateSettlement, confirmOfflinePayout, actionLoading.value)
+          renderSettlementPanel(
+            statements.value,
+            settlementStatus.value,
+            settlementMerchantId.value,
+            { generateSettlement, confirmOfflinePayout, loadSettlementStatements, updateSettlementMerchantId, exportSettlementCsv },
+            actionLoading.value
+          )
         ])
       ]);
   }
@@ -750,13 +776,48 @@ function textInput(labelText: string, value: string, onValue: (value: string) =>
 
 function renderSettlementPanel(
   statements: AdminSettlementStatement[],
-  generateSettlement: () => Promise<void>,
-  confirmOfflinePayout: (statement: AdminSettlementStatement) => Promise<void>,
+  activeStatus: AdminSettlementStatementStatusFilter,
+  merchantId: string,
+  actions: {
+    generateSettlement: () => Promise<void>;
+    confirmOfflinePayout: (statement: AdminSettlementStatement) => Promise<void>;
+    loadSettlementStatements: (status?: AdminSettlementStatementStatusFilter) => Promise<void>;
+    updateSettlementMerchantId: (value: string) => void;
+    exportSettlementCsv: () => void;
+  },
   actionLoading: boolean
 ) {
+  const statusOptions: Array<{ value: AdminSettlementStatementStatusFilter; label: string }> = [
+    { value: 'generated', label: label(adminSettlementStatementStatusLabels, 'generated') },
+    { value: 'paid_offline', label: label(adminSettlementStatementStatusLabels, 'paid_offline') },
+    { value: 'all', label: label(adminSettlementStatementStatusLabels, 'all') }
+  ];
+
   return panel('结算管理', [
-    h('div', { class: 'panel-action-row' }, [
-      h(ElButton, { type: 'primary', plain: true, loading: actionLoading, onClick: generateSettlement }, () => '生成结算单')
+    h('div', { class: 'filter-stack' }, [
+      h(
+        'div',
+        { class: 'panel-action-row' },
+        statusOptions.map((option) =>
+          h(
+            ElButton,
+            {
+              size: 'small',
+              type: activeStatus === option.value ? 'primary' : 'default',
+              plain: activeStatus !== option.value,
+              loading: actionLoading,
+              onClick: () => actions.loadSettlementStatements(option.value)
+            },
+            () => option.label
+          )
+        )
+      ),
+      h('div', { class: 'lookup-row' }, [
+        textInput('结算商户ID', merchantId, actions.updateSettlementMerchantId),
+        h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: () => actions.loadSettlementStatements() }, () => '查询结算'),
+        h(ElButton, { size: 'small', type: 'primary', plain: true, loading: actionLoading, onClick: actions.exportSettlementCsv }, () => '导出结算CSV'),
+        h(ElButton, { size: 'small', type: 'success', plain: true, loading: actionLoading, onClick: actions.generateSettlement }, () => '生成结算单')
+      ])
     ]),
     statements.length === 0
       ? h('p', { class: 'empty-state' }, '暂无结算单')
@@ -771,7 +832,7 @@ function renderSettlementPanel(
                 h(ElTag, { type: statement.status === 'generated' ? 'warning' : 'success' }, () => label(adminSettlementStatementStatusLabels, statement.status)),
                 h(ElTag, () => `明细 ${statement.itemCount} 条`),
                 statement.status === 'generated'
-                  ? h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => confirmOfflinePayout(statement) }, () => '确认线下打款')
+                  ? h(ElButton, { size: 'small', type: 'success', loading: actionLoading, onClick: () => actions.confirmOfflinePayout(statement) }, () => '确认线下打款')
                   : null
               ]),
               statement.payoutReference ? h('p', { class: 'muted' }, `流水 ${statement.payoutReference}`) : null,
