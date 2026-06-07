@@ -35,7 +35,7 @@ import { summarizeSettlementStatements } from './settlementSummary';
 
 const adminActorUserId = 'admin-user-001';
 const defaultRejectReason = '资料不完整';
-const localSettlementMerchantId = 'merchant-001';
+const localSettlementMerchantId = 'merchant-local-review';
 const localSettlementPaidAt = '2026-06-06T08:00:00.000Z';
 const localSettlementPayoutRemark = '本地线下打款确认';
 const localPaymentPaidAt = '2026-06-06T08:10:00.000Z';

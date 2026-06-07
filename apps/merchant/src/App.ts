@@ -21,13 +21,13 @@ import { summarizeMerchantFulfillmentOrders } from './fulfillmentSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
-const merchantId = 'merchant-001';
-const merchantActorUserId = 'merchant-user-001';
+const merchantId = 'merchant-local-review';
+const merchantActorUserId = 'merchant-user-local';
 const fixedMerchantContext = {
   merchantId,
-  franchiseId: 'franchise-001',
-  categoryId: 'category-rice',
-  brandId: 'brand-rice'
+  franchiseId: 'franchise-local-review',
+  categoryId: 'category-local-review',
+  brandId: 'brand-local-review'
 };
 
 type MerchantDraftForm = {

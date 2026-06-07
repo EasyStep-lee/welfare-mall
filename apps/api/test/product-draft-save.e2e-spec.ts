@@ -180,4 +180,19 @@ describe('Product draft save API contract', () => {
       expect.arrayContaining([expect.objectContaining({ code: 'sku_required', field: 'skus' })])
     );
   });
+
+  it('returns 400 when draft master data references missing business records', async () => {
+    productMasterRepository.saveFromDraft.mockRejectedValue({
+      code: 'P2003',
+      meta: { modelName: 'Product', constraint: ['merchantId'] }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/products/drafts/save')
+      .send({ payload: completeDraft, actorUserId: 'merchant-user-001' })
+      .expect(400);
+
+    expect(productDraftRepository.saveSnapshot).not.toHaveBeenCalled();
+    expect(response.body.message).toContain('Product draft references missing master data: merchantId.');
+  });
 });

@@ -429,7 +429,7 @@ describe('Admin Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
+    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-local-review' });
     expect(wrapper.text()).toContain('已生成结算单 MSS-20260606-002');
     expect(requestUrls().filter((url) => url.includes('/settlements/merchant-statements?status=generated')).length).toBeGreaterThanOrEqual(2);
   });
