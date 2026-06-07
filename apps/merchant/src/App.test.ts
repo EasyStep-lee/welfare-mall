@@ -11,10 +11,10 @@ const draftQueueResponse = {
       name: '东北五常大米福利装',
       status: 'draft',
       saleStatus: 'off_sale',
-      merchant: { id: 'merchant-001', code: 'M-001', name: '哈尔滨优选商贸' },
-      franchise: { id: 'franchise-001', code: 'F-001', name: '黑龙江福利卡中心' },
-      category: { id: 'category-001', code: 'grain', name: '粮油副食' },
-      brand: { id: 'brand-001', code: 'wuchang', name: '五常香米' },
+      merchant: { id: 'merchant-local-review', code: 'M-LOCAL-REVIEW', name: '本地优选商户' },
+      franchise: { id: 'franchise-local-review', code: 'F-LOCAL-REVIEW', name: '本地福利卡中心' },
+      category: { id: 'category-local-review', code: 'local-grain', name: '粮油副食' },
+      brand: { id: 'brand-local-review', code: 'local-wuchang', name: '五常香米' },
       origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
       skuCount: 2,
       imageCount: 3,
@@ -87,7 +87,7 @@ const merchantSettlementStatementsResponse = {
     {
       id: 'statement-001',
       statementNo: 'MSS-20260606-001',
-      merchantId: 'merchant-001',
+      merchantId: 'merchant-local-review',
       status: 'generated',
       itemCount: 2,
       grossAmount: 18980,
@@ -162,11 +162,11 @@ describe('Merchant Vue workbench', () => {
     expect(wrapper.text()).toContain('MSS-20260606-001');
 
     expect(requestUrls()).toContain(
-      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=paid'
+      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-local-review&status=paid'
     );
     expect(requestUrls()).toContain('http://localhost:3000/api/products/review-queue?status=draft');
     expect(requestUrls()).toContain(
-      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=generated'
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-local-review&status=generated'
     );
   });
 
@@ -178,7 +178,7 @@ describe('Merchant Vue workbench', () => {
     await flushPromises();
 
     expect(requestUrls()).toContain(
-      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-001&status=paid_offline'
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-local-review&status=paid_offline'
     );
   });
 
@@ -207,7 +207,7 @@ describe('Merchant Vue workbench', () => {
       expect(firstCreateObjectURLCall).toBeTruthy();
       const csv = await readBlobText(firstCreateObjectURLCall![0]);
       expect(csv).toContain('MSS-20260606-001');
-      expect(csv).toContain('merchant-001');
+      expect(csv).toContain('merchant-local-review');
       expect(clickSpy).toHaveBeenCalledTimes(1);
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:merchant-settlements');
     } finally {
@@ -228,7 +228,7 @@ describe('Merchant Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001' });
+    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-local-review' });
     expect(wrapper.text()).toContain('ORDER-20260603-001 已确认完成');
     expect(wrapper.text()).toContain('暂无待履约订单');
   });
@@ -260,7 +260,7 @@ describe('Merchant Vue workbench', () => {
     await flushPromises();
 
     expect(requestUrls()).toContain(
-      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-001&status=completed&orderNo=ORDER-20260603-COMPLETED&taskNo=FT-ORDER-20260603-COMPLETED-MERCHANT-001-001'
+      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-local-review&status=completed&orderNo=ORDER-20260603-COMPLETED&taskNo=FT-ORDER-20260603-COMPLETED-MERCHANT-001-001'
     );
     expect(wrapper.text()).toContain('ORDER-20260603-COMPLETED');
     expect(findButton(wrapper, '确认完成')).toBeUndefined();
@@ -296,7 +296,7 @@ describe('Merchant Vue workbench', () => {
     await flushPromises();
 
     const completeCall = findRequest('/orders/merchant/fulfillment/ORDER-20260603-PICKUP/complete');
-    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-001', pickupCode: 'PICKUP-8899' });
+    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-local-review', pickupCode: 'PICKUP-8899' });
   });
 
   it('submits a draft product for review from the Vue workbench', async () => {
@@ -311,7 +311,7 @@ describe('Merchant Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-001' });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-local' });
     expect(wrapper.text()).toContain('东北五常大米福利装 已提交审核');
     expect(wrapper.text()).toContain('暂无商品草稿');
   });
@@ -347,15 +347,15 @@ describe('Merchant Vue workbench', () => {
       headers: { 'Content-Type': 'application/json' }
     });
     const requestBody = JSON.parse(String(saveCall?.[1]?.body));
-    expect(requestBody.actorUserId).toBe('merchant-user-001');
+    expect(requestBody.actorUserId).toBe('merchant-user-local');
     expect(requestBody.productId).toBeNull();
     expect(requestBody.payload).toMatchObject({
       code: 'P-RICE-001',
       name: '东北五常大米福利装',
-      merchantId: 'merchant-001',
-      franchiseId: 'franchise-001',
-      categoryId: 'category-rice',
-      brandId: 'brand-rice',
+      merchantId: 'merchant-local-review',
+      franchiseId: 'franchise-local-review',
+      categoryId: 'category-local-review',
+      brandId: 'brand-local-review',
       originCountry: '中国'
     });
     expect(requestBody.payload.skus[0]).toMatchObject({
@@ -434,7 +434,7 @@ describe('Merchant Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-001' });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-local' });
   });
 
   it('saves edited master data fields from the visible Vue draft form', async () => {
