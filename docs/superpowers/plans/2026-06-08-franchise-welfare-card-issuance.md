@@ -104,8 +104,16 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/franchise-welfare-card-issuance`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/franchise-welfare-card-issuance`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Open docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature branch: `codex/franchise-welfare-card-issuance`.
+- Feature commit: `14e59307dd1bdb64d40de50ecb9af10b0aa5d39a`.
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/247`.
+- GitHub checks passed: `docs-check`, `project-foundation-check`.
+- Squash merge commit: `53a3cd82f44e29322475f21295078486194b3856`.
+- Docs-only completion branch: `codex/docs-franchise-welfare-card-issuance-complete`.
