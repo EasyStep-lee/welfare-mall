@@ -422,6 +422,65 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('待支付');
   });
 
+  it('creates a local pickup checkout order from the product detail panel', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        if (url.endsWith('/orders')) {
+          return {
+            ok: true,
+            json: async () => ({
+              idempotentReplay: false,
+              order: {
+                orderNo: 'ORDER-20260608-PORTAL-PICKUP',
+                status: 'pending_payment',
+                totalAmount: 6990,
+                welfareCardPayableAmount: 0,
+                cashPayableAmount: 6990
+              }
+            })
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="选择门店自提履约方式"]').trigger('click');
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+
+    const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
+    expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
+      buyerUserId: 'local-user-001',
+      items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
+      welfareCardPaymentAmount: 0,
+      fulfillment: {
+        type: 'pickup',
+        pickupStoreName: '本地自提点'
+      }
+    });
+    expect(wrapper.text()).toContain('门店自提');
+    expect(wrapper.text()).toContain('本地自提点');
+    expect(wrapper.text()).toContain('ORDER-20260608-PORTAL-PICKUP');
+  });
+
   it('loads local buyer orders alongside the catalog', async () => {
     vi.stubGlobal(
       'fetch',

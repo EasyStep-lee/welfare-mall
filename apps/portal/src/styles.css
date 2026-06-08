@@ -622,6 +622,30 @@ h1 {
   font-size: 13px;
 }
 
+.checkout-mode-control {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode-button {
+  background: #ffffff;
+  border: 1px solid #c9d8d4;
+  border-radius: 8px;
+  color: #40575f;
+  cursor: pointer;
+  min-height: 36px;
+  min-width: 92px;
+  padding: 0 12px;
+}
+
+.mode-button.active {
+  background: #174c43;
+  border-color: #174c43;
+  color: #ffffff;
+}
+
 .checkout-button {
   background: #174c43;
   border: 1px solid #174c43;

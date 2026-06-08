@@ -82,12 +82,17 @@ export type PortalOrderCheckoutInput = {
   productPoolItemId: string;
   quantity: number;
   welfareCardPaymentAmount: number;
-  fulfillment: {
-    type: 'delivery';
-    receiverName: string;
-    receiverPhone: string;
-    receiverAddress: string;
-  };
+  fulfillment:
+    | {
+        type: 'delivery';
+        receiverName: string;
+        receiverPhone: string;
+        receiverAddress: string;
+      }
+    | {
+        type: 'pickup';
+        pickupStoreName: string;
+      };
 };
 
 export type PortalCheckoutOrder = {

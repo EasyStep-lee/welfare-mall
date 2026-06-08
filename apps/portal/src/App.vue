@@ -26,6 +26,10 @@ const localDelivery = {
   receiverPhone: '13800000000',
   receiverAddress: '本地联调地址'
 };
+const localPickup = {
+  pickupStoreName: '本地自提点'
+};
+type CheckoutFulfillmentMode = 'delivery' | 'pickup';
 
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -36,6 +40,7 @@ const selectedDetail = ref<ProductPoolItemDetail | null>(null);
 const checkoutLoading = ref(false);
 const checkoutError = ref<string | null>(null);
 const createdOrder = ref<PortalCheckoutOrder | null>(null);
+const checkoutFulfillmentMode = ref<CheckoutFulfillmentMode>('delivery');
 const ordersLoading = ref(true);
 const ordersError = ref<string | null>(null);
 const orders = ref<PortalOrderRecord[]>([]);
@@ -68,6 +73,11 @@ const originText = computed(() => {
 
   return [origin.country, origin.province, origin.city, origin.description].filter(Boolean).join(' / ');
 });
+const checkoutSummary = computed(() =>
+  checkoutFulfillmentMode.value === 'pickup'
+    ? `数量 1，门店自提 ${localPickup.pickupStoreName}`
+    : `数量 1，配送至 ${localDelivery.receiverAddress}`
+);
 
 onMounted(() => {
   void Promise.all([loadCatalog(), loadLocalOrders()]);
@@ -107,8 +117,7 @@ async function openProductDetail(item: ProductPoolCatalogItem) {
   detailLoading.value = true;
   detailError.value = null;
   selectedDetail.value = null;
-  checkoutError.value = null;
-  createdOrder.value = null;
+  resetCheckout();
 
   try {
     selectedDetail.value = await fetchProductPoolItemDetail(item.id);
@@ -154,9 +163,8 @@ function closeOrderDetail() {
 
 function closeProductDetail() {
   detailError.value = null;
-  checkoutError.value = null;
+  resetCheckout();
   selectedDetail.value = null;
-  createdOrder.value = null;
 }
 
 function formatMoney(amount: number) {
@@ -226,6 +234,32 @@ function hasFulfillmentProgress(order: PortalOrderRecord) {
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
+}
+
+function selectCheckoutFulfillmentMode(mode: CheckoutFulfillmentMode) {
+  checkoutFulfillmentMode.value = mode;
+  checkoutError.value = null;
+  createdOrder.value = null;
+}
+
+function resetCheckout() {
+  checkoutError.value = null;
+  createdOrder.value = null;
+  checkoutFulfillmentMode.value = 'delivery';
+}
+
+function checkoutFulfillmentPayload() {
+  if (checkoutFulfillmentMode.value === 'pickup') {
+    return {
+      type: 'pickup' as const,
+      ...localPickup
+    };
+  }
+
+  return {
+    type: 'delivery' as const,
+    ...localDelivery
+  };
 }
 
 function createPaymentRequestId(orderNo: string) {
@@ -313,10 +347,7 @@ async function submitLocalOrder() {
       productPoolItemId: selectedDetail.value.id,
       quantity: 1,
       welfareCardPaymentAmount: 0,
-      fulfillment: {
-        type: 'delivery',
-        ...localDelivery
-      }
+      fulfillment: checkoutFulfillmentPayload()
     });
     createdOrder.value = result.order;
     await loadLocalOrders();
@@ -847,7 +878,29 @@ async function confirmLatestRefund() {
           <section class="checkout-block">
             <div>
               <h3>本地下单</h3>
-              <p>数量 1，配送至 {{ localDelivery.receiverAddress }}</p>
+              <p>{{ checkoutSummary }}</p>
+            </div>
+            <div class="checkout-mode-control" aria-label="履约方式">
+              <button
+                type="button"
+                class="mode-button"
+                :class="{ active: checkoutFulfillmentMode === 'delivery' }"
+                aria-label="选择配送履约方式"
+                :aria-pressed="checkoutFulfillmentMode === 'delivery'"
+                @click="selectCheckoutFulfillmentMode('delivery')"
+              >
+                配送
+              </button>
+              <button
+                type="button"
+                class="mode-button"
+                :class="{ active: checkoutFulfillmentMode === 'pickup' }"
+                aria-label="选择门店自提履约方式"
+                :aria-pressed="checkoutFulfillmentMode === 'pickup'"
+                @click="selectCheckoutFulfillmentMode('pickup')"
+              >
+                门店自提
+              </button>
             </div>
             <button
               type="button"
