@@ -103,8 +103,16 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/auth-entrypoints-foundation`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/auth-entrypoints-foundation`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Open docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature branch: `codex/auth-entrypoints-foundation`.
+- Feature commit: `8a587a17662dbcefcaea7b1256bab55231a7b4a2`.
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/245`.
+- GitHub checks passed: `docs-check`, `project-foundation-check`.
+- Squash merge commit: `1fbe8db54806dd7695a44ce99c39862a6d5dd92b`.
+- Docs-only completion branch: `codex/docs-auth-entrypoints-foundation-complete`.
