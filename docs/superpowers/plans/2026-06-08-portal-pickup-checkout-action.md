@@ -108,7 +108,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -116,9 +116,14 @@ Commit message:
 feat: let portal create pickup orders
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Feature branch `codex/portal-pickup-checkout-action` committed `0e133bf feat: let portal create pickup orders`.
+- PR #227 `feat: let portal create pickup orders` passed `docs-check` and `project-foundation-check`, then merged into `main` with squash merge commit `2e2adc1261bb604910ce310ff1dcd6cbe31c9b04`.
+- Docs-only branch `codex/docs-portal-pickup-checkout-complete` marks this plan complete.
 
 ## Acceptance Boundary
 
