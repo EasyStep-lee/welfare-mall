@@ -123,6 +123,19 @@ export type PortalOrderRecord = PortalCheckoutOrder & {
   createdAt: string;
   updatedAt: string;
   latestPayment: PortalPayment | null;
+  fulfillmentSummary?: {
+    totalTasks: number;
+    pendingTasks: number;
+    completedTasks: number;
+    taskNos: string[];
+  };
+  fulfillmentTasks?: Array<{
+    taskNo: string;
+    merchantId: string;
+    status: string;
+    createdAt: string;
+    completedAt: string | null;
+  }>;
   lines: PortalOrderLine[];
 };
 

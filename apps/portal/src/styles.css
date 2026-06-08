@@ -535,6 +535,45 @@ h1 {
   padding: 14px;
 }
 
+.fulfillment-block {
+  background: #f7faf8;
+  border: 1px solid #d7e1dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.fulfillment-task-list {
+  display: grid;
+  gap: 8px;
+}
+
+.fulfillment-task {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cfe1d9;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.fulfillment-task strong {
+  overflow-wrap: anywhere;
+}
+
+.fulfillment-task span {
+  background: #edf4f1;
+  border: 1px solid #cfe1d9;
+  border-radius: 999px;
+  color: #174c43;
+  font-size: 13px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
 .persisted-payment {
   background: #ffffff;
 }
@@ -542,17 +581,21 @@ h1 {
 .checkout-block h3,
 .checkout-block p,
 .payment-block h3,
-.payment-block p {
+.payment-block p,
+.fulfillment-block h3,
+.fulfillment-block p {
   margin: 0;
 }
 
 .checkout-block h3,
-.payment-block h3 {
+.payment-block h3,
+.fulfillment-block h3 {
   font-size: 16px;
 }
 
 .checkout-block p,
-.payment-block p {
+.payment-block p,
+.fulfillment-block p {
   color: #5c7177;
   font-size: 13px;
 }
@@ -643,5 +686,10 @@ h1 {
 
   .checkout-button {
     width: 100%;
+  }
+
+  .fulfillment-task {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
