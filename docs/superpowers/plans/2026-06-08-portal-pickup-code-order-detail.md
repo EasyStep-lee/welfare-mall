@@ -97,7 +97,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -105,9 +105,18 @@ Commit message:
 feat: show portal pickup codes
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-pickup-code-order-detail`
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/219`
+- Feature merge commit: `178f33d5122649ff3287ada410a4295d13fd4b47`
+- GitHub checks: `docs-check` and `project-foundation-check` passed.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-pickup-code-complete`
 
 ## Acceptance Boundary
 
