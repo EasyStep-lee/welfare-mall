@@ -115,6 +115,7 @@ export type AdminOrder = {
     taskNo: string;
     merchantId: string;
     status: string;
+    pickupCode: string | null;
     createdAt: string;
     completedAt: string | null;
   }>;

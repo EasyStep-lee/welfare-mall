@@ -28,6 +28,7 @@ export type AdminOrderFulfillmentTask = {
   taskNo: string;
   merchantId: string;
   status: string;
+  pickupCode: string | null;
   createdAt: Date;
   completedAt: Date | null;
 };
@@ -346,6 +347,7 @@ function fulfillmentTaskSummarySelect() {
     taskNo: true,
     merchantId: true,
     status: true,
+    pickupCode: true,
     createdAt: true,
     completedAt: true
   } as const;
@@ -424,6 +426,7 @@ function groupFulfillmentTasksByOrderNo(
       taskNo: task.taskNo,
       merchantId: task.merchantId,
       status: task.status,
+      pickupCode: task.pickupCode,
       createdAt: task.createdAt,
       completedAt: task.completedAt
     });

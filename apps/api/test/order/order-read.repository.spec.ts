@@ -147,6 +147,7 @@ describe('OrderReadRepository', () => {
         taskNo: true,
         merchantId: true,
         status: true,
+        pickupCode: true,
         createdAt: true,
         completedAt: true
       })
@@ -167,6 +168,7 @@ describe('OrderReadRepository', () => {
             taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
             merchantId: 'merchant-001',
             status: 'pending',
+            pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
             createdAt: new Date('2026-06-03T00:15:00.000Z'),
             completedAt: null
           },
@@ -174,6 +176,7 @@ describe('OrderReadRepository', () => {
             taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
             merchantId: 'merchant-002',
             status: 'completed',
+            pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-002-001',
             createdAt: new Date('2026-06-03T00:16:00.000Z'),
             completedAt: new Date('2026-06-03T00:30:00.000Z')
           }
@@ -231,6 +234,7 @@ describe('OrderReadRepository', () => {
             taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
             merchantId: 'merchant-001',
             status: 'pending',
+            pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
             createdAt: new Date('2026-06-03T00:15:00.000Z'),
             completedAt: null
           },
@@ -238,6 +242,7 @@ describe('OrderReadRepository', () => {
             taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
             merchantId: 'merchant-002',
             status: 'completed',
+            pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-002-001',
             createdAt: new Date('2026-06-03T00:16:00.000Z'),
             completedAt: new Date('2026-06-03T00:30:00.000Z')
           }
@@ -473,6 +478,7 @@ describe('OrderReadRepository', () => {
           taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
           merchantId: 'merchant-001',
           status: 'pending',
+          pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
           createdAt: new Date('2026-06-03T00:15:00.000Z'),
           completedAt: null
         },
@@ -480,6 +486,7 @@ describe('OrderReadRepository', () => {
           taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
           merchantId: 'merchant-002',
           status: 'completed',
+          pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-002-001',
           createdAt: new Date('2026-06-03T00:16:00.000Z'),
           completedAt: new Date('2026-06-03T00:30:00.000Z')
         }
@@ -522,6 +529,7 @@ describe('OrderReadRepository', () => {
           taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
           merchantId: 'merchant-001',
           status: 'pending',
+          pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001',
           createdAt: new Date('2026-06-03T00:15:00.000Z'),
           completedAt: null
         }

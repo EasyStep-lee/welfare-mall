@@ -606,6 +606,7 @@ function renderOrderFulfillmentTasks(order: AdminOrder) {
         h('strong', task.taskNo),
         h('span', task.merchantId),
         h('span', label(adminFulfillmentStatusLabels, task.status)),
+        task.pickupCode ? h('span', `取货码 ${task.pickupCode}`) : null,
         task.completedAt ? h('span', `完成 ${task.completedAt}`) : null
       ])
     )

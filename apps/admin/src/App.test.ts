@@ -77,6 +77,7 @@ const adminOrdersResponse = {
           taskNo: 'FT-001',
           merchantId: 'merchant-001',
           status: 'pending',
+          pickupCode: 'WM_PICKUP:FT-001',
           createdAt: '2026-06-03T00:20:00.000Z',
           completedAt: null
         }
@@ -535,6 +536,14 @@ describe('Admin Vue workbench', () => {
     expect(wrapper.text()).toContain('FT-001');
     expect(wrapper.text()).toContain('merchant-001');
     expect(wrapper.text()).toContain('待履约');
+  });
+
+  it('renders pickup codes on admin fulfillment task details', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('取货码');
+    expect(wrapper.text()).toContain('WM_PICKUP:FT-001');
   });
 
   it('filters admin inventory reservations and stock balances from visible controls', async () => {
