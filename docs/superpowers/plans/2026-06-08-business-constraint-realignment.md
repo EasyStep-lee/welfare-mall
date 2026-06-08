@@ -93,8 +93,16 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/business-constraint-realignment`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/business-constraint-realignment`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Open docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature branch: `codex/business-constraint-realignment`.
+- Feature commit: `e7eeb44 chore: enforce business boundary constraints`.
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/243`.
+- GitHub checks passed: `docs-check`, `project-foundation-check`.
+- Squash merge commit: `3520876abb07e822b0cb4ff6e48319095de060a1`.
+- Docs-only completion branch: `codex/docs-business-constraint-realignment-complete`.
