@@ -25,6 +25,7 @@ export type ProductPoolCatalogResponse = {
 export type ProductPoolItemDetail = ProductPoolCatalogItem & {
   productPoolId: string;
   product: {
+    merchantId: string;
     code: string;
     name: string;
     origin: {

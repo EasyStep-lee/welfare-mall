@@ -27,7 +27,7 @@ const localDelivery = {
   receiverAddress: '本地联调地址'
 };
 const localPickup = {
-  pickupStoreName: '本地自提点'
+  pickupStoreName: '商户自提'
 };
 type CheckoutFulfillmentMode = 'delivery' | 'pickup';
 
@@ -75,7 +75,7 @@ const originText = computed(() => {
 });
 const checkoutSummary = computed(() =>
   checkoutFulfillmentMode.value === 'pickup'
-    ? `数量 1，门店自提 ${localPickup.pickupStoreName}`
+    ? `数量 1，商户自提 ${selectedDetail.value?.product.merchantId ?? '待选择商户'}`
     : `数量 1，配送至 ${localDelivery.receiverAddress}`
 );
 
@@ -834,6 +834,10 @@ async function confirmLatestRefund() {
               <dd>{{ selectedDetail.product.code }}</dd>
             </div>
             <div>
+              <dt>履约商户</dt>
+              <dd>{{ selectedDetail.product.merchantId }}</dd>
+            </div>
+            <div>
               <dt>品牌</dt>
               <dd>{{ selectedDetail.product.brand?.name ?? '未设置品牌' }}</dd>
             </div>
@@ -899,11 +903,11 @@ async function confirmLatestRefund() {
                 type="button"
                 class="mode-button"
                 :class="{ active: checkoutFulfillmentMode === 'pickup' }"
-                aria-label="选择门店自提履约方式"
+                aria-label="选择商户自提履约方式"
                 :aria-pressed="checkoutFulfillmentMode === 'pickup'"
                 @click="selectCheckoutFulfillmentMode('pickup')"
               >
-                门店自提
+                商户自提
               </button>
             </div>
             <button

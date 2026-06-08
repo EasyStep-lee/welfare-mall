@@ -36,6 +36,7 @@ const detailResponse = {
   displayPriceAmount: 6990,
   displayImageUrl: 'https://img.example.com/local-review/rice-main.jpg',
   product: {
+    merchantId: 'merchant-local-review',
     code: 'P-LOCAL-REVIEW',
     name: '本地审核五常大米福利装',
     origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
@@ -346,6 +347,8 @@ describe('Portal product pool catalog', () => {
 
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/product-pools/items/pool-item-local-review');
     expect(wrapper.text()).toContain('P-LOCAL-REVIEW');
+    expect(wrapper.text()).toContain('履约商户');
+    expect(wrapper.text()).toContain('merchant-local-review');
     expect(wrapper.text()).toContain('五常香米');
     expect(wrapper.text()).toContain('粮油副食');
     expect(wrapper.text()).toContain('五常核心产区');
@@ -522,7 +525,7 @@ describe('Portal product pool catalog', () => {
 
     await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
     await flushPromises();
-    await wrapper.get('button[aria-label="选择门店自提履约方式"]').trigger('click');
+    await wrapper.get('button[aria-label="选择商户自提履约方式"]').trigger('click');
     await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
     await flushPromises();
 
@@ -533,11 +536,12 @@ describe('Portal product pool catalog', () => {
       welfareCardPaymentAmount: 0,
       fulfillment: {
         type: 'pickup',
-        pickupStoreName: '本地自提点'
+        pickupStoreName: '商户自提'
       }
     });
-    expect(wrapper.text()).toContain('门店自提');
-    expect(wrapper.text()).toContain('本地自提点');
+    expect(wrapper.text()).toContain('商户自提');
+    expect(wrapper.text()).toContain('merchant-local-review');
+    expect(wrapper.text()).not.toContain('门店自提');
     expect(wrapper.text()).toContain('ORDER-20260608-PORTAL-PICKUP');
   });
 
