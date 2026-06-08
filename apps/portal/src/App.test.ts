@@ -253,6 +253,33 @@ const refundProcessingOrderDetailResponse = {
   order: refundProcessingOrder
 };
 
+const refundCallbackResponse = {
+  duplicate: false,
+  refund: {
+    ...refundResponse.refund,
+    status: 'succeeded',
+    providerRefundNo: 'LOCAL-PORTAL-PROVIDER-REF-20260607-PORTAL'
+  },
+  callback: {
+    providerEventId: 'LOCAL-PORTAL-REFUND-ORDER-20260607-PORTAL',
+    status: 'succeeded'
+  }
+};
+
+const refundedOrder = {
+  ...refundProcessingOrder,
+  status: 'refunded',
+  latestRefund: refundCallbackResponse.refund
+};
+
+const refundedOrderListResponse = {
+  orders: [refundedOrder]
+};
+
+const refundedOrderDetailResponse = {
+  order: refundedOrder
+};
+
 describe('Portal product pool catalog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -809,6 +836,78 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('REF-20260607-PORTAL');
     expect(wrapper.text()).toContain('退款中');
     expect(wrapper.find('button[aria-label="为订单 ORDER-20260607-PORTAL 申请退款"]').exists()).toBe(false);
+  });
+
+  it('confirms a processing local refund as succeeded and refreshes order reads', async () => {
+    let ordersRequestCount = 0;
+    let detailRequestCount = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/refunds/callbacks')) {
+          return {
+            ok: true,
+            json: async () => refundCallbackResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          detailRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (detailRequestCount > 1 ? refundedOrderDetailResponse : refundProcessingOrderDetailResponse)
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          ordersRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (ordersRequestCount > 1 ? refundedOrderListResponse : refundProcessingOrderListResponse)
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="确认退款单 REF-20260607-PORTAL 退款成功"]').trigger('click');
+    await flushPromises();
+
+    const callbackCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).endsWith('/orders/refunds/callbacks'));
+    expect(callbackCall).toBeTruthy();
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const callbackBody = JSON.parse(String(callbackCall?.[1]?.body));
+    expect(callbackBody).toMatchObject({
+      providerEventId: 'LOCAL-PORTAL-REFUND-ORDER-20260607-PORTAL',
+      refundNo: 'REF-20260607-PORTAL',
+      providerRefundNo: 'LOCAL-PORTAL-PROVIDER-REF-20260607-PORTAL',
+      status: 'succeeded',
+      payload: { source: 'portal-local-refund' }
+    });
+    expect(callbackBody.succeededAt).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/));
+    expect(ordersRequestCount).toBe(2);
+    expect(detailRequestCount).toBe(2);
+    expect(wrapper.text()).toContain('退款已确认');
+    expect(wrapper.text()).toContain('退款成功');
+    expect(wrapper.text()).toContain('已退款');
+    expect(wrapper.find('button[aria-label="确认退款单 REF-20260607-PORTAL 退款成功"]').exists()).toBe(false);
   });
 
   it('renders fulfillment progress for a paid buyer order detail', async () => {
