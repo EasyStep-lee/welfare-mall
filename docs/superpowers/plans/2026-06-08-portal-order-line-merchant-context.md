@@ -109,7 +109,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -117,9 +117,20 @@ Commit message:
 feat: show portal order merchant context
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-order-line-merchant-context`.
+- Feature commit: `79c17e3 feat: show portal order merchant context`.
+- PR: #239 `feat: show portal order merchant context`.
+- GitHub checks: `docs-check` passed; `project-foundation-check` passed.
+- Merged to `main` with squash commit `ce0f8e2b130e6b6f314bbbb95da1d09979cf4779`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-order-line-merchant-context-complete`.
+- Docs-only scope: this plan file only.
 
 ## Acceptance Boundary
 
