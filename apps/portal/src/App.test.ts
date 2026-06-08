@@ -100,6 +100,30 @@ const orderDetailResponse = {
   order: orderListResponse.orders[0]
 };
 
+const latestPaymentResponse = {
+  id: 'payment-local-latest',
+  paymentNo: 'PAY-20260607-LATEST',
+  requestId: 'portal-payment-ORDER-20260607-PORTAL-latest',
+  orderNo: 'ORDER-20260607-PORTAL',
+  status: 'pending',
+  channel: 'wechat',
+  totalAmount: 6990,
+  welfareCardPayableAmount: 0,
+  cashPayableAmount: 6990,
+  providerPaymentNo: null,
+  paidAt: null,
+  createdAt: '2026-06-07T00:01:00.000Z',
+  updatedAt: '2026-06-07T00:01:00.000Z'
+};
+
+const orderListWithLatestPaymentResponse = {
+  orders: [{ ...orderListResponse.orders[0], latestPayment: latestPaymentResponse }]
+};
+
+const orderDetailWithLatestPaymentResponse = {
+  order: orderListWithLatestPaymentResponse.orders[0]
+};
+
 const paymentResponse = {
   idempotentReplay: false,
   payment: {
@@ -388,5 +412,47 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('PAY-20260607-PORTAL');
     expect(wrapper.text()).toContain('微信支付');
     expect(wrapper.text()).toContain('待支付');
+  });
+
+  it('renders persisted latest payment on order list and detail reads', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailWithLatestPaymentResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderListWithLatestPaymentResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('最近支付');
+    expect(wrapper.text()).toContain('PAY-20260607-LATEST');
+    expect(wrapper.text()).toContain('微信支付 · 待支付');
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('订单详情');
+    expect(wrapper.text()).toContain('最近支付');
+    expect(wrapper.text()).toContain('PAY-20260607-LATEST');
+    expect(wrapper.text()).toContain('微信支付 · 待支付');
   });
 });

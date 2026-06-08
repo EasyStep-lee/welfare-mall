@@ -172,6 +172,10 @@ function paymentChannelText(channel: string) {
   return labels[channel] ?? channel;
 }
 
+function paymentSummaryText(payment: PortalPayment) {
+  return `${paymentChannelText(payment.channel)} · ${paymentStatusText(payment.status)}`;
+}
+
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
@@ -233,6 +237,11 @@ async function submitLocalPayment() {
       cashPayableAmount: selectedOrder.value.cashPayableAmount
     });
     createdPayment.value = result.payment;
+    selectedOrder.value = {
+      ...selectedOrder.value,
+      latestPayment: result.payment
+    };
+    await loadLocalOrders();
   } catch (submitError) {
     paymentError.value = submitError instanceof Error ? submitError.message : '支付单创建失败';
   } finally {
@@ -288,6 +297,9 @@ async function submitLocalPayment() {
           <span>{{ order.orderNo }}</span>
           <strong>{{ formatMoney(order.totalAmount) }}</strong>
           <em>{{ statusText(order.status) }}</em>
+          <small v-if="order.latestPayment" class="order-payment-summary">
+            最近支付 {{ order.latestPayment.paymentNo }} · {{ paymentSummaryText(order.latestPayment) }}
+          </small>
         </button>
       </div>
     </section>
@@ -332,6 +344,17 @@ async function submitLocalPayment() {
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>
         </div>
+        <section v-if="selectedOrder.latestPayment" class="payment-block persisted-payment">
+          <div>
+            <h3>最近支付</h3>
+            <p>{{ paymentSummaryText(selectedOrder.latestPayment) }}</p>
+          </div>
+          <div class="checkout-result">
+            <span>支付单</span>
+            <strong>{{ selectedOrder.latestPayment.paymentNo }}</strong>
+            <p>{{ formatMoney(selectedOrder.latestPayment.cashPayableAmount) }}</p>
+          </div>
+        </section>
         <section v-if="selectedOrder.status === 'pending_payment'" class="payment-block">
           <div>
             <h3>本地支付</h3>

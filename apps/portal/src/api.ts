@@ -122,6 +122,7 @@ export type PortalOrderRecord = PortalCheckoutOrder & {
   pickupStoreName: string | null;
   createdAt: string;
   updatedAt: string;
+  latestPayment: PortalPayment | null;
   lines: PortalOrderLine[];
 };
 
@@ -143,6 +144,7 @@ export type PortalPaymentInput = {
 };
 
 export type PortalPayment = {
+  id?: string;
   paymentNo: string;
   requestId: string;
   orderNo: string;
@@ -152,6 +154,9 @@ export type PortalPayment = {
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
   providerPaymentNo: string | null;
+  paidAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type PortalPaymentResponse = {
