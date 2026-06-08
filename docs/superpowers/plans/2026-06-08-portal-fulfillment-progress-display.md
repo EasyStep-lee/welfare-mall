@@ -141,7 +141,7 @@ Evidence:
 
 ### Task 6: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -149,9 +149,17 @@ Commit message:
 feat: show portal fulfillment progress
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-fulfillment-progress-display`
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/217`
+- Feature merge commit: `c15ebe5b6b6a0e330609680a0e28e88b170e4a46`
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-fulfillment-progress-complete`
 
 ## Acceptance Boundary
 
