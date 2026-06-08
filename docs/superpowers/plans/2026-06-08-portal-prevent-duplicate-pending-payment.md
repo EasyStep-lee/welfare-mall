@@ -92,7 +92,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -100,9 +100,17 @@ Commit message:
 fix: prevent duplicate portal pending payments
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-prevent-duplicate-pending-payment`
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/215`
+- Feature merge commit: `890df6618107a94223dce8c2a52b773ebe975d3c`
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-duplicate-payment-guard-complete`
 
 ## Acceptance Boundary
 
