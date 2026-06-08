@@ -106,7 +106,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -114,9 +114,18 @@ Commit message:
 feat: let portal cancel pending orders
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-order-cancel-action`
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/221`
+- Feature merge commit: `9ca5935356cb6c4a879527d60f73d5a0f659fcd0`
+- GitHub checks: `docs-check` and `project-foundation-check` passed.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-order-cancel-complete`
 
 ## Acceptance Boundary
 
