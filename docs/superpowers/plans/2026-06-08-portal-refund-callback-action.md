@@ -106,7 +106,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -114,9 +114,14 @@ Commit message:
 feat: let portal confirm refund callbacks
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Feature branch `codex/portal-refund-callback-action` committed `2a43d32 feat: let portal confirm refund callbacks`.
+- PR #225 `feat: let portal confirm refund callbacks` passed `docs-check` and `project-foundation-check`, then merged into `main` with squash merge commit `310961e3975cc666884d9860e2f9f1a7dab1c1d5`.
+- Docs-only branch `codex/docs-portal-refund-callback-complete` marks this plan complete.
 
 ## Acceptance Boundary
 
