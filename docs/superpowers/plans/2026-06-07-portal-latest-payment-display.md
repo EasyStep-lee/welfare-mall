@@ -108,7 +108,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -116,9 +116,14 @@ Commit message:
 feat: show portal latest order payments
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Feature branch `codex/portal-latest-payment-display` merged through PR #211.
+- Feature merge commit: `59e483b3114a07a046a924dd5b53ce2d50461e48`.
+- Docs completion branch: `codex/docs-portal-latest-payment-display-complete`.
 
 ## Acceptance Boundary
 
