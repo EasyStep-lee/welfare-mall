@@ -26,6 +26,7 @@ export type ProductPoolItemSummary = Omit<ProductPoolItemSnapshot, 'skuId' | 'di
 export type ProductPoolItemDetail = ProductPoolItemSummary & {
   productPoolId: string;
   product: {
+    merchantId: string;
     code: string;
     name: string;
     origin: {
@@ -249,6 +250,7 @@ export class ProductPoolRepository {
         displayImageUrl: true,
         product: {
           select: {
+            merchantId: true,
             code: true,
             name: true,
             originCountry: true,
@@ -301,6 +303,7 @@ export class ProductPoolRepository {
       displayPriceAmount: item.displayPriceAmount,
       displayImageUrl: item.displayImageUrl,
       product: {
+        merchantId: item.product.merchantId,
         code: item.product.code,
         name: item.product.name,
         origin: {

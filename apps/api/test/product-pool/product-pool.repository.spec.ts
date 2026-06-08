@@ -23,6 +23,7 @@ const productPoolItemDetail = {
   displayPriceAmount: 6990,
   displayImageUrl: 'https://cdn.example.com/products/rice-main.jpg',
   product: {
+    merchantId: 'merchant-local-review',
     code: 'P-RICE-001',
     name: '东北五常大米福利装',
     originCountry: '中国',
@@ -283,6 +284,7 @@ describe('ProductPoolRepository', () => {
         displayName: '东北五常大米福利装',
         product: expect.objectContaining({
           code: 'P-RICE-001',
+          merchantId: 'merchant-local-review',
           origin: { country: '中国', province: '黑龙江', city: '哈尔滨', description: '五常核心产区' },
           parameters: [expect.objectContaining({ name: '净含量', value: '5kg' })],
           qualifications: [expect.objectContaining({ title: '产地证明' })],
