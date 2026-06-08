@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import {
   cancelPortalOrder,
   confirmPortalPayment,
+  confirmPortalRefund,
   createPortalOrder,
   createPortalPayment,
   createPortalRefund,
@@ -54,6 +55,9 @@ const refundLoading = ref(false);
 const refundError = ref<string | null>(null);
 const refundMessage = ref<string | null>(null);
 const createdRefund = ref<PortalRefund | null>(null);
+const refundConfirmLoading = ref(false);
+const refundConfirmError = ref<string | null>(null);
+const refundConfirmMessage = ref<string | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -234,9 +238,19 @@ function createRefundRequestId(orderNo: string) {
   return `portal-refund-${safeOrderNo}-${Date.now()}`;
 }
 
+function createRefundCallbackEventId(orderNo: string) {
+  const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `LOCAL-PORTAL-REFUND-${safeOrderNo}`;
+}
+
 function createPaymentCallbackEventId(orderNo: string) {
   const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `LOCAL-PORTAL-PAYMENT-${safeOrderNo}`;
+}
+
+function createProviderRefundNo(refundNo: string) {
+  const safeRefundNo = refundNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `LOCAL-PORTAL-PROVIDER-${safeRefundNo}`;
 }
 
 function createProviderPaymentNo(paymentNo: string) {
@@ -260,6 +274,10 @@ function canRequestRefund(order: PortalOrderRecord) {
   return order.status === 'paid' && order.latestPayment?.status === 'paid' && !order.latestRefund;
 }
 
+function canConfirmLatestRefund(order: PortalOrderRecord) {
+  return order.status === 'refund_processing' && order.latestRefund?.status === 'processing';
+}
+
 function resetPaymentConfirmation() {
   paymentConfirmError.value = null;
   confirmedPaymentMessage.value = null;
@@ -274,6 +292,8 @@ function resetRefundRequest() {
   refundError.value = null;
   refundMessage.value = null;
   createdRefund.value = null;
+  refundConfirmError.value = null;
+  refundConfirmMessage.value = null;
 }
 
 async function submitLocalOrder() {
@@ -448,6 +468,48 @@ async function requestSelectedOrderRefund() {
     refundError.value = requestError instanceof Error ? requestError.message : '退款申请失败';
   } finally {
     refundLoading.value = false;
+  }
+}
+
+async function confirmLatestRefund() {
+  if (!selectedOrder.value?.latestRefund) {
+    refundConfirmError.value = '请先选择退款单';
+    return;
+  }
+
+  if (!canConfirmLatestRefund(selectedOrder.value)) {
+    refundConfirmError.value = '当前退款不可确认';
+    return;
+  }
+
+  const orderNo = selectedOrder.value.orderNo;
+  const refundNo = selectedOrder.value.latestRefund.refundNo;
+
+  refundConfirmLoading.value = true;
+  refundConfirmError.value = null;
+  refundConfirmMessage.value = null;
+
+  try {
+    await confirmPortalRefund({
+      providerEventId: createRefundCallbackEventId(orderNo),
+      refundNo,
+      providerRefundNo: createProviderRefundNo(refundNo),
+      status: 'succeeded',
+      succeededAt: new Date().toISOString(),
+      payload: { source: 'portal-local-refund' }
+    });
+
+    await loadLocalOrders();
+    const response = await fetchPortalOrderDetail({
+      orderNo,
+      buyerUserId: localBuyerUserId
+    });
+    selectedOrder.value = response.order;
+    refundConfirmMessage.value = '退款已确认';
+  } catch (confirmError) {
+    refundConfirmError.value = confirmError instanceof Error ? confirmError.message : '退款确认失败';
+  } finally {
+    refundConfirmLoading.value = false;
   }
 }
 </script>
@@ -641,6 +703,18 @@ async function requestSelectedOrderRefund() {
             <strong>{{ (selectedOrder.latestRefund ?? createdRefund)?.refundNo }}</strong>
             <p>{{ refundStatusText((selectedOrder.latestRefund ?? createdRefund)?.status ?? '') }}</p>
           </div>
+          <button
+            v-if="selectedOrder.latestRefund && canConfirmLatestRefund(selectedOrder)"
+            type="button"
+            class="checkout-button"
+            :aria-label="`确认退款单 ${selectedOrder.latestRefund.refundNo} 退款成功`"
+            :disabled="refundConfirmLoading"
+            @click="confirmLatestRefund"
+          >
+            {{ refundConfirmLoading ? '确认中' : '确认退款成功' }}
+          </button>
+          <p v-if="refundConfirmError" class="checkout-message error">{{ refundConfirmError }}</p>
+          <p v-if="refundConfirmMessage" class="checkout-message success">{{ refundConfirmMessage }}</p>
         </section>
         <section v-if="canCreateLocalPayment(selectedOrder)" class="payment-block">
           <div>

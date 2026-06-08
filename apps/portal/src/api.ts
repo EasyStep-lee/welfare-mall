@@ -214,6 +214,28 @@ export type PortalRefundResponse = {
   refund: PortalRefund;
 };
 
+export type PortalRefundCallbackInput = {
+  providerEventId: string;
+  refundNo: string;
+  providerRefundNo: string;
+  status: 'succeeded';
+  succeededAt: string;
+  payload: Record<string, unknown>;
+};
+
+export type PortalRefundCallbackResponse = {
+  duplicate: boolean;
+  refund: {
+    refundNo: string;
+    status: string;
+    providerRefundNo: string | null;
+  };
+  callback: {
+    providerEventId: string;
+    status: string;
+  };
+};
+
 export type PortalPaymentCallbackInput = {
   providerEventId: string;
   paymentNo: string;
@@ -365,6 +387,20 @@ export async function confirmPortalPayment(input: PortalPaymentCallbackInput): P
   }
 
   return response.json() as Promise<PortalPaymentCallbackResponse>;
+}
+
+export async function confirmPortalRefund(input: PortalRefundCallbackInput): Promise<PortalRefundCallbackResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/refunds/callbacks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to confirm refund: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalRefundCallbackResponse>;
 }
 
 function apiBaseUrl() {
