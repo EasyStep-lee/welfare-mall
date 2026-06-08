@@ -83,6 +83,7 @@ const orderListResponse = {
           orderId: 'order-local-001',
           productPoolItemId: 'pool-item-local-review',
           productId: 'product-local-review',
+          merchantId: 'merchant-local-review',
           skuId: 'sku-local-review-5kg',
           displayName: '本地审核五常大米福利装',
           displaySkuCode: 'SKU-LOCAL-REVIEW-5KG',
@@ -572,6 +573,8 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
     expect(wrapper.text()).toContain('待支付');
     expect(wrapper.text()).toContain('¥69.90');
+    expect(wrapper.text()).toContain('履约商户');
+    expect(wrapper.text()).toContain('merchant-local-review');
   });
 
   it('opens a local buyer order detail from the order list', async () => {
@@ -614,6 +617,8 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('SKU-LOCAL-REVIEW-5KG');
     expect(wrapper.text()).toContain('本地用户');
     expect(wrapper.text()).toContain('本地联调地址');
+    expect(wrapper.text()).toContain('履约商户');
+    expect(wrapper.text()).toContain('merchant-local-review');
     expect(wrapper.text()).toContain('¥69.90');
   });
 

@@ -45,6 +45,22 @@ const pickupOrderRecord = {
   pickupStoreName: '浦东直营网点'
 };
 
+const orderRecordWithMerchantLines = {
+  ...orderRecord,
+  lines: orderRecord.lines.map((line) => ({
+    ...line,
+    merchantId: 'merchant-001'
+  }))
+};
+
+const pickupOrderRecordWithMerchantLines = {
+  ...pickupOrderRecord,
+  lines: pickupOrderRecord.lines.map((line) => ({
+    ...line,
+    merchantId: 'merchant-001'
+  }))
+};
+
 const paymentRecord = {
   id: 'payment-001',
   paymentNo: 'PAY-20260603-001',
@@ -111,6 +127,9 @@ function createPrismaMock() {
     orderRefund: {
       findMany: jest.fn().mockResolvedValue([refundRecord])
     },
+    product: {
+      findMany: jest.fn().mockResolvedValue([{ id: 'product-001', merchantId: 'merchant-001' }])
+    },
     fulfillmentTask: {
       findMany: jest.fn().mockResolvedValue([pendingFulfillmentTaskRecord, completedFulfillmentTaskRecord])
     }
@@ -139,6 +158,10 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
+    expect(prisma.product.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['product-001'] } },
+      select: { id: true, merchantId: true }
+    });
     expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
       where: { orderNo: { in: ['ORDER-20260603-001'] } },
       orderBy: { createdAt: 'asc' },
@@ -154,7 +177,7 @@ describe('OrderReadRepository', () => {
     });
     expect(result).toEqual([
       {
-        ...orderRecord,
+        ...orderRecordWithMerchantLines,
         latestPayment: paymentRecord,
         latestRefund: refundRecord,
         fulfillmentSummary: {
@@ -220,7 +243,7 @@ describe('OrderReadRepository', () => {
     });
     expect(result).toEqual([
       {
-        ...orderRecord,
+        ...orderRecordWithMerchantLines,
         latestPayment: paymentRecord,
         latestRefund: refundRecord,
         fulfillmentSummary: {
@@ -464,7 +487,7 @@ describe('OrderReadRepository', () => {
       })
     });
     expect(result).toEqual({
-      ...orderRecord,
+      ...orderRecordWithMerchantLines,
       latestPayment: paymentRecord,
       latestRefund: refundRecord,
       fulfillmentSummary: {
@@ -515,7 +538,7 @@ describe('OrderReadRepository', () => {
       })
     });
     expect(result).toEqual({
-      ...pickupOrderRecord,
+      ...pickupOrderRecordWithMerchantLines,
       latestPayment: paymentRecord,
       latestRefund: refundRecord,
       fulfillmentSummary: {

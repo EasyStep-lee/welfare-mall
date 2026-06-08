@@ -108,6 +108,7 @@ export type PortalOrderLine = {
   id: string;
   productPoolItemId: string;
   productId: string;
+  merchantId: string | null;
   skuId: string | null;
   displayName: string;
   displaySkuCode: string | null;

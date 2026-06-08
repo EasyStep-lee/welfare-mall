@@ -9,6 +9,7 @@ export type OrderCheckoutLineRecord = {
   orderId: string;
   productPoolItemId: string;
   productId: string;
+  merchantId?: string | null;
   skuId: string | null;
   displayName: string;
   displaySkuCode: string | null;
