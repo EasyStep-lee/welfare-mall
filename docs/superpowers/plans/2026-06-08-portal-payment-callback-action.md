@@ -114,7 +114,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -122,9 +122,14 @@ Commit message:
 feat: confirm portal local payments
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Feature branch `codex/portal-payment-callback-action` merged through PR #213.
+- Feature merge commit: `f8f0eddab4cce6527435a5394bd63ab2524e6584`.
+- Docs completion branch: `codex/docs-portal-payment-callback-action-complete`.
 
 ## Acceptance Boundary
 
