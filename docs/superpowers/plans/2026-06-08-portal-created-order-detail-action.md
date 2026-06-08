@@ -100,7 +100,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -108,9 +108,17 @@ Commit message:
 feat: let portal open created order details
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch `codex/portal-created-order-detail-action` committed `621241c feat: let portal open created order details`.
+- PR #229 `feat: let portal open created order details` passed `docs-check` and `project-foundation-check`.
+- PR #229 was squash-merged into `main` as `7f37cad feat: let portal open created order details`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch `codex/docs-portal-created-order-detail-complete` marks this GitHub integration section complete.
 
 ## Acceptance Boundary
 
