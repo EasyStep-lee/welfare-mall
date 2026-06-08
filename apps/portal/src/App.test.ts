@@ -224,6 +224,35 @@ const paymentCallbackResponse = {
   }
 };
 
+const refundResponse = {
+  idempotentReplay: false,
+  refund: {
+    refundNo: 'REF-20260607-PORTAL',
+    requestId: 'portal-refund-ORDER-20260607-PORTAL-001',
+    paymentNo: 'PAY-20260607-LATEST',
+    orderNo: 'ORDER-20260607-PORTAL',
+    channel: 'wechat',
+    status: 'processing',
+    refundAmount: 6990,
+    reason: 'after_sale',
+    providerRefundNo: null
+  }
+};
+
+const refundProcessingOrder = {
+  ...paidOrderListResponse.orders[0],
+  status: 'refund_processing',
+  latestRefund: refundResponse.refund
+};
+
+const refundProcessingOrderListResponse = {
+  orders: [refundProcessingOrder]
+};
+
+const refundProcessingOrderDetailResponse = {
+  order: refundProcessingOrder
+};
+
 describe('Portal product pool catalog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -709,6 +738,77 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('PAY-20260607-LATEST');
     expect(wrapper.text()).toContain('微信支付 · 已支付');
     expect(wrapper.text()).toContain('已支付');
+  });
+
+  it('creates a full refund request from a paid buyer order detail', async () => {
+    let ordersRequestCount = 0;
+    let detailRequestCount = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/orders/refunds')) {
+          return {
+            ok: true,
+            json: async () => refundResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          detailRequestCount += 1;
+          return {
+            ok: true,
+            json: async () =>
+              detailRequestCount > 1 ? refundProcessingOrderDetailResponse : paidOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          ordersRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (ordersRequestCount > 1 ? refundProcessingOrderListResponse : paidOrderListResponse)
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 申请退款"]').trigger('click');
+    await flushPromises();
+
+    const refundCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders/refunds'));
+    expect(refundCall).toBeTruthy();
+    expect(refundCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const refundBody = JSON.parse(String(refundCall?.[1]?.body));
+    expect(refundBody).toMatchObject({
+      paymentNo: 'PAY-20260607-LATEST',
+      orderNo: 'ORDER-20260607-PORTAL',
+      channel: 'wechat',
+      refundAmount: 6990,
+      reason: 'after_sale'
+    });
+    expect(refundBody.requestId).toContain('portal-refund-ORDER-20260607-PORTAL-');
+    expect(ordersRequestCount).toBe(2);
+    expect(detailRequestCount).toBe(2);
+    expect(wrapper.text()).toContain('退款申请已提交');
+    expect(wrapper.text()).toContain('REF-20260607-PORTAL');
+    expect(wrapper.text()).toContain('退款中');
+    expect(wrapper.find('button[aria-label="为订单 ORDER-20260607-PORTAL 申请退款"]').exists()).toBe(false);
   });
 
   it('renders fulfillment progress for a paid buyer order detail', async () => {
