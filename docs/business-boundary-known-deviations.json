@@ -1,0 +1,186 @@
+{
+  "updatedAt": "2026-06-08",
+  "purpose": "Current known deviations from the enforced business boundary. New occurrences must fail verify:business-boundary unless this list is intentionally updated with a reason and nextAction.",
+  "deviations": [
+    {
+      "file": "apps/admin/src/App.ts",
+      "reason": "Admin Vue still uses fixed local admin actor and local merchant filters before formal Admin and department login screens are implemented.",
+      "nextAction": "Replace fixed adminActorUserId and local merchant IDs with JWT user and scoped identity in the auth entrypoints slice."
+    },
+    {
+      "file": "apps/admin/src/App.test.ts",
+      "reason": "Admin tests still assert fixed local admin and merchant IDs for current local-only flows.",
+      "nextAction": "Rewrite tests around logged-in Admin identity and business scopes when Admin login is introduced."
+    },
+    {
+      "file": "apps/admin/src/api.ts",
+      "reason": "Admin client still carries refund/payment channel strings and local token fallback before full business identity enforcement.",
+      "nextAction": "Constrain payment channels to wechat/alipay and use authenticated Admin identity in the payment realignment and auth slices."
+    },
+    {
+      "file": "apps/api/src/auth/auth.service.ts",
+      "reason": "API auth includes local development users for current Docker verification.",
+      "nextAction": "Move from local fixed identities to seeded role-based Admin, Franchise, Merchant, and User accounts."
+    },
+    {
+      "file": "apps/api/src/dev/seed-local-review-product.ts",
+      "reason": "Local seed still creates fixed review merchant/franchise/product IDs for Docker smoke flows.",
+      "nextAction": "Keep only deterministic seed data while wiring formal login and role contexts to those seeded subjects."
+    },
+    {
+      "file": "apps/api/src/order/order-cancel.repository.ts",
+      "reason": "Order compatibility reads still expose pickupStoreName.",
+      "nextAction": "Add merchant address snapshots and keep pickupStoreName read-only compatibility."
+    },
+    {
+      "file": "apps/api/src/order/order-checkout.repository.ts",
+      "reason": "Checkout persistence still stores pickupStoreName and derives merchant without persisted sales-franchise order facts.",
+      "nextAction": "Persist salesFranchiseId, fulfillmentMerchantId, and merchant address snapshots during checkout."
+    },
+    {
+      "file": "apps/api/src/order/order-checkout.service.ts",
+      "reason": "Checkout validation still requires pickupStoreName for pickup compatibility.",
+      "nextAction": "Validate pickup against merchant address instead of pickupStoreName."
+    },
+    {
+      "file": "apps/api/src/order/order-fulfillment.repository.ts",
+      "reason": "Fulfillment tasks still copy pickupStoreName compatibility data.",
+      "nextAction": "Use merchant address snapshots for fulfillment display and pickup verification."
+    },
+    {
+      "file": "apps/api/src/order/order-payment-status.ts",
+      "reason": "Payment channel enum still contains cash, which is not allowed for user payment under the new boundary.",
+      "nextAction": "Remove cash from new payment paths and keep only wechat/alipay for online cash payment."
+    },
+    {
+      "file": "apps/api/src/order/order-payment.repository.ts",
+      "reason": "Payment persistence still stores one channel for the payment rather than explicit welfare-card plus online-cash components.",
+      "nextAction": "Introduce combination payment components tied to welfare-card ledger and wechat/alipay cash channel."
+    },
+    {
+      "file": "apps/api/src/order/order-payment.service.ts",
+      "reason": "Payment service currently validates split amounts but does not validate card account, issuer franchise, or online cash channel components.",
+      "nextAction": "Validate user welfare-card balance and restrict cash component to wechat/alipay."
+    },
+    {
+      "file": "apps/api/src/order/order-read.repository.ts",
+      "reason": "Order reads still expose pickupStoreName and do not return sales franchise plus merchant address facts.",
+      "nextAction": "Return sales franchise, fulfillment merchant, and merchant address snapshots in buyer/Admin reads."
+    },
+    {
+      "file": "apps/api/src/order/order-refund-status.ts",
+      "reason": "Refund channel enum still includes cash from the early payment model.",
+      "nextAction": "Refund by original payment component: welfare-card ledger reversal plus wechat/alipay refund."
+    },
+    {
+      "file": "apps/api/src/order/order-refund.service.ts",
+      "reason": "Refund service accepts channel strings before original-route welfare-card and online-cash refund is implemented.",
+      "nextAction": "Drive refunds from persisted payment components instead of caller-supplied cash channel values."
+    },
+    {
+      "file": "apps/api/src/order/order.controller.ts",
+      "reason": "Order API still accepts pickupStoreName and legacy channel values for current local flows.",
+      "nextAction": "Move pickup to merchant address and payment to combination components."
+    },
+    {
+      "file": "apps/merchant/src/App.ts",
+      "reason": "Merchant Vue still uses fixed local merchant and actor IDs before Merchant login.",
+      "nextAction": "Read merchantId, franchiseId, and actor user from JWT identity."
+    },
+    {
+      "file": "apps/merchant/src/App.test.ts",
+      "reason": "Merchant tests still assert fixed local merchant IDs and pickupStoreName compatibility.",
+      "nextAction": "Rewrite tests around logged-in Merchant identity and merchant address display."
+    },
+    {
+      "file": "apps/merchant/src/api.ts",
+      "reason": "Merchant client still accepts explicit merchant IDs and uses localStorage token fallback.",
+      "nextAction": "Use JWT identity as the source of merchant scope and remove explicit conflicting merchant IDs from commands."
+    },
+    {
+      "file": "apps/portal/src/App.vue",
+      "reason": "Portal still uses fixed buyer ID, local pickup payload, and merchant wording before buyer login and merchant address snapshots are implemented.",
+      "nextAction": "Use logged-in buyer identity, welfare-card account selection, sales franchise display, fulfillment merchant, and merchant address."
+    },
+    {
+      "file": "apps/portal/src/App.test.ts",
+      "reason": "Portal tests still assert fixed buyer ID and compatibility pickup data.",
+      "nextAction": "Rewrite tests for authenticated buyer, franchise sales party, merchant address, and combination payment."
+    },
+    {
+      "file": "apps/portal/src/api.ts",
+      "reason": "Portal API client still sends welfareCardPaymentAmount as a numeric field and carries pickupStoreName compatibility.",
+      "nextAction": "Send selected welfare-card account plus online cash channel component."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/detail/index.js",
+      "reason": "Mini program detail flow still sends numeric welfareCardPaymentAmount and fixed local buyer data.",
+      "nextAction": "Use logged-in user identity and selected welfare-card account."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/detail/index.test.mjs",
+      "reason": "Mini program detail tests still cover the numeric welfare-card amount shortcut.",
+      "nextAction": "Test selected card account, issuer franchise validation, and online cash remainder."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/detail/index.wxml",
+      "reason": "Mini program detail page still labels welfare-card amount as a raw input.",
+      "nextAction": "Replace with card selection and available balance display."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/order-detail/index.js",
+      "reason": "Mini program order detail still formats compatibility pickup and cash-channel facts.",
+      "nextAction": "Show sales franchise, fulfillment merchant, merchant address, and payment components."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/order-detail/index.test.mjs",
+      "reason": "Mini program order detail tests still include pickupStoreName and raw cash-channel displays.",
+      "nextAction": "Rewrite around merchant address and combination payment display."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/order-detail/index.wxml",
+      "reason": "Mini program order detail still displays welfare-card and cash amounts without card-account context.",
+      "nextAction": "Show welfare-card account component and wechat/alipay online cash component."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/orders/index.js",
+      "reason": "Mini program order list still formats compatibility payment and pickup summaries.",
+      "nextAction": "Show sales franchise and normalized payment component summary."
+    },
+    {
+      "file": "apps/user-miniprogram/pages/orders/index.test.mjs",
+      "reason": "Mini program order-list tests still use fixed local buyer and old payment text.",
+      "nextAction": "Rewrite around authenticated buyer and combination payment display."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/api.test.mjs",
+      "reason": "Mini program API tests still assert legacy checkout/payment payload shapes.",
+      "nextAction": "Update helpers after card-account and online-cash component API contracts are introduced."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/checkout.test.mjs",
+      "reason": "Checkout utility tests still assert numeric welfareCardPaymentAmount.",
+      "nextAction": "Test welfare-card account selection and issuer-franchise validation inputs."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/order.js",
+      "reason": "Order utility still formats pickupStoreName and cash text.",
+      "nextAction": "Format sales franchise, fulfillment merchant, merchant address, and payment components."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/order.test.mjs",
+      "reason": "Order utility tests still use pickupStoreName and old cash payment text.",
+      "nextAction": "Rewrite around merchant address and combination payment components."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/payment.js",
+      "reason": "Payment utility still maps cash as a user payment channel.",
+      "nextAction": "Remove cash and format only wechat/alipay online cash component plus welfare-card component."
+    },
+    {
+      "file": "apps/user-miniprogram/utils/refund.js",
+      "reason": "Refund utility still maps cash as a refund channel.",
+      "nextAction": "Refund welfare-card and online-cash components by original route."
+    }
+  ]
+}
