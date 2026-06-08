@@ -283,8 +283,61 @@ const refundedOrderDetailResponse = {
 };
 
 describe('Portal product pool catalog', () => {
+  beforeEach(() => {
+    installLocalStorageMock();
+    localStorage.setItem('welfareMallPortalAccessToken', 'buyer-token-local');
+    localStorage.setItem(
+      'welfareMallPortalUser',
+      JSON.stringify({ username: 'buyer-local', displayName: '本地用户', subjectType: 'buyer', subjectId: 'user-001' })
+    );
+  });
+
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('requires buyer login before loading the Portal catalog', async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/auth/login')) {
+          return response({
+            tokenType: 'Bearer',
+            accessToken: 'buyer-token-001',
+            expiresIn: 3600,
+            user: { username: 'buyer-local', displayName: '本地用户', subjectType: 'buyer', subjectId: 'user-001' }
+          });
+        }
+        if (url.includes('/product-pools/catalog')) {
+          return response(catalogResponse);
+        }
+        if (url.includes('/orders?buyerUserId=local-user-001')) {
+          return response(orderListResponse);
+        }
+
+        return response({});
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('用户登录');
+    expect(wrapper.text()).not.toContain('企业福利商品目录');
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/product-pools/catalog'));
+
+    await wrapper.get('input[aria-label="账号"]').setValue('buyer-local');
+    await wrapper.get('input[aria-label="密码"]').setValue('local-dev-password');
+    await wrapper.get('button[aria-label="登录用户端"]').trigger('click');
+    await flushPromises();
+
+    expect(localStorage.getItem('welfareMallPortalAccessToken')).toBe('buyer-token-001');
+    expect(wrapper.text()).toContain('本地用户');
+    expect(wrapper.text()).toContain('企业福利商品目录');
   });
 
   it('loads and renders product pool item snapshots', async () => {
@@ -1117,3 +1170,20 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('WM_PICKUP:FT-ORDER-PORTAL-PICKUP-001');
   });
 });
+
+function response(body: unknown) {
+  return {
+    ok: true,
+    json: async () => body
+  } as Response;
+}
+
+function installLocalStorageMock() {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => store.set(key, String(value))),
+    removeItem: vi.fn((key: string) => store.delete(key)),
+    clear: vi.fn(() => store.clear())
+  });
+}

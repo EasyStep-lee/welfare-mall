@@ -9,6 +9,7 @@ import {
   AdminOrderStatusFilter,
   AdminSettlementStatement,
   AdminSettlementStatementStatusFilter,
+  AuthenticatedUser,
   ReviewQueueItem,
   ReviewQueueStatus,
   adminFulfillmentStatusLabels,
@@ -24,6 +25,7 @@ import {
   fetchAdminSettlementStatements,
   fetchReviewQueue,
   generateSettlementStatement,
+  loginAdmin,
   processOrderPaymentCallback,
   processOrderRefundCallback,
   publishProductToPool,
@@ -57,9 +59,18 @@ type StockLookupForm = {
   skuId: string;
 };
 
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
 export default defineComponent({
   name: 'AdminApp',
   setup() {
+    const authUser = ref<AuthenticatedUser | null>(readStoredUser('welfareMallAdminUser'));
+    const loginForm = ref<LoginForm>({ username: 'admin-local', password: 'local-dev-password' });
+    const loginLoading = ref(false);
+    const loginError = ref<string | null>(null);
     const reviewItems = ref<ReviewQueueItem[]>([]);
     const reviewStatus = ref<ReviewQueueStatus>('pending_review');
     const orderStatus = ref<AdminOrderStatusFilter>('all');
@@ -74,7 +85,7 @@ export default defineComponent({
     const reservations = ref<AdminInventoryReservation[]>([]);
     const stocks = ref<AdminInventoryStock[]>([]);
     const statements = ref<AdminSettlementStatement[]>([]);
-    const loading = ref(true);
+    const loading = ref(Boolean(authUser.value));
     const actionLoading = ref(false);
     const message = ref<string | null>(null);
     const error = ref<string | null>(null);
@@ -103,6 +114,25 @@ export default defineComponent({
       } finally {
         loading.value = false;
       }
+    }
+
+    async function submitLogin() {
+      loginLoading.value = true;
+      loginError.value = null;
+      try {
+        const result = await loginAdmin(loginForm.value);
+        storeAuthState('welfareMallAdminAccessToken', 'welfareMallAdminUser', result.accessToken, result.user);
+        authUser.value = result.user;
+        await loadAll();
+      } catch (submitError) {
+        loginError.value = submitError instanceof Error ? submitError.message : '平台登录失败';
+      } finally {
+        loginLoading.value = false;
+      }
+    }
+
+    function updateLoginField(field: keyof LoginForm, value: string) {
+      loginForm.value = { ...loginForm.value, [field]: value };
     }
 
     async function reloadReviewQueue(status: ReviewQueueStatus = reviewStatus.value) {
@@ -332,13 +362,23 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      void loadAll();
+      if (authUser.value) {
+        void loadAll();
+        return;
+      }
+      loading.value = false;
     });
 
     return () =>
-      h('main', { class: 'app-shell' }, [
+      !authUser.value
+        ? renderLoginShell('平台登录', '登录平台工作台', loginForm.value, updateLoginField, submitLogin, loginLoading.value, loginError.value)
+        : h('main', { class: 'app-shell' }, [
         h('header', { class: 'app-header' }, [
-          h('div', [h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'), h('h1', '平台管理工作台')]),
+          h('div', [
+            h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'),
+            h('h1', '平台管理工作台'),
+            h('p', { class: 'muted' }, authUser.value.displayName)
+          ]),
           h(ElButton, { type: 'primary', plain: true, loading: loading.value, onClick: loadAll }, () => '刷新')
         ]),
         message.value ? h('p', { class: 'success-message' }, message.value) : null,
@@ -377,6 +417,50 @@ export default defineComponent({
       ]);
   }
 });
+
+function readStoredUser(key: string): AuthenticatedUser | null {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as AuthenticatedUser;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function storeAuthState(tokenKey: string, userKey: string, accessToken: string, user: AuthenticatedUser) {
+  localStorage.setItem(tokenKey, accessToken);
+  localStorage.setItem(userKey, JSON.stringify(user));
+}
+
+function renderLoginShell(
+  title: string,
+  buttonLabel: string,
+  form: LoginForm,
+  onField: (field: keyof LoginForm, value: string) => void,
+  onSubmit: () => Promise<void>,
+  loading: boolean,
+  error: string | null
+) {
+  return h('main', { class: 'app-shell login-shell' }, [
+    h('section', { class: 'workspace-panel login-panel' }, [
+      h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'),
+      h('h1', title),
+      textInput('账号', form.username, (value) => onField('username', value)),
+      textInput('密码', form.password, (value) => onField('password', value), { type: 'password' }),
+      h(ElButton, { type: 'primary', loading, 'aria-label': buttonLabel, onClick: onSubmit }, () => buttonLabel),
+      error ? h('p', { class: 'error-message' }, error) : null
+    ])
+  ]);
+}
 
 function metric(label: string, value: string) {
   return h(ElCol, { xs: 12, sm: 6 }, () =>
@@ -785,10 +869,11 @@ function renderStockPanel(
   ]);
 }
 
-function textInput(labelText: string, value: string, onValue: (value: string) => void) {
+function textInput(labelText: string, value: string, onValue: (value: string) => void, options: { type?: string } = {}) {
   return h('label', { class: 'lookup-field' }, [
     h('span', labelText),
     h('input', {
+      type: options.type ?? 'text',
       value,
       onInput: (event: Event) => onValue((event.target as HTMLInputElement).value)
     })

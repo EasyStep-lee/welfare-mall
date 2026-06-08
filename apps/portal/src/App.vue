@@ -11,6 +11,8 @@ import {
   fetchProductPoolItemDetail,
   fetchPortalOrderDetail,
   fetchPortalOrders,
+  loginPortal,
+  type AuthenticatedUser,
   type PortalCheckoutOrder,
   type PortalOrderRecord,
   type PortalPayment,
@@ -31,7 +33,11 @@ const localPickup = {
 };
 type CheckoutFulfillmentMode = 'delivery' | 'pickup';
 
-const loading = ref(true);
+const authUser = ref<AuthenticatedUser | null>(readStoredUser('welfareMallPortalUser'));
+const loginForm = ref({ username: 'buyer-local', password: 'local-dev-password' });
+const loginLoading = ref(false);
+const loginError = ref<string | null>(null);
+const loading = ref(Boolean(authUser.value));
 const error = ref<string | null>(null);
 const productPools = ref<ProductPoolCatalog[]>([]);
 const detailLoading = ref(false);
@@ -41,7 +47,7 @@ const checkoutLoading = ref(false);
 const checkoutError = ref<string | null>(null);
 const createdOrder = ref<PortalCheckoutOrder | null>(null);
 const checkoutFulfillmentMode = ref<CheckoutFulfillmentMode>('delivery');
-const ordersLoading = ref(true);
+const ordersLoading = ref(Boolean(authUser.value));
 const ordersError = ref<string | null>(null);
 const orders = ref<PortalOrderRecord[]>([]);
 const orderDetailLoading = ref(false);
@@ -80,8 +86,56 @@ const checkoutSummary = computed(() =>
 );
 
 onMounted(() => {
-  void Promise.all([loadCatalog(), loadLocalOrders()]);
+  if (authUser.value) {
+    void loadLocalData();
+    return;
+  }
+  loading.value = false;
+  ordersLoading.value = false;
 });
+
+async function loadLocalData() {
+  await Promise.all([loadCatalog(), loadLocalOrders()]);
+}
+
+async function submitLogin() {
+  loginLoading.value = true;
+  loginError.value = null;
+
+  try {
+    const result = await loginPortal(loginForm.value);
+    storeAuthState('welfareMallPortalAccessToken', 'welfareMallPortalUser', result.accessToken, result.user);
+    authUser.value = result.user;
+    await loadLocalData();
+  } catch (submitError) {
+    loginError.value = submitError instanceof Error ? submitError.message : '用户登录失败';
+  } finally {
+    loginLoading.value = false;
+  }
+}
+
+function readStoredUser(key: string): AuthenticatedUser | null {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as AuthenticatedUser;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function storeAuthState(tokenKey: string, userKey: string, accessToken: string, user: AuthenticatedUser) {
+  localStorage.setItem(tokenKey, accessToken);
+  localStorage.setItem(userKey, JSON.stringify(user));
+}
 
 async function loadCatalog() {
   loading.value = true;
@@ -566,11 +620,31 @@ async function confirmLatestRefund() {
 </script>
 
 <template>
-  <main class="portal-shell">
+  <main v-if="!authUser" class="portal-shell login-shell">
+    <section class="login-panel">
+      <p class="eyebrow">商品池</p>
+      <h1>用户登录</h1>
+      <label class="login-field">
+        <span>账号</span>
+        <input v-model="loginForm.username" aria-label="账号" type="text" />
+      </label>
+      <label class="login-field">
+        <span>密码</span>
+        <input v-model="loginForm.password" aria-label="密码" type="password" />
+      </label>
+      <button type="button" class="checkout-button" aria-label="登录用户端" :disabled="loginLoading" @click="submitLogin">
+        {{ loginLoading ? '登录中' : '登录用户端' }}
+      </button>
+      <p v-if="loginError" class="state-text error compact">{{ loginError }}</p>
+    </section>
+  </main>
+
+  <main v-else class="portal-shell">
     <header class="portal-topbar">
       <div>
         <p class="eyebrow">商品池</p>
         <h1>企业福利商品目录</h1>
+        <p class="operator-name">{{ authUser.displayName }}</p>
       </div>
       <button type="button" class="refresh-button" @click="loadCatalog">刷新</button>
     </header>

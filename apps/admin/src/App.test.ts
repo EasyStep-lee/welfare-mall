@@ -187,6 +187,12 @@ const adminSettlementStatementsResponse = {
 
 describe('Admin Vue workbench', () => {
   beforeEach(() => {
+    installLocalStorageMock();
+    localStorage.setItem('welfareMallAdminAccessToken', 'admin-token-local');
+    localStorage.setItem(
+      'welfareMallAdminUser',
+      JSON.stringify({ username: 'admin-local', displayName: '本地平台管理员', subjectType: 'platform', subjectId: 'platform' })
+    );
     let reviewQueueLoads = 0;
     let settlementLoads = 0;
     let orderLoads = 0;
@@ -290,8 +296,64 @@ describe('Admin Vue workbench', () => {
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('requires platform login before loading the Admin workbench', async () => {
+    localStorage.clear();
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/login')) {
+        return response({
+          tokenType: 'Bearer',
+          accessToken: 'admin-token-001',
+          expiresIn: 3600,
+          user: { username: 'admin-local', displayName: '本地平台管理员', subjectType: 'platform', subjectId: 'platform' }
+        });
+      }
+      if (url.includes('/products/review-queue')) {
+        return response(reviewQueueResponse);
+      }
+      if (url.includes('/orders/admin/inventory-stocks')) {
+        return response(adminInventoryStocksResponse);
+      }
+      if (url.includes('/orders/admin/inventory-reservations')) {
+        return response(adminInventoryReservationsResponse);
+      }
+      if (url.includes('/orders/admin')) {
+        return response(adminOrdersResponse);
+      }
+      if (url.includes('/settlements/merchant-statements')) {
+        return response(adminSettlementStatementsResponse);
+      }
+
+      return response({});
+    });
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('平台登录');
+    expect(wrapper.text()).not.toContain('商品审核');
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/products/review-queue'));
+
+    await setFieldValue(wrapper, '账号', 'admin-local');
+    await setFieldValue(wrapper, '密码', 'local-dev-password');
+    await wrapper.get('button[aria-label="登录平台工作台"]').trigger('click');
+    await flushPromises();
+
+    expect(localStorage.getItem('welfareMallAdminAccessToken')).toBe('admin-token-001');
+    expect(wrapper.text()).toContain('本地平台管理员');
+    expect(wrapper.text()).toContain('商品审核');
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin-local', password: 'local-dev-password' })
+      })
+    );
   });
 
   it('renders Vue Element Plus admin sections and loads core read models', async () => {
@@ -677,6 +739,16 @@ function response(body: unknown) {
     ok: true,
     json: async () => body
   } as Response;
+}
+
+function installLocalStorageMock() {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => store.set(key, String(value))),
+    removeItem: vi.fn((key: string) => store.delete(key)),
+    clear: vi.fn(() => store.clear())
+  });
 }
 
 function requestUrls() {

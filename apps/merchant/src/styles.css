@@ -32,6 +32,101 @@ button {
   justify-content: space-between;
 }
 
+.app-shell {
+  display: grid;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 1440px;
+  padding: 24px;
+}
+
+.app-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.login-shell {
+  align-content: center;
+  min-height: 100vh;
+}
+
+.login-panel {
+  background: #ffffff;
+  border: 1px solid #d9e5e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  justify-self: center;
+  max-width: 420px;
+  padding: 24px;
+  width: 100%;
+}
+
+.workspace-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summary-grid {
+  width: 100%;
+}
+
+.workspace-panel,
+.metric-card {
+  border-radius: 8px;
+}
+
+.panel-action-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.item-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.list-row {
+  border: 1px solid #e0e9e6;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  padding: 12px;
+}
+
+.metric-label,
+.muted,
+.empty-state {
+  color: #637a76;
+}
+
+.metric-label,
+.muted,
+.empty-state,
+.success-message,
+.error-message {
+  margin: 0;
+}
+
+.metric-value {
+  color: #172421;
+  font-size: 20px;
+}
+
+.success-message {
+  color: #1f6b42;
+}
+
+.error-message {
+  color: #9c2d20;
+}
+
 .eyebrow {
   color: #5b716d;
   font-size: 13px;
