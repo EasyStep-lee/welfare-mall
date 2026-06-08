@@ -422,6 +422,66 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('待支付');
   });
 
+  it('opens the newly created checkout order detail from the checkout result', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders')) {
+          return {
+            ok: true,
+            json: async () => ({
+              idempotentReplay: false,
+              order: {
+                orderNo: 'ORDER-20260607-PORTAL',
+                status: 'pending_payment',
+                totalAmount: 6990,
+                welfareCardPayableAmount: 0,
+                cashPayableAmount: 6990
+              }
+            })
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情并支付"]').trigger('click');
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001'
+    );
+    expect(wrapper.text()).toContain('订单详情');
+    expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
+    expect(wrapper.text()).toContain('发起支付');
+  });
+
   it('creates a local pickup checkout order from the product detail panel', async () => {
     vi.stubGlobal(
       'fetch',
