@@ -107,6 +107,24 @@ const adminOrdersResponse = {
       fulfillmentSummary: { totalTasks: 1, pendingTasks: 0, completedTasks: 1, taskNos: ['FT-REFUND-001'] },
       fulfillmentTasks: [],
       lines: [{ displayName: 'Refund Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 2, lineTotalAmount: 13980 }]
+    },
+    {
+      orderNo: 'ORDER-20260603-CANCELLED',
+      buyerUserId: 'user-cancelled',
+      status: 'cancelled',
+      totalAmount: 6990,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 6990,
+      fulfillmentType: 'delivery',
+      receiverName: 'Zhao Min',
+      receiverPhone: '13600000000',
+      receiverAddress: 'Longyang Road 8',
+      pickupStoreName: null,
+      latestPayment: { paymentNo: 'PAY-20260603-CANCELLED', status: 'cancelled', channel: 'wechat' },
+      latestRefund: null,
+      fulfillmentSummary: { totalTasks: 0, pendingTasks: 0, completedTasks: 0, taskNos: [] },
+      fulfillmentTasks: [],
+      lines: [{ displayName: 'Cancelled Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 1, lineTotalAmount: 6990 }]
     }
   ]
 };
@@ -526,6 +544,20 @@ describe('Admin Vue workbench', () => {
     expect(requestUrls()).toContain(
       'http://localhost:3000/api/orders/admin?status=paid&fulfillmentStatus=pending&merchantId=merchant-001&taskNo=FT-001'
     );
+  });
+
+  it('renders and filters cancelled admin orders with a business status label', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('ORDER-20260603-CANCELLED');
+    expect(wrapper.text()).toContain('已取消');
+    expect(wrapper.text()).not.toContain('cancelled履约');
+
+    await clickButton(wrapper, '已取消');
+    await flushPromises();
+
+    expect(requestUrls()).toContain('http://localhost:3000/api/orders/admin?status=cancelled');
   });
 
   it('renders fulfillment task details on admin order cards', async () => {

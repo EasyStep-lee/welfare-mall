@@ -629,6 +629,7 @@ function renderOrderFilters(
     { value: 'paid', label: label(adminOrderStatusLabels, 'paid') },
     { value: 'refund_processing', label: label(adminOrderStatusLabels, 'refund_processing') },
     { value: 'refunded', label: label(adminOrderStatusLabels, 'refunded') },
+    { value: 'cancelled', label: label(adminOrderStatusLabels, 'cancelled') },
     { value: 'completed', label: label(adminOrderStatusLabels, 'completed') }
   ];
   const fulfillmentOptions: Array<{ value: AdminFulfillmentStatusFilter; label: string }> = [
