@@ -107,7 +107,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -115,9 +115,18 @@ Commit message:
 feat: let portal request paid order refunds
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-refund-request-action`
+- Feature PR: `https://github.com/EasyStep-lee/welfare-mall/pull/223`
+- Feature merge commit: `71d649f870967f0c1af177827dec54dc8c22e101`
+- GitHub checks: `docs-check` and `project-foundation-check` passed.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-refund-request-complete`
 
 ## Acceptance Boundary
 
