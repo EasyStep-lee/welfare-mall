@@ -47,10 +47,56 @@ model Franchise {
   merchants Merchant[]
   products  Product[]
   productPools ProductPool[]
+  welfareCardAccounts WelfareCardAccount[]
+  welfareCardLedgerEntries WelfareCardLedgerEntry[]
 
   @@index([regionId])
   @@index([status])
   @@map("franchise")
+}
+
+model WelfareCardAccount {
+  id            String                   @id @default(cuid())
+  accountNo     String                   @unique
+  franchiseId   String
+  buyerUserId   String
+  status        String
+  balanceAmount Int                      @default(0)
+  issuedAmount  Int                      @default(0)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  franchise     Franchise                @relation(fields: [franchiseId], references: [id])
+  ledgerEntries WelfareCardLedgerEntry[]
+
+  @@unique([franchiseId, buyerUserId])
+  @@index([franchiseId])
+  @@index([buyerUserId])
+  @@index([status])
+  @@map("welfare_card_account")
+}
+
+model WelfareCardLedgerEntry {
+  id           String             @id @default(cuid())
+  ledgerNo     String             @unique
+  requestId    String             @unique
+  accountId    String
+  franchiseId  String
+  buyerUserId  String
+  type         String
+  amount       Int
+  balanceAfter Int
+  orderNo      String?
+  remark       String?
+  createdAt    DateTime           @default(now())
+  account      WelfareCardAccount @relation(fields: [accountId], references: [id])
+  franchise    Franchise          @relation(fields: [franchiseId], references: [id])
+
+  @@index([accountId])
+  @@index([franchiseId])
+  @@index([buyerUserId])
+  @@index([type])
+  @@index([orderNo])
+  @@map("welfare_card_ledger_entry")
 }
 
 model Merchant {
