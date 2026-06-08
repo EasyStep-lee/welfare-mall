@@ -124,6 +124,7 @@ export type PortalOrderRecord = PortalCheckoutOrder & {
   createdAt: string;
   updatedAt: string;
   latestPayment: PortalPayment | null;
+  latestRefund: PortalRefund | null;
   fulfillmentSummary?: {
     totalTasks: number;
     pendingTasks: number;
@@ -182,6 +183,35 @@ export type PortalPayment = {
 export type PortalPaymentResponse = {
   idempotentReplay: boolean;
   payment: PortalPayment;
+};
+
+export type PortalRefundInput = {
+  requestId: string;
+  paymentNo: string;
+  orderNo: string;
+  channel: 'wechat';
+  refundAmount: number;
+  reason: 'after_sale';
+};
+
+export type PortalRefund = {
+  id?: string;
+  refundNo: string;
+  requestId: string;
+  paymentNo: string;
+  orderNo: string;
+  status: string;
+  channel: string;
+  refundAmount: number;
+  reason: string;
+  providerRefundNo: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PortalRefundResponse = {
+  idempotentReplay: boolean;
+  refund: PortalRefund;
 };
 
 export type PortalPaymentCallbackInput = {
@@ -307,6 +337,20 @@ export async function createPortalPayment(input: PortalPaymentInput): Promise<Po
   }
 
   return response.json() as Promise<PortalPaymentResponse>;
+}
+
+export async function createPortalRefund(input: PortalRefundInput): Promise<PortalRefundResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/refunds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create refund: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalRefundResponse>;
 }
 
 export async function confirmPortalPayment(input: PortalPaymentCallbackInput): Promise<PortalPaymentCallbackResponse> {

@@ -5,6 +5,7 @@ import {
   confirmPortalPayment,
   createPortalOrder,
   createPortalPayment,
+  createPortalRefund,
   fetchProductPoolCatalog,
   fetchProductPoolItemDetail,
   fetchPortalOrderDetail,
@@ -12,6 +13,7 @@ import {
   type PortalCheckoutOrder,
   type PortalOrderRecord,
   type PortalPayment,
+  type PortalRefund,
   type ProductPoolCatalog,
   type ProductPoolCatalogItem,
   type ProductPoolItemDetail
@@ -48,6 +50,10 @@ const confirmedPaymentMessage = ref<string | null>(null);
 const orderCancelLoading = ref(false);
 const orderCancelError = ref<string | null>(null);
 const orderCancelMessage = ref<string | null>(null);
+const refundLoading = ref(false);
+const refundError = ref<string | null>(null);
+const refundMessage = ref<string | null>(null);
+const createdRefund = ref<PortalRefund | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -117,6 +123,7 @@ async function openOrderDetail(order: PortalOrderRecord) {
   createdPayment.value = null;
   resetPaymentConfirmation();
   resetOrderCancellation();
+  resetRefundRequest();
 
   try {
     const response = await fetchPortalOrderDetail({
@@ -136,6 +143,7 @@ function closeOrderDetail() {
   paymentError.value = null;
   resetPaymentConfirmation();
   resetOrderCancellation();
+  resetRefundRequest();
   selectedOrder.value = null;
   createdPayment.value = null;
 }
@@ -188,6 +196,16 @@ function paymentSummaryText(payment: PortalPayment) {
   return `${paymentChannelText(payment.channel)} · ${paymentStatusText(payment.status)}`;
 }
 
+function refundStatusText(status: string) {
+  const labels: Record<string, string> = {
+    processing: '退款处理中',
+    succeeded: '退款成功',
+    failed: '退款失败'
+  };
+
+  return labels[status] ?? status;
+}
+
 function fulfillmentTaskStatusText(status: string) {
   const labels: Record<string, string> = {
     pending: '待履约',
@@ -209,6 +227,11 @@ function createCheckoutRequestId(itemId: string) {
 function createPaymentRequestId(orderNo: string) {
   const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-payment-${safeOrderNo}-${Date.now()}`;
+}
+
+function createRefundRequestId(orderNo: string) {
+  const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `portal-refund-${safeOrderNo}-${Date.now()}`;
 }
 
 function createPaymentCallbackEventId(orderNo: string) {
@@ -233,6 +256,10 @@ function canCancelOrder(order: PortalOrderRecord) {
   return order.status === 'pending_payment';
 }
 
+function canRequestRefund(order: PortalOrderRecord) {
+  return order.status === 'paid' && order.latestPayment?.status === 'paid' && !order.latestRefund;
+}
+
 function resetPaymentConfirmation() {
   paymentConfirmError.value = null;
   confirmedPaymentMessage.value = null;
@@ -241,6 +268,12 @@ function resetPaymentConfirmation() {
 function resetOrderCancellation() {
   orderCancelError.value = null;
   orderCancelMessage.value = null;
+}
+
+function resetRefundRequest() {
+  refundError.value = null;
+  refundMessage.value = null;
+  createdRefund.value = null;
 }
 
 async function submitLocalOrder() {
@@ -371,6 +404,50 @@ async function cancelSelectedOrder() {
     orderCancelError.value = cancelError instanceof Error ? cancelError.message : '订单取消失败';
   } finally {
     orderCancelLoading.value = false;
+  }
+}
+
+async function requestSelectedOrderRefund() {
+  if (!selectedOrder.value?.latestPayment) {
+    refundError.value = '请先选择已支付订单';
+    return;
+  }
+
+  if (!canRequestRefund(selectedOrder.value)) {
+    refundError.value = '当前订单不可申请退款';
+    return;
+  }
+
+  const orderNo = selectedOrder.value.orderNo;
+  const payment = selectedOrder.value.latestPayment;
+
+  refundLoading.value = true;
+  refundError.value = null;
+  refundMessage.value = null;
+  createdRefund.value = null;
+
+  try {
+    const result = await createPortalRefund({
+      requestId: createRefundRequestId(orderNo),
+      paymentNo: payment.paymentNo,
+      orderNo,
+      channel: 'wechat',
+      refundAmount: selectedOrder.value.totalAmount,
+      reason: 'after_sale'
+    });
+
+    createdRefund.value = result.refund;
+    await loadLocalOrders();
+    const response = await fetchPortalOrderDetail({
+      orderNo,
+      buyerUserId: localBuyerUserId
+    });
+    selectedOrder.value = response.order;
+    refundMessage.value = '退款申请已提交';
+  } catch (requestError) {
+    refundError.value = requestError instanceof Error ? requestError.message : '退款申请失败';
+  } finally {
+    refundLoading.value = false;
   }
 }
 </script>
@@ -538,6 +615,32 @@ async function cancelSelectedOrder() {
           </button>
           <p v-if="paymentConfirmError" class="checkout-message error">{{ paymentConfirmError }}</p>
           <p v-if="confirmedPaymentMessage" class="checkout-message success">{{ confirmedPaymentMessage }}</p>
+        </section>
+        <section
+          v-if="canRequestRefund(selectedOrder) || selectedOrder.latestRefund || refundError || refundMessage"
+          class="payment-block"
+        >
+          <div>
+            <h3>售后退款</h3>
+            <p>已支付订单可发起全额退款申请</p>
+          </div>
+          <button
+            v-if="canRequestRefund(selectedOrder)"
+            type="button"
+            class="secondary-button"
+            :aria-label="`为订单 ${selectedOrder.orderNo} 申请退款`"
+            :disabled="refundLoading"
+            @click="requestSelectedOrderRefund"
+          >
+            {{ refundLoading ? '提交中' : '申请退款' }}
+          </button>
+          <p v-if="refundError" class="checkout-message error">{{ refundError }}</p>
+          <p v-if="refundMessage" class="checkout-message success">{{ refundMessage }}</p>
+          <div v-if="selectedOrder.latestRefund ?? createdRefund" class="checkout-result">
+            <span>退款单</span>
+            <strong>{{ (selectedOrder.latestRefund ?? createdRefund)?.refundNo }}</strong>
+            <p>{{ refundStatusText((selectedOrder.latestRefund ?? createdRefund)?.status ?? '') }}</p>
+          </div>
         </section>
         <section v-if="canCreateLocalPayment(selectedOrder)" class="payment-block">
           <div>
