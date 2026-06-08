@@ -101,7 +101,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -109,9 +109,17 @@ Commit message:
 feat: show admin fulfillment task details
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch `codex/admin-order-fulfillment-task-details-vue` committed `93b9873 feat: show admin fulfillment task details`.
+- PR #231 `feat: show admin fulfillment task details` passed `docs-check` and `project-foundation-check`.
+- PR #231 was squash-merged into `main` as `798cbe6 feat: show admin fulfillment task details`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch `codex/docs-admin-order-fulfillment-task-details-complete` marks this GitHub integration section complete.
 
 ## Acceptance Boundary
 
