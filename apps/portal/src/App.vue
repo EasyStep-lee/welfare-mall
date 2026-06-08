@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+  cancelPortalOrder,
   confirmPortalPayment,
   createPortalOrder,
   createPortalPayment,
@@ -44,6 +45,9 @@ const createdPayment = ref<PortalPayment | null>(null);
 const paymentConfirmLoading = ref(false);
 const paymentConfirmError = ref<string | null>(null);
 const confirmedPaymentMessage = ref<string | null>(null);
+const orderCancelLoading = ref(false);
+const orderCancelError = ref<string | null>(null);
+const orderCancelMessage = ref<string | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -112,6 +116,7 @@ async function openOrderDetail(order: PortalOrderRecord) {
   paymentError.value = null;
   createdPayment.value = null;
   resetPaymentConfirmation();
+  resetOrderCancellation();
 
   try {
     const response = await fetchPortalOrderDetail({
@@ -130,6 +135,7 @@ function closeOrderDetail() {
   orderDetailError.value = null;
   paymentError.value = null;
   resetPaymentConfirmation();
+  resetOrderCancellation();
   selectedOrder.value = null;
   createdPayment.value = null;
 }
@@ -223,9 +229,18 @@ function canCreateLocalPayment(order: PortalOrderRecord) {
   return order.status === 'pending_payment' && order.latestPayment?.status !== 'pending';
 }
 
+function canCancelOrder(order: PortalOrderRecord) {
+  return order.status === 'pending_payment';
+}
+
 function resetPaymentConfirmation() {
   paymentConfirmError.value = null;
   confirmedPaymentMessage.value = null;
+}
+
+function resetOrderCancellation() {
+  orderCancelError.value = null;
+  orderCancelMessage.value = null;
 }
 
 async function submitLocalOrder() {
@@ -325,6 +340,37 @@ async function confirmLatestPayment() {
     paymentConfirmError.value = confirmError instanceof Error ? confirmError.message : '支付确认失败';
   } finally {
     paymentConfirmLoading.value = false;
+  }
+}
+
+async function cancelSelectedOrder() {
+  if (!selectedOrder.value) {
+    orderCancelError.value = '请先选择订单';
+    return;
+  }
+
+  if (!canCancelOrder(selectedOrder.value)) {
+    orderCancelError.value = '当前订单不可取消';
+    return;
+  }
+
+  orderCancelLoading.value = true;
+  orderCancelError.value = null;
+  orderCancelMessage.value = null;
+
+  try {
+    const response = await cancelPortalOrder({
+      orderNo: selectedOrder.value.orderNo,
+      buyerUserId: localBuyerUserId,
+      reason: 'user_cancel'
+    });
+    selectedOrder.value = response.order;
+    orderCancelMessage.value = '订单已取消';
+    await loadLocalOrders();
+  } catch (cancelError) {
+    orderCancelError.value = cancelError instanceof Error ? cancelError.message : '订单取消失败';
+  } finally {
+    orderCancelLoading.value = false;
   }
 }
 </script>
@@ -431,6 +477,24 @@ async function confirmLatestPayment() {
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>
         </div>
+        <section v-if="canCancelOrder(selectedOrder) || orderCancelError || orderCancelMessage" class="payment-block">
+          <div>
+            <h3>订单操作</h3>
+            <p>待支付订单可由本地买家主动取消</p>
+          </div>
+          <button
+            v-if="canCancelOrder(selectedOrder)"
+            type="button"
+            class="secondary-button"
+            :aria-label="`取消订单 ${selectedOrder.orderNo}`"
+            :disabled="orderCancelLoading"
+            @click="cancelSelectedOrder"
+          >
+            {{ orderCancelLoading ? '取消中' : '取消订单' }}
+          </button>
+          <p v-if="orderCancelError" class="checkout-message error">{{ orderCancelError }}</p>
+          <p v-if="orderCancelMessage" class="checkout-message success">{{ orderCancelMessage }}</p>
+        </section>
         <section v-if="hasFulfillmentProgress(selectedOrder)" class="fulfillment-block">
           <div>
             <h3>履约进度</h3>

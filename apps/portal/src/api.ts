@@ -148,6 +148,12 @@ export type PortalOrderDetailResponse = {
   order: PortalOrderRecord;
 };
 
+export type PortalOrderCancelInput = {
+  orderNo: string;
+  buyerUserId: string;
+  reason: 'user_cancel';
+};
+
 export type PortalPaymentInput = {
   requestId: string;
   orderNo: string;
@@ -267,6 +273,23 @@ export async function fetchPortalOrderDetail(input: {
 
   if (!response.ok) {
     throw new Error(`Failed to load order detail: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalOrderDetailResponse>;
+}
+
+export async function cancelPortalOrder(input: PortalOrderCancelInput): Promise<PortalOrderDetailResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      buyerUserId: input.buyerUserId,
+      reason: input.reason
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cancel order: ${response.status}`);
   }
 
   return response.json() as Promise<PortalOrderDetailResponse>;
