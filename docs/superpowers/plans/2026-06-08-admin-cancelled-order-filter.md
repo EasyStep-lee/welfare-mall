@@ -101,7 +101,7 @@ Evidence:
 
 ### Task 3: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -109,9 +109,20 @@ Commit message:
 feat: filter cancelled admin orders
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/admin-cancelled-order-filter-vue`.
+- Feature commit: `0a80979 feat: filter cancelled admin orders`.
+- PR: #235 `feat: filter cancelled admin orders`.
+- GitHub checks: `docs-check` passed; `project-foundation-check` passed.
+- Merged to `main` with squash commit `2a5300f3416d315db819e8ba8073e8a45f174d0f`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-admin-cancelled-order-filter-complete`.
+- Docs-only scope: this plan file only.
 
 ## Acceptance Boundary
 
