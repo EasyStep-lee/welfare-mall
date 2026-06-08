@@ -27,11 +27,50 @@ button {
   padding: 24px;
 }
 
+.login-shell {
+  align-items: center;
+  display: grid;
+}
+
+.login-panel {
+  background: #ffffff;
+  border: 1px solid #d7e1dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  justify-self: center;
+  max-width: 420px;
+  padding: 24px;
+  width: 100%;
+}
+
+.login-field {
+  color: #5c7177;
+  display: grid;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.login-field input {
+  border: 1px solid #cbd6dc;
+  border-radius: 8px;
+  color: #172026;
+  font: inherit;
+  min-height: 38px;
+  padding: 0 10px;
+  width: 100%;
+}
+
 .portal-topbar {
   align-items: center;
   display: flex;
   gap: 16px;
   justify-content: space-between;
+}
+
+.operator-name {
+  color: #5c7177;
+  margin: 6px 0 0;
 }
 
 .eyebrow {

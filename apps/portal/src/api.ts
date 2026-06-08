@@ -9,6 +9,21 @@ export type ProductPoolCatalogItem = {
   displayImageUrl: string;
 };
 
+export type AuthenticatedUser = {
+  username: string;
+  displayName: string;
+  subjectType: string;
+  subjectId: string;
+  permissions?: string[];
+};
+
+export type LoginResponse = {
+  tokenType: 'Bearer';
+  accessToken: string;
+  expiresIn: number;
+  user: AuthenticatedUser;
+};
+
 export type ProductPoolCatalog = {
   id: string;
   code: string;
@@ -269,6 +284,20 @@ export type PortalOrderCheckoutResponse = {
   idempotentReplay: boolean;
   order: PortalCheckoutOrder;
 };
+
+export async function loginPortal(input: { username: string; password: string }): Promise<LoginResponse> {
+  const response = await fetch(`${apiBaseUrl()}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: input.username.trim(), password: input.password })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to login portal: ${response.status}`);
+  }
+
+  return response.json() as Promise<LoginResponse>;
+}
 
 export async function fetchProductPoolCatalog(): Promise<ProductPoolCatalogResponse> {
   const response = await fetch(`${apiBaseUrl()}/product-pools/catalog`);

@@ -1,6 +1,6 @@
 import { ElButton, ElCard, ElCol, ElRow, ElSpace, ElTag } from 'element-plus';
 import { computed, defineComponent, h, onMounted, ref } from 'vue';
-import type { ProductDraftPayload } from './api';
+import type { AuthenticatedUser, ProductDraftPayload } from './api';
 import {
   MerchantFulfillmentOrder,
   MerchantFulfillmentStatusFilter,
@@ -11,6 +11,7 @@ import {
   fetchMerchantFulfillmentOrders,
   fetchMerchantSettlementStatements,
   fetchMerchantSubmissionQueue,
+  loginMerchant,
   merchantFulfillmentStatusLabels,
   merchantSettlementStatementStatusLabels,
   saveProductDraft,
@@ -51,9 +52,18 @@ type FulfillmentLookupForm = {
   taskNo: string;
 };
 
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
 export default defineComponent({
   name: 'MerchantApp',
   setup() {
+    const authUser = ref<AuthenticatedUser | null>(readStoredUser('welfareMallMerchantUser'));
+    const loginForm = ref<LoginForm>({ username: 'merchant-local', password: 'local-dev-password' });
+    const loginLoading = ref(false);
+    const loginError = ref<string | null>(null);
     const fulfillmentOrders = ref<MerchantFulfillmentOrder[]>([]);
     const fulfillmentStatus = ref<MerchantFulfillmentStatusFilter>('paid');
     const fulfillmentFilters = ref<FulfillmentLookupForm>({ orderNo: '', taskNo: '' });
@@ -61,7 +71,7 @@ export default defineComponent({
     const draftItems = ref<SubmissionQueueItem[]>([]);
     const statements = ref<MerchantSettlementStatement[]>([]);
     const settlementStatus = ref<MerchantSettlementStatementStatusFilter>('generated');
-    const loading = ref(true);
+    const loading = ref(Boolean(authUser.value));
     const actionLoading = ref(false);
     const message = ref<string | null>(null);
     const error = ref<string | null>(null);
@@ -113,6 +123,25 @@ export default defineComponent({
       } finally {
         loading.value = false;
       }
+    }
+
+    async function submitLogin() {
+      loginLoading.value = true;
+      loginError.value = null;
+      try {
+        const result = await loginMerchant(loginForm.value);
+        storeAuthState('welfareMallMerchantAccessToken', 'welfareMallMerchantUser', result.accessToken, result.user);
+        authUser.value = result.user;
+        await loadAll();
+      } catch (submitError) {
+        loginError.value = submitError instanceof Error ? submitError.message : '商户登录失败';
+      } finally {
+        loginLoading.value = false;
+      }
+    }
+
+    function updateLoginField(field: keyof LoginForm, value: string) {
+      loginForm.value = { ...loginForm.value, [field]: value };
     }
 
     async function completeOrder(order: MerchantFulfillmentOrder) {
@@ -184,13 +213,23 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      void loadAll();
+      if (authUser.value) {
+        void loadAll();
+        return;
+      }
+      loading.value = false;
     });
 
     return () =>
-      h('main', { class: 'app-shell' }, [
+      !authUser.value
+        ? renderLoginShell('商户登录', '登录商户工作台', loginForm.value, updateLoginField, submitLogin, loginLoading.value, loginError.value)
+        : h('main', { class: 'app-shell' }, [
         h('header', { class: 'app-header' }, [
-          h('div', [h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'), h('h1', '商户运营工作台')]),
+          h('div', [
+            h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'),
+            h('h1', '商户运营工作台'),
+            h('p', { class: 'muted' }, authUser.value.displayName)
+          ]),
           h(ElButton, { type: 'primary', plain: true, loading: loading.value, onClick: loadAll }, () => '刷新')
         ]),
         message.value ? h('p', { class: 'success-message' }, message.value) : null,
@@ -216,6 +255,50 @@ export default defineComponent({
       ]);
   }
 });
+
+function readStoredUser(key: string): AuthenticatedUser | null {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as AuthenticatedUser;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function storeAuthState(tokenKey: string, userKey: string, accessToken: string, user: AuthenticatedUser) {
+  localStorage.setItem(tokenKey, accessToken);
+  localStorage.setItem(userKey, JSON.stringify(user));
+}
+
+function renderLoginShell(
+  title: string,
+  buttonLabel: string,
+  form: LoginForm,
+  onField: (field: keyof LoginForm, value: string) => void,
+  onSubmit: () => Promise<void>,
+  loading: boolean,
+  error: string | null
+) {
+  return h('main', { class: 'app-shell login-shell' }, [
+    h('section', { class: 'workspace-panel login-panel' }, [
+      h('p', { class: 'eyebrow' }, 'Vue 3 + Element Plus'),
+      h('h1', title),
+      draftInput('账号', form.username, (value) => onField('username', value)),
+      draftInput('密码', form.password, (value) => onField('password', value), { type: 'password' }),
+      h(ElButton, { type: 'primary', loading, 'aria-label': buttonLabel, onClick: onSubmit }, () => buttonLabel),
+      error ? h('p', { class: 'error-message' }, error) : null
+    ])
+  ]);
+}
 
 function metric(label: string, value: string) {
   return h(ElCol, { xs: 12, sm: 6 }, () =>
@@ -329,11 +412,12 @@ function draftInput(
   text: string,
   value: string,
   onValue: (value: string) => void,
-  options: { readonly?: boolean; wide?: boolean } = {}
+  options: { readonly?: boolean; wide?: boolean; type?: string } = {}
 ) {
   return h('label', { class: options.wide ? 'draft-field wide-field' : 'draft-field' }, [
     h('span', text),
     h('input', {
+      type: options.type ?? 'text',
       value,
       readonly: options.readonly,
       onInput: (event: Event) => onValue((event.target as HTMLInputElement).value)

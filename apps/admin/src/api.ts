@@ -11,6 +11,21 @@ export type AdminFulfillmentStatusFilter = 'all' | 'pending' | 'completed';
 export type AdminInventoryReservationStatusFilter = 'all' | 'reserved' | 'released';
 export type AdminSettlementStatementStatusFilter = 'all' | 'generated' | 'paid_offline';
 
+export type AuthenticatedUser = {
+  username: string;
+  displayName: string;
+  subjectType: string;
+  subjectId: string;
+  permissions?: string[];
+};
+
+export type LoginResponse = {
+  tokenType: 'Bearer';
+  accessToken: string;
+  expiresIn: number;
+  user: AuthenticatedUser;
+};
+
 export type BusinessParty = {
   id: string;
   code: string;
@@ -364,6 +379,20 @@ function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
     ...init,
     headers: withAuthHeaders(init?.headers as ApiHeaders | undefined)
   });
+}
+
+export async function loginAdmin(input: { username: string; password: string }): Promise<LoginResponse> {
+  const response = await fetch(`${apiBaseUrl()}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: input.username.trim(), password: input.password })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to login admin: ${response.status}`);
+  }
+
+  return response.json() as Promise<LoginResponse>;
 }
 
 export async function fetchReviewQueue(status: ReviewQueueStatus): Promise<ReviewQueueResponse> {

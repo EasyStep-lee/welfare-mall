@@ -103,6 +103,12 @@ const merchantSettlementStatementsResponse = {
 
 describe('Merchant Vue workbench', () => {
   beforeEach(() => {
+    installLocalStorageMock();
+    localStorage.setItem('welfareMallMerchantAccessToken', 'merchant-token-local');
+    localStorage.setItem(
+      'welfareMallMerchantUser',
+      JSON.stringify({ username: 'merchant-local', displayName: '本地商户操作员', subjectType: 'merchant', subjectId: 'merchant-local-review' })
+    );
     let fulfillmentLoads = 0;
     let draftLoads = 0;
     vi.stubGlobal(
@@ -144,8 +150,56 @@ describe('Merchant Vue workbench', () => {
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('requires merchant login before loading the Merchant workbench', async () => {
+    localStorage.clear();
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/login')) {
+        return response({
+          tokenType: 'Bearer',
+          accessToken: 'merchant-token-001',
+          expiresIn: 3600,
+          user: {
+            username: 'merchant-local',
+            displayName: '本地商户操作员',
+            subjectType: 'merchant',
+            subjectId: 'merchant-local-review'
+          }
+        });
+      }
+      if (url.includes('/orders/merchant/fulfillment')) {
+        return response(fulfillmentQueueResponse);
+      }
+      if (url.includes('/products/review-queue')) {
+        return response(draftQueueResponse);
+      }
+      if (url.includes('/settlements/merchant-statements')) {
+        return response(merchantSettlementStatementsResponse);
+      }
+
+      return response({});
+    });
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('商户登录');
+    expect(wrapper.text()).not.toContain('履约订单');
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/orders/merchant/fulfillment'));
+
+    await setFieldValue(wrapper, '账号', 'merchant-local');
+    await setFieldValue(wrapper, '密码', 'local-dev-password');
+    await wrapper.get('button[aria-label="登录商户工作台"]').trigger('click');
+    await flushPromises();
+
+    expect(localStorage.getItem('welfareMallMerchantAccessToken')).toBe('merchant-token-001');
+    expect(wrapper.text()).toContain('本地商户操作员');
+    expect(wrapper.text()).toContain('履约订单');
   });
 
   it('renders Vue Element Plus merchant sections and loads core read models', async () => {
@@ -486,6 +540,16 @@ function response(body: unknown) {
     ok: true,
     json: async () => body
   } as Response;
+}
+
+function installLocalStorageMock() {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => store.set(key, String(value))),
+    removeItem: vi.fn((key: string) => store.delete(key)),
+    clear: vi.fn(() => store.clear())
+  });
 }
 
 function requestUrls() {

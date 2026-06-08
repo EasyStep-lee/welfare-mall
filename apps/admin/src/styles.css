@@ -609,6 +609,21 @@ dd {
   padding: 24px;
 }
 
+.login-shell {
+  align-content: center;
+  min-height: 100vh;
+}
+
+.login-panel {
+  background: #ffffff;
+  display: grid;
+  gap: 14px;
+  justify-self: center;
+  max-width: 420px;
+  padding: 24px;
+  width: 100%;
+}
+
 .app-header {
   align-items: center;
   display: flex;
