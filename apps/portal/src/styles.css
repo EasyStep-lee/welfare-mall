@@ -199,6 +199,13 @@ h1 {
   padding: 5px 9px;
 }
 
+.order-payment-summary {
+  color: #5c7177;
+  font-size: 13px;
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+
 .order-detail-body {
   display: grid;
   gap: 14px;
@@ -526,6 +533,10 @@ h1 {
   display: grid;
   gap: 12px;
   padding: 14px;
+}
+
+.persisted-payment {
+  background: #ffffff;
 }
 
 .checkout-block h3,
