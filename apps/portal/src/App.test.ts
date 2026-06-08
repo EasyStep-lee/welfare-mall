@@ -140,6 +140,27 @@ const paidOrderDetailResponse = {
   order: paidOrderListResponse.orders[0]
 };
 
+const paidOrderWithFulfillmentResponse = {
+  order: {
+    ...paidOrderListResponse.orders[0],
+    fulfillmentSummary: {
+      totalTasks: 1,
+      pendingTasks: 1,
+      completedTasks: 0,
+      taskNos: ['FT-ORDER-20260607-PORTAL-MERCHANT-LOCAL-REVIEW-001']
+    },
+    fulfillmentTasks: [
+      {
+        taskNo: 'FT-ORDER-20260607-PORTAL-MERCHANT-LOCAL-REVIEW-001',
+        merchantId: 'merchant-local-review',
+        status: 'pending',
+        createdAt: '2026-06-08T00:10:00.000Z',
+        completedAt: null
+      }
+    ]
+  }
+};
+
 const paymentResponse = {
   idempotentReplay: false,
   payment: {
@@ -591,5 +612,42 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('PAY-20260607-LATEST');
     expect(wrapper.text()).toContain('微信支付 · 已支付');
     expect(wrapper.text()).toContain('已支付');
+  });
+
+  it('renders fulfillment progress for a paid buyer order detail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => paidOrderWithFulfillmentResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => paidOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('履约进度');
+    expect(wrapper.text()).toContain('待履约 1');
+    expect(wrapper.text()).toContain('FT-ORDER-20260607-PORTAL-MERCHANT-LOCAL-REVIEW-001');
   });
 });

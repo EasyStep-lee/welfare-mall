@@ -32,6 +32,12 @@ export type AdminOrderFulfillmentTask = {
   completedAt: Date | null;
 };
 
+export type BuyerOrderReadRecord = OrderCheckoutRecord & {
+  fulfillmentSummary: AdminOrderFulfillmentSummary;
+  fulfillmentTasks: AdminOrderFulfillmentTask[];
+  pickupCode?: string | null;
+};
+
 export type AdminOrderReadRecord = OrderCheckoutRecord & {
   fulfillmentSummary: AdminOrderFulfillmentSummary;
   fulfillmentTasks: AdminOrderFulfillmentTask[];
@@ -51,14 +57,14 @@ type PickupFulfillmentTaskRecord = {
 export class OrderReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listOrdersByBuyer(buyerUserId: string): Promise<OrderCheckoutRecord[]> {
+  async listOrdersByBuyer(buyerUserId: string): Promise<BuyerOrderReadRecord[]> {
     const orders = await this.prisma.orderHeader.findMany({
       where: { buyerUserId },
       orderBy: { createdAt: 'desc' },
       select: orderReadSelect()
     });
 
-    return this.attachLatestOrderFacts(orders);
+    return this.attachLatestOrderFacts(orders, { includeFulfillmentSummary: true });
   }
 
   async listRecentAdminOrders(input: ListRecentAdminOrdersInput = {}): Promise<AdminOrderReadRecord[]> {
@@ -84,7 +90,7 @@ export class OrderReadRepository {
     return this.attachLatestOrderFacts(orders, { includeFulfillmentSummary: true });
   }
 
-  async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<OrderCheckoutRecord | null> {
+  async findOrderForBuyer(input: FindOrderForBuyerInput): Promise<BuyerOrderReadRecord | null> {
     const order = await this.prisma.orderHeader.findFirst({
       where: {
         buyerUserId: input.buyerUserId,
@@ -98,6 +104,7 @@ export class OrderReadRepository {
     }
 
     const [orderWithFacts] = await this.attachLatestOrderFacts([order], {
+      includeFulfillmentSummary: true,
       includePickupCodes: order.fulfillmentType === 'pickup'
     });
 
@@ -162,6 +169,10 @@ export class OrderReadRepository {
   ): Promise<OrderCheckoutRecord[]>;
   private async attachLatestOrderFacts(
     orders: OrderCheckoutRecord[],
+    options: { includeFulfillmentSummary: true; includePickupCodes?: boolean }
+  ): Promise<BuyerOrderReadRecord[]>;
+  private async attachLatestOrderFacts(
+    orders: OrderCheckoutRecord[],
     options: { includeFulfillmentSummary: true }
   ): Promise<AdminOrderReadRecord[]>;
   private async attachLatestOrderFacts(
@@ -207,13 +218,17 @@ export class OrderReadRepository {
       });
       const fulfillmentSummaryByOrderNo = summarizeFulfillmentTasks(orderNos, tasks);
       const fulfillmentTasksByOrderNo = groupFulfillmentTasksByOrderNo(orderNos, tasks);
+      const pickupCodeByOrderNo = options.includePickupCodes
+        ? await this.findPickupCodesByOrderNo(orders.filter((order) => order.fulfillmentType === 'pickup').map((order) => order.orderNo))
+        : new Map<string, string>();
 
       return orders.map((order) => ({
         ...order,
         latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
         latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
         fulfillmentSummary: fulfillmentSummaryByOrderNo.get(order.orderNo) ?? emptyFulfillmentSummary(),
-        fulfillmentTasks: fulfillmentTasksByOrderNo.get(order.orderNo) ?? []
+        fulfillmentTasks: fulfillmentTasksByOrderNo.get(order.orderNo) ?? [],
+        ...(options.includePickupCodes && order.fulfillmentType === 'pickup' ? { pickupCode: pickupCodeByOrderNo.get(order.orderNo) ?? null } : {})
       }));
     }
 

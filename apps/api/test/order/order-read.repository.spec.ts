@@ -139,8 +139,47 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(prisma.fulfillmentTask.findMany).not.toHaveBeenCalled();
-    expect(result).toEqual([{ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord }]);
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'asc' },
+      select: expect.objectContaining({
+        orderNo: true,
+        taskNo: true,
+        merchantId: true,
+        status: true,
+        createdAt: true,
+        completedAt: true
+      })
+    });
+    expect(result).toEqual([
+      {
+        ...orderRecord,
+        latestPayment: paymentRecord,
+        latestRefund: refundRecord,
+        fulfillmentSummary: {
+          totalTasks: 2,
+          pendingTasks: 1,
+          completedTasks: 1,
+          taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
+        },
+        fulfillmentTasks: [
+          {
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+            merchantId: 'merchant-001',
+            status: 'pending',
+            createdAt: new Date('2026-06-03T00:15:00.000Z'),
+            completedAt: null
+          },
+          {
+            taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+            merchantId: 'merchant-002',
+            status: 'completed',
+            createdAt: new Date('2026-06-03T00:16:00.000Z'),
+            completedAt: new Date('2026-06-03T00:30:00.000Z')
+          }
+        ]
+      }
+    ]);
   });
 
   it('lists recent admin orders newest first with latest payment and fulfillment summary', async () => {
@@ -407,8 +446,45 @@ describe('OrderReadRepository', () => {
       orderBy: { createdAt: 'desc' },
       select: expect.any(Object)
     });
-    expect(prisma.fulfillmentTask.findMany).not.toHaveBeenCalled();
-    expect(result).toEqual({ ...orderRecord, latestPayment: paymentRecord, latestRefund: refundRecord });
+    expect(prisma.fulfillmentTask.findMany).toHaveBeenCalledWith({
+      where: { orderNo: { in: ['ORDER-20260603-001'] } },
+      orderBy: { createdAt: 'asc' },
+      select: expect.objectContaining({
+        orderNo: true,
+        taskNo: true,
+        merchantId: true,
+        status: true,
+        createdAt: true,
+        completedAt: true
+      })
+    });
+    expect(result).toEqual({
+      ...orderRecord,
+      latestPayment: paymentRecord,
+      latestRefund: refundRecord,
+      fulfillmentSummary: {
+        totalTasks: 2,
+        pendingTasks: 1,
+        completedTasks: 1,
+        taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001', 'FT-ORDER-20260603-001-MERCHANT-002-001']
+      },
+      fulfillmentTasks: [
+        {
+          taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+          merchantId: 'merchant-001',
+          status: 'pending',
+          createdAt: new Date('2026-06-03T00:15:00.000Z'),
+          completedAt: null
+        },
+        {
+          taskNo: 'FT-ORDER-20260603-001-MERCHANT-002-001',
+          merchantId: 'merchant-002',
+          status: 'completed',
+          createdAt: new Date('2026-06-03T00:16:00.000Z'),
+          completedAt: new Date('2026-06-03T00:30:00.000Z')
+        }
+      ]
+    });
   });
 
   it('finds pickup order details with the buyer-visible pickup code', async () => {
@@ -435,6 +511,21 @@ describe('OrderReadRepository', () => {
       ...pickupOrderRecord,
       latestPayment: paymentRecord,
       latestRefund: refundRecord,
+      fulfillmentSummary: {
+        totalTasks: 1,
+        pendingTasks: 1,
+        completedTasks: 0,
+        taskNos: ['FT-ORDER-20260603-001-MERCHANT-001-001']
+      },
+      fulfillmentTasks: [
+        {
+          taskNo: 'FT-ORDER-20260603-001-MERCHANT-001-001',
+          merchantId: 'merchant-001',
+          status: 'pending',
+          createdAt: new Date('2026-06-03T00:15:00.000Z'),
+          completedAt: null
+        }
+      ],
       pickupCode: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
     });
   });

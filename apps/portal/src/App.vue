@@ -182,6 +182,19 @@ function paymentSummaryText(payment: PortalPayment) {
   return `${paymentChannelText(payment.channel)} · ${paymentStatusText(payment.status)}`;
 }
 
+function fulfillmentTaskStatusText(status: string) {
+  const labels: Record<string, string> = {
+    pending: '待履约',
+    completed: '已完成'
+  };
+
+  return labels[status] ?? status;
+}
+
+function hasFulfillmentProgress(order: PortalOrderRecord) {
+  return (order.fulfillmentSummary?.totalTasks ?? 0) > 0;
+}
+
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
@@ -366,6 +379,10 @@ async function confirmLatestPayment() {
           <small v-if="order.latestPayment" class="order-payment-summary">
             最近支付 {{ order.latestPayment.paymentNo }} · {{ paymentSummaryText(order.latestPayment) }}
           </small>
+          <small v-if="hasFulfillmentProgress(order)" class="order-payment-summary">
+            履约 待履约 {{ order.fulfillmentSummary?.pendingTasks ?? 0 }} · 已完成
+            {{ order.fulfillmentSummary?.completedTasks ?? 0 }}
+          </small>
         </button>
       </div>
     </section>
@@ -410,6 +427,21 @@ async function confirmLatestPayment() {
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>
         </div>
+        <section v-if="hasFulfillmentProgress(selectedOrder)" class="fulfillment-block">
+          <div>
+            <h3>履约进度</h3>
+            <p>
+              待履约 {{ selectedOrder.fulfillmentSummary?.pendingTasks ?? 0 }} · 已完成
+              {{ selectedOrder.fulfillmentSummary?.completedTasks ?? 0 }}
+            </p>
+          </div>
+          <div class="fulfillment-task-list">
+            <article v-for="task in selectedOrder.fulfillmentTasks ?? []" :key="task.taskNo" class="fulfillment-task">
+              <strong>{{ task.taskNo }}</strong>
+              <span>{{ fulfillmentTaskStatusText(task.status) }}</span>
+            </article>
+          </div>
+        </section>
         <section v-if="selectedOrder.latestPayment" class="payment-block persisted-payment">
           <div>
             <h3>最近支付</h3>
