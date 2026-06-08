@@ -142,7 +142,7 @@ Evidence:
 
 ### Task 4: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -150,9 +150,17 @@ Commit message:
 feat: show admin pickup codes
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch `codex/admin-pickup-code-task-visibility` committed `23381f5 feat: show admin pickup codes`.
+- PR #233 `feat: show admin pickup codes` passed `docs-check` and `project-foundation-check`.
+- PR #233 was squash-merged into `main` as `f22edb4 feat: show admin pickup codes`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch `codex/docs-admin-pickup-code-task-visibility-complete` marks this GitHub integration section complete.
 
 ## Acceptance Boundary
 
