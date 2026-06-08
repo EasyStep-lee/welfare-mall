@@ -95,7 +95,7 @@ Evidence:
 
 ### Task 3: GitHub Integration
 
-- [ ] **Step 1: Commit, push, open PR, and merge**
+- [x] **Step 1: Commit, push, open PR, and merge**
 
 Commit message:
 
@@ -103,9 +103,20 @@ Commit message:
 feat: show portal merchant fulfillment context
 ```
 
-- [ ] **Step 2: Mark plan complete in docs-only follow-up**
+Evidence:
+- Feature branch: `codex/portal-merchant-fulfillment-context`.
+- Feature commit: `8ab1333 feat: show portal merchant fulfillment context`.
+- PR: #237 `feat: show portal merchant fulfillment context`.
+- GitHub checks: `docs-check` passed; `project-foundation-check` passed.
+- Merged to `main` with squash commit `b978f0a45641105f776aa8bd9e3b9147f5cceeef`.
+
+- [x] **Step 2: Mark plan complete in docs-only follow-up**
 
 After the feature PR merges, create a docs-only branch and mark this plan complete.
+
+Evidence:
+- Docs-only branch: `codex/docs-portal-merchant-fulfillment-context-complete`.
+- Docs-only scope: this plan file only.
 
 ## Acceptance Boundary
 
