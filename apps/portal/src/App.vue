@@ -235,6 +235,14 @@ function hasFulfillmentProgress(order: PortalOrderRecord) {
   return (order.fulfillmentSummary?.totalTasks ?? 0) > 0;
 }
 
+function orderLineMerchantText(order: PortalOrderRecord) {
+  const merchantIds = [
+    ...new Set(order.lines.map((line) => line.merchantId).filter((merchantId): merchantId is string => Boolean(merchantId)))
+  ];
+
+  return merchantIds.length > 0 ? merchantIds.join(' / ') : '待确认';
+}
+
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
@@ -599,6 +607,7 @@ async function confirmLatestRefund() {
           <small v-if="order.latestPayment" class="order-payment-summary">
             最近支付 {{ order.latestPayment.paymentNo }} · {{ paymentSummaryText(order.latestPayment) }}
           </small>
+          <small class="order-payment-summary">履约商户 {{ orderLineMerchantText(order) }}</small>
           <small v-if="hasFulfillmentProgress(order)" class="order-payment-summary">
             履约 待履约 {{ order.fulfillmentSummary?.pendingTasks ?? 0 }} · 已完成
             {{ order.fulfillmentSummary?.completedTasks ?? 0 }}
@@ -647,6 +656,7 @@ async function confirmLatestRefund() {
             <div>
               <h3>{{ line.displayName }}</h3>
               <p>{{ line.displaySkuCode ?? '默认规格' }} · x{{ line.quantity }}</p>
+              <p>履约商户 {{ line.merchantId ?? '待确认' }}</p>
             </div>
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>

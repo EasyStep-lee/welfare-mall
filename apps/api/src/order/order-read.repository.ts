@@ -163,6 +163,28 @@ export class OrderReadRepository {
     return pickupCodeByOrderNo;
   }
 
+  private async attachOrderLineMerchantIds(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]> {
+    const productIds = [...new Set(orders.flatMap((order) => order.lines.map((line) => line.productId)))];
+
+    if (productIds.length === 0) {
+      return orders;
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, merchantId: true }
+    });
+    const merchantIdByProductId = new Map(products.map((product) => [product.id, product.merchantId]));
+
+    return orders.map((order) => ({
+      ...order,
+      lines: order.lines.map((line) => ({
+        ...line,
+        merchantId: merchantIdByProductId.get(line.productId) ?? null
+      }))
+    }));
+  }
+
   private async attachLatestOrderFacts(orders: OrderCheckoutRecord[]): Promise<OrderCheckoutRecord[]>;
   private async attachLatestOrderFacts(
     orders: OrderCheckoutRecord[],
@@ -185,6 +207,8 @@ export class OrderReadRepository {
     if (orderNos.length === 0) {
       return orders;
     }
+
+    const ordersWithLineMerchants = await this.attachOrderLineMerchantIds(orders);
 
     const payments = await this.prisma.orderPayment.findMany({
       where: { orderNo: { in: orderNos } },
@@ -220,10 +244,12 @@ export class OrderReadRepository {
       const fulfillmentSummaryByOrderNo = summarizeFulfillmentTasks(orderNos, tasks);
       const fulfillmentTasksByOrderNo = groupFulfillmentTasksByOrderNo(orderNos, tasks);
       const pickupCodeByOrderNo = options.includePickupCodes
-        ? await this.findPickupCodesByOrderNo(orders.filter((order) => order.fulfillmentType === 'pickup').map((order) => order.orderNo))
+        ? await this.findPickupCodesByOrderNo(
+            ordersWithLineMerchants.filter((order) => order.fulfillmentType === 'pickup').map((order) => order.orderNo)
+          )
         : new Map<string, string>();
 
-      return orders.map((order) => ({
+      return ordersWithLineMerchants.map((order) => ({
         ...order,
         latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
         latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
@@ -234,10 +260,12 @@ export class OrderReadRepository {
     }
 
     if (options.includePickupCodes) {
-      const pickupOrderNos = orders.filter((order) => order.fulfillmentType === 'pickup').map((order) => order.orderNo);
+      const pickupOrderNos = ordersWithLineMerchants
+        .filter((order) => order.fulfillmentType === 'pickup')
+        .map((order) => order.orderNo);
       const pickupCodeByOrderNo = await this.findPickupCodesByOrderNo(pickupOrderNos);
 
-      return orders.map((order) => ({
+      return ordersWithLineMerchants.map((order) => ({
         ...order,
         latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
         latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null,
@@ -245,7 +273,7 @@ export class OrderReadRepository {
       }));
     }
 
-    return orders.map((order) => ({
+    return ordersWithLineMerchants.map((order) => ({
       ...order,
       latestPayment: latestPaymentByOrderNo.get(order.orderNo) ?? null,
       latestRefund: latestRefundByOrderNo.get(order.orderNo) ?? null
