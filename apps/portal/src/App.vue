@@ -129,6 +129,10 @@ async function openProductDetail(item: ProductPoolCatalogItem) {
 }
 
 async function openOrderDetail(order: PortalOrderRecord) {
+  await openOrderDetailByOrderNo(order.orderNo);
+}
+
+async function openOrderDetailByOrderNo(orderNo: string) {
   orderDetailLoading.value = true;
   orderDetailError.value = null;
   selectedOrder.value = null;
@@ -140,7 +144,7 @@ async function openOrderDetail(order: PortalOrderRecord) {
 
   try {
     const response = await fetchPortalOrderDetail({
-      orderNo: order.orderNo,
+      orderNo,
       buyerUserId: localBuyerUserId
     });
     selectedOrder.value = response.order;
@@ -916,6 +920,15 @@ async function confirmLatestRefund() {
               <span>订单创建成功</span>
               <strong>{{ createdOrder.orderNo }}</strong>
               <p>{{ statusText(createdOrder.status) }} · {{ formatMoney(createdOrder.totalAmount) }}</p>
+              <button
+                type="button"
+                class="secondary-button"
+                :aria-label="`查看订单 ${createdOrder.orderNo} 详情并支付`"
+                :disabled="orderDetailLoading"
+                @click="openOrderDetailByOrderNo(createdOrder.orderNo)"
+              >
+                {{ orderDetailLoading ? '加载订单中' : '查看订单并支付' }}
+              </button>
             </div>
           </section>
         </div>
