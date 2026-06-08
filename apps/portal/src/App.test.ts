@@ -485,6 +485,42 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('微信支付 · 待支付');
   });
 
+  it('does not offer a second payment creation action when latest payment is pending', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailWithLatestPaymentResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderListWithLatestPaymentResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('确认支付成功');
+    expect(wrapper.find('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').exists()).toBe(false);
+  });
+
   it('confirms a persisted local payment as paid and refreshes order reads', async () => {
     let ordersRequestCount = 0;
     let detailRequestCount = 0;

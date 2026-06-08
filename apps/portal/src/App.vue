@@ -206,6 +206,10 @@ function canConfirmLatestPayment(order: PortalOrderRecord) {
   return order.status === 'pending_payment' && order.latestPayment?.status === 'pending';
 }
 
+function canCreateLocalPayment(order: PortalOrderRecord) {
+  return order.status === 'pending_payment' && order.latestPayment?.status !== 'pending';
+}
+
 function resetPaymentConfirmation() {
   paymentConfirmError.value = null;
   confirmedPaymentMessage.value = null;
@@ -416,6 +420,12 @@ async function confirmLatestPayment() {
             <strong>{{ selectedOrder.latestPayment.paymentNo }}</strong>
             <p>{{ formatMoney(selectedOrder.latestPayment.cashPayableAmount) }}</p>
           </div>
+          <p
+            v-if="createdPayment?.paymentNo === selectedOrder.latestPayment.paymentNo"
+            class="checkout-message success"
+          >
+            支付单创建成功
+          </p>
           <button
             v-if="canConfirmLatestPayment(selectedOrder)"
             type="button"
@@ -429,7 +439,7 @@ async function confirmLatestPayment() {
           <p v-if="paymentConfirmError" class="checkout-message error">{{ paymentConfirmError }}</p>
           <p v-if="confirmedPaymentMessage" class="checkout-message success">{{ confirmedPaymentMessage }}</p>
         </section>
-        <section v-if="selectedOrder.status === 'pending_payment'" class="payment-block">
+        <section v-if="canCreateLocalPayment(selectedOrder)" class="payment-block">
           <div>
             <h3>本地支付</h3>
             <p>微信支付 · 应付 {{ formatMoney(selectedOrder.cashPayableAmount) }}</p>
