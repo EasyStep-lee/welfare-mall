@@ -243,6 +243,14 @@ function orderLineMerchantText(order: PortalOrderRecord) {
   return merchantIds.length > 0 ? merchantIds.join(' / ') : '待确认';
 }
 
+function fulfillmentFactLabel(order: PortalOrderRecord) {
+  return order.fulfillmentType === 'pickup' ? '履约方式' : '配送地址';
+}
+
+function fulfillmentFactText(order: PortalOrderRecord) {
+  return order.fulfillmentType === 'pickup' ? '商户自提' : order.receiverAddress ?? '待补充';
+}
+
 function createCheckoutRequestId(itemId: string) {
   const safeItemId = itemId.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return `portal-checkout-${safeItemId}-${Date.now()}`;
@@ -642,8 +650,8 @@ async function confirmLatestRefund() {
             <strong>{{ selectedOrder.receiverName ?? '待补充' }}</strong>
           </div>
           <div>
-            <span>配送地址</span>
-            <strong>{{ selectedOrder.receiverAddress ?? selectedOrder.pickupStoreName ?? '待补充' }}</strong>
+            <span>{{ fulfillmentFactLabel(selectedOrder) }}</span>
+            <strong>{{ fulfillmentFactText(selectedOrder) }}</strong>
           </div>
         </div>
         <div v-if="selectedOrder.pickupCode" class="pickup-code-row">

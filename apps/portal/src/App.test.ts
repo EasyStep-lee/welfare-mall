@@ -1107,7 +1107,12 @@ describe('Portal product pool catalog', () => {
     await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PICKUP 详情"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('本地自提点');
+    expect(wrapper.text()).toContain('履约方式');
+    expect(wrapper.text()).toContain('商户自提');
+    expect(wrapper.text()).toContain('履约商户');
+    expect(wrapper.text()).toContain('merchant-local-review');
+    expect(wrapper.text()).not.toContain('本地自提点');
+    expect(wrapper.text()).not.toContain('门店自提');
     expect(wrapper.text()).toContain('取货码');
     expect(wrapper.text()).toContain('WM_PICKUP:FT-ORDER-PORTAL-PICKUP-001');
   });
