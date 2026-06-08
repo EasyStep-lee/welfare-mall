@@ -100,6 +100,18 @@ const orderDetailResponse = {
   order: orderListResponse.orders[0]
 };
 
+const cancelledOrderResponse = {
+  order: {
+    ...orderListResponse.orders[0],
+    status: 'cancelled',
+    updatedAt: '2026-06-07T00:05:00.000Z'
+  }
+};
+
+const cancelledOrderListResponse = {
+  orders: [cancelledOrderResponse.order]
+};
+
 const latestPaymentResponse = {
   id: 'payment-local-latest',
   paymentNo: 'PAY-20260607-LATEST',
@@ -485,6 +497,68 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('PAY-20260607-PORTAL');
     expect(wrapper.text()).toContain('微信支付');
     expect(wrapper.text()).toContain('待支付');
+  });
+
+  it('cancels a pending buyer order from the order detail panel', async () => {
+    let ordersRequestCount = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL/cancel')) {
+          return {
+            ok: true,
+            json: async () => cancelledOrderResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => orderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          ordersRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (ordersRequestCount > 1 ? cancelledOrderListResponse : orderListResponse)
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="取消订单 ORDER-20260607-PORTAL"]').trigger('click');
+    await flushPromises();
+
+    const cancelCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).endsWith('/orders/ORDER-20260607-PORTAL/cancel'));
+    expect(cancelCall).toBeTruthy();
+    expect(cancelCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(cancelCall?.[1]?.body))).toEqual({
+      buyerUserId: 'local-user-001',
+      reason: 'user_cancel'
+    });
+    expect(ordersRequestCount).toBe(2);
+    expect(wrapper.text()).toContain('订单已取消');
+    expect(wrapper.text()).toContain('已取消');
+    expect(wrapper.find('button[aria-label="取消订单 ORDER-20260607-PORTAL"]').exists()).toBe(false);
   });
 
   it('renders persisted latest payment on order list and detail reads', async () => {
