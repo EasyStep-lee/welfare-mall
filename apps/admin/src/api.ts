@@ -5,6 +5,7 @@ export type AdminOrderStatusFilter =
   | 'paid'
   | 'refund_processing'
   | 'refunded'
+  | 'cancelled'
   | 'completed';
 export type AdminFulfillmentStatusFilter = 'all' | 'pending' | 'completed';
 export type AdminInventoryReservationStatusFilter = 'all' | 'reserved' | 'released';
@@ -293,6 +294,7 @@ export const adminOrderStatusLabels: Record<AdminOrderStatusFilter, string> = {
   paid: '已支付',
   refund_processing: '退款中',
   refunded: '已退款',
+  cancelled: '已取消',
   completed: '已完成'
 };
 
