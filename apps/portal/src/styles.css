@@ -577,6 +577,10 @@ h1 {
   color: #9c2d20;
 }
 
+.checkout-message.success {
+  color: #174c43;
+}
+
 .checkout-result {
   background: #ffffff;
   border: 1px solid #cfe1d9;

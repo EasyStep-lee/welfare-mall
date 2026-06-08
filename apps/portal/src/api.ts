@@ -164,6 +164,28 @@ export type PortalPaymentResponse = {
   payment: PortalPayment;
 };
 
+export type PortalPaymentCallbackInput = {
+  providerEventId: string;
+  paymentNo: string;
+  providerPaymentNo: string;
+  status: 'paid';
+  paidAt: string;
+  payload: Record<string, unknown>;
+};
+
+export type PortalPaymentCallbackResponse = {
+  duplicate: boolean;
+  payment: {
+    paymentNo: string;
+    status: string;
+    providerPaymentNo: string | null;
+  };
+  callback: {
+    providerEventId: string;
+    status: string;
+  };
+};
+
 export type PortalOrderCheckoutResponse = {
   idempotentReplay: boolean;
   order: PortalCheckoutOrder;
@@ -248,6 +270,20 @@ export async function createPortalPayment(input: PortalPaymentInput): Promise<Po
   }
 
   return response.json() as Promise<PortalPaymentResponse>;
+}
+
+export async function confirmPortalPayment(input: PortalPaymentCallbackInput): Promise<PortalPaymentCallbackResponse> {
+  const response = await fetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to confirm payment: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalPaymentCallbackResponse>;
 }
 
 function apiBaseUrl() {

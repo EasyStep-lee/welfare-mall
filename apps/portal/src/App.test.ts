@@ -116,12 +116,28 @@ const latestPaymentResponse = {
   updatedAt: '2026-06-07T00:01:00.000Z'
 };
 
+const paidLatestPaymentResponse = {
+  ...latestPaymentResponse,
+  status: 'paid',
+  providerPaymentNo: 'LOCAL-PORTAL-PROVIDER-PAY-20260607-LATEST',
+  paidAt: '2026-06-08T00:00:00.000Z',
+  updatedAt: '2026-06-08T00:00:00.000Z'
+};
+
 const orderListWithLatestPaymentResponse = {
   orders: [{ ...orderListResponse.orders[0], latestPayment: latestPaymentResponse }]
 };
 
 const orderDetailWithLatestPaymentResponse = {
   order: orderListWithLatestPaymentResponse.orders[0]
+};
+
+const paidOrderListResponse = {
+  orders: [{ ...orderListResponse.orders[0], status: 'paid', latestPayment: paidLatestPaymentResponse }]
+};
+
+const paidOrderDetailResponse = {
+  order: paidOrderListResponse.orders[0]
 };
 
 const paymentResponse = {
@@ -136,6 +152,19 @@ const paymentResponse = {
     welfareCardPayableAmount: 0,
     cashPayableAmount: 6990,
     providerPaymentNo: null
+  }
+};
+
+const paymentCallbackResponse = {
+  duplicate: false,
+  payment: {
+    paymentNo: 'PAY-20260607-LATEST',
+    status: 'paid',
+    providerPaymentNo: 'LOCAL-PORTAL-PROVIDER-PAY-20260607-LATEST'
+  },
+  callback: {
+    providerEventId: 'LOCAL-PORTAL-PAYMENT-ORDER-20260607-PORTAL',
+    status: 'paid'
   }
 };
 
@@ -454,5 +483,77 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('最近支付');
     expect(wrapper.text()).toContain('PAY-20260607-LATEST');
     expect(wrapper.text()).toContain('微信支付 · 待支付');
+  });
+
+  it('confirms a persisted local payment as paid and refreshes order reads', async () => {
+    let ordersRequestCount = 0;
+    let detailRequestCount = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/payments/callbacks')) {
+          return {
+            ok: true,
+            json: async () => paymentCallbackResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          detailRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (detailRequestCount > 1 ? paidOrderDetailResponse : orderDetailWithLatestPaymentResponse)
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          ordersRequestCount += 1;
+          return {
+            ok: true,
+            json: async () => (ordersRequestCount > 1 ? paidOrderListResponse : orderListWithLatestPaymentResponse)
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="确认支付单 PAY-20260607-LATEST 支付成功"]').trigger('click');
+    await flushPromises();
+
+    const callbackCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).endsWith('/orders/payments/callbacks'));
+    expect(callbackCall).toBeTruthy();
+    expect(callbackCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const callbackBody = JSON.parse(String(callbackCall?.[1]?.body));
+    expect(callbackBody).toMatchObject({
+      providerEventId: 'LOCAL-PORTAL-PAYMENT-ORDER-20260607-PORTAL',
+      paymentNo: 'PAY-20260607-LATEST',
+      providerPaymentNo: 'LOCAL-PORTAL-PROVIDER-PAY-20260607-LATEST',
+      status: 'paid',
+      payload: { source: 'portal-local-payment' }
+    });
+    expect(callbackBody.paidAt).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/));
+    expect(ordersRequestCount).toBe(2);
+    expect(detailRequestCount).toBe(2);
+    expect(wrapper.text()).toContain('支付已确认');
+    expect(wrapper.text()).toContain('PAY-20260607-LATEST');
+    expect(wrapper.text()).toContain('微信支付 · 已支付');
+    expect(wrapper.text()).toContain('已支付');
   });
 });
