@@ -161,6 +161,29 @@ const paidOrderWithFulfillmentResponse = {
   }
 };
 
+const pickupOrderListResponse = {
+  orders: [
+    {
+      ...orderListResponse.orders[0],
+      id: 'order-local-pickup-001',
+      orderNo: 'ORDER-20260607-PICKUP',
+      requestId: 'portal-checkout-pickup-001',
+      status: 'paid',
+      fulfillmentType: 'pickup',
+      receiverAddress: null,
+      pickupStoreName: '本地自提点',
+      latestPayment: paidLatestPaymentResponse
+    }
+  ]
+};
+
+const pickupOrderDetailResponse = {
+  order: {
+    ...pickupOrderListResponse.orders[0],
+    pickupCode: 'WM_PICKUP:FT-ORDER-PORTAL-PICKUP-001'
+  }
+};
+
 const paymentResponse = {
   idempotentReplay: false,
   payment: {
@@ -649,5 +672,42 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('履约进度');
     expect(wrapper.text()).toContain('待履约 1');
     expect(wrapper.text()).toContain('FT-ORDER-20260607-PORTAL-MERCHANT-LOCAL-REVIEW-001');
+  });
+
+  it('renders pickup code for a pickup buyer order detail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/ORDER-20260607-PICKUP?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => pickupOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => pickupOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PICKUP 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('本地自提点');
+    expect(wrapper.text()).toContain('取货码');
+    expect(wrapper.text()).toContain('WM_PICKUP:FT-ORDER-PORTAL-PICKUP-001');
   });
 });

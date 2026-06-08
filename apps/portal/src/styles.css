@@ -535,6 +535,28 @@ h1 {
   padding: 14px;
 }
 
+.pickup-code-row {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cfe1d9;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.pickup-code-row span {
+  color: #5c7177;
+  font-size: 13px;
+}
+
+.pickup-code-row strong {
+  color: #174c43;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
 .fulfillment-block {
   background: #f7faf8;
   border: 1px solid #d7e1dd;
@@ -689,6 +711,11 @@ h1 {
   }
 
   .fulfillment-task {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pickup-code-row {
     align-items: stretch;
     flex-direction: column;
   }
