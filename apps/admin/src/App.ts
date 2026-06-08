@@ -575,6 +575,7 @@ function renderOrdersPanel(
                 h(ElTag, () => `履约 ${order.fulfillmentSummary.totalTasks} 项`),
                 h(ElTag, () => `待履约 ${order.fulfillmentSummary.pendingTasks}`)
               ]),
+              renderOrderFulfillmentTasks(order),
               h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / ')),
               h(ElSpace, { wrap: true }, () => [
                 canConfirmPayment(order)
@@ -590,6 +591,24 @@ function renderOrdersPanel(
             ])
           )
         )
+  ]);
+}
+
+function renderOrderFulfillmentTasks(order: AdminOrder) {
+  if (order.fulfillmentTasks.length === 0) {
+    return null;
+  }
+
+  return h('div', { class: 'order-fulfillment-tasks' }, [
+    h('strong', '履约任务'),
+    ...order.fulfillmentTasks.map((task) =>
+      h('div', { class: 'order-fulfillment-task', key: task.taskNo }, [
+        h('strong', task.taskNo),
+        h('span', task.merchantId),
+        h('span', label(adminFulfillmentStatusLabels, task.status)),
+        task.completedAt ? h('span', `完成 ${task.completedAt}`) : null
+      ])
+    )
   ]);
 }
 

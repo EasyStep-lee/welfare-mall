@@ -72,7 +72,15 @@ const adminOrdersResponse = {
       latestPayment: { paymentNo: 'PAY-20260603-001', status: 'paid', channel: 'wechat' },
       latestRefund: null,
       fulfillmentSummary: { totalTasks: 1, pendingTasks: 1, completedTasks: 0, taskNos: ['FT-001'] },
-      fulfillmentTasks: [],
+      fulfillmentTasks: [
+        {
+          taskNo: 'FT-001',
+          merchantId: 'merchant-001',
+          status: 'pending',
+          createdAt: '2026-06-03T00:20:00.000Z',
+          completedAt: null
+        }
+      ],
       lines: [{ displayName: 'Local Rice', displaySkuCode: 'SKU-RICE-5KG', quantity: 2, lineTotalAmount: 13980 }]
     },
     {
@@ -517,6 +525,16 @@ describe('Admin Vue workbench', () => {
     expect(requestUrls()).toContain(
       'http://localhost:3000/api/orders/admin?status=paid&fulfillmentStatus=pending&merchantId=merchant-001&taskNo=FT-001'
     );
+  });
+
+  it('renders fulfillment task details on admin order cards', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('履约任务');
+    expect(wrapper.text()).toContain('FT-001');
+    expect(wrapper.text()).toContain('merchant-001');
+    expect(wrapper.text()).toContain('待履约');
   });
 
   it('filters admin inventory reservations and stock balances from visible controls', async () => {
