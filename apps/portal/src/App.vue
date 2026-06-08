@@ -417,6 +417,10 @@ async function confirmLatestPayment() {
             <strong>{{ selectedOrder.receiverAddress ?? selectedOrder.pickupStoreName ?? '待补充' }}</strong>
           </div>
         </div>
+        <div v-if="selectedOrder.pickupCode" class="pickup-code-row">
+          <span>取货码</span>
+          <strong>{{ selectedOrder.pickupCode }}</strong>
+        </div>
         <div class="order-line-list">
           <article v-for="line in selectedOrder.lines" :key="line.id" class="order-line">
             <img :src="line.displayImageUrl" :alt="line.displayName" />

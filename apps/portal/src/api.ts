@@ -120,6 +120,7 @@ export type PortalOrderRecord = PortalCheckoutOrder & {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  pickupCode?: string | null;
   createdAt: string;
   updatedAt: string;
   latestPayment: PortalPayment | null;
