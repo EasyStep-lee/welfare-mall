@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+  confirmPortalPayment,
   createPortalOrder,
   createPortalPayment,
   fetchProductPoolCatalog,
@@ -40,6 +41,9 @@ const selectedOrder = ref<PortalOrderRecord | null>(null);
 const paymentLoading = ref(false);
 const paymentError = ref<string | null>(null);
 const createdPayment = ref<PortalPayment | null>(null);
+const paymentConfirmLoading = ref(false);
+const paymentConfirmError = ref<string | null>(null);
+const confirmedPaymentMessage = ref<string | null>(null);
 
 const totalItems = computed(() => productPools.value.reduce((total, pool) => total + pool.items.length, 0));
 const originText = computed(() => {
@@ -107,6 +111,7 @@ async function openOrderDetail(order: PortalOrderRecord) {
   selectedOrder.value = null;
   paymentError.value = null;
   createdPayment.value = null;
+  resetPaymentConfirmation();
 
   try {
     const response = await fetchPortalOrderDetail({
@@ -124,6 +129,7 @@ async function openOrderDetail(order: PortalOrderRecord) {
 function closeOrderDetail() {
   orderDetailError.value = null;
   paymentError.value = null;
+  resetPaymentConfirmation();
   selectedOrder.value = null;
   createdPayment.value = null;
 }
@@ -186,6 +192,25 @@ function createPaymentRequestId(orderNo: string) {
   return `portal-payment-${safeOrderNo}-${Date.now()}`;
 }
 
+function createPaymentCallbackEventId(orderNo: string) {
+  const safeOrderNo = orderNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `LOCAL-PORTAL-PAYMENT-${safeOrderNo}`;
+}
+
+function createProviderPaymentNo(paymentNo: string) {
+  const safePaymentNo = paymentNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `LOCAL-PORTAL-PROVIDER-${safePaymentNo}`;
+}
+
+function canConfirmLatestPayment(order: PortalOrderRecord) {
+  return order.status === 'pending_payment' && order.latestPayment?.status === 'pending';
+}
+
+function resetPaymentConfirmation() {
+  paymentConfirmError.value = null;
+  confirmedPaymentMessage.value = null;
+}
+
 async function submitLocalOrder() {
   if (!selectedDetail.value) {
     checkoutError.value = '请先选择商品';
@@ -246,6 +271,43 @@ async function submitLocalPayment() {
     paymentError.value = submitError instanceof Error ? submitError.message : '支付单创建失败';
   } finally {
     paymentLoading.value = false;
+  }
+}
+
+async function confirmLatestPayment() {
+  if (!selectedOrder.value?.latestPayment) {
+    paymentConfirmError.value = '请先创建支付单';
+    return;
+  }
+
+  const orderNo = selectedOrder.value.orderNo;
+  const paymentNo = selectedOrder.value.latestPayment.paymentNo;
+
+  paymentConfirmLoading.value = true;
+  paymentConfirmError.value = null;
+  confirmedPaymentMessage.value = null;
+
+  try {
+    await confirmPortalPayment({
+      providerEventId: createPaymentCallbackEventId(orderNo),
+      paymentNo,
+      providerPaymentNo: createProviderPaymentNo(paymentNo),
+      status: 'paid',
+      paidAt: new Date().toISOString(),
+      payload: { source: 'portal-local-payment' }
+    });
+
+    await loadLocalOrders();
+    const response = await fetchPortalOrderDetail({
+      orderNo,
+      buyerUserId: localBuyerUserId
+    });
+    selectedOrder.value = response.order;
+    confirmedPaymentMessage.value = '支付已确认';
+  } catch (confirmError) {
+    paymentConfirmError.value = confirmError instanceof Error ? confirmError.message : '支付确认失败';
+  } finally {
+    paymentConfirmLoading.value = false;
   }
 }
 </script>
@@ -354,6 +416,18 @@ async function submitLocalPayment() {
             <strong>{{ selectedOrder.latestPayment.paymentNo }}</strong>
             <p>{{ formatMoney(selectedOrder.latestPayment.cashPayableAmount) }}</p>
           </div>
+          <button
+            v-if="canConfirmLatestPayment(selectedOrder)"
+            type="button"
+            class="checkout-button"
+            :aria-label="`确认支付单 ${selectedOrder.latestPayment.paymentNo} 支付成功`"
+            :disabled="paymentConfirmLoading"
+            @click="confirmLatestPayment"
+          >
+            {{ paymentConfirmLoading ? '确认中' : '确认支付成功' }}
+          </button>
+          <p v-if="paymentConfirmError" class="checkout-message error">{{ paymentConfirmError }}</p>
+          <p v-if="confirmedPaymentMessage" class="checkout-message success">{{ confirmedPaymentMessage }}</p>
         </section>
         <section v-if="selectedOrder.status === 'pending_payment'" class="payment-block">
           <div>
