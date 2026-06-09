@@ -58,4 +58,34 @@ describe('user mini-program refund helpers', () => {
       refundAmountText: '¥139.80'
     });
   });
+
+  it('does not send offline cash as a refund channel', () => {
+    expect(
+      buildRefundPayload({
+        requestId: 'refund-request-cash',
+        order: {
+          ...paidOrder,
+          latestPayment: {
+            ...paidOrder.latestPayment,
+            channel: 'cash'
+          }
+        }
+      })
+    ).toMatchObject({
+      channel: 'wechat'
+    });
+  });
+
+  it('does not map offline cash as a refund channel', () => {
+    expect(
+      toRefundDisplay({
+        refundNo: 'REF-CASH-001',
+        status: 'processing',
+        channel: 'cash',
+        refundAmount: 13980
+      })
+    ).toMatchObject({
+      channelText: '未知退款渠道'
+    });
+  });
 });

@@ -11,6 +11,7 @@ Page({
     error: '',
     order: null,
     orderDisplay: null,
+    selectedPaymentChannel: 'wechat',
     creatingPayment: false,
     payment: null,
     paymentDisplay: null,
@@ -52,6 +53,7 @@ Page({
         payment: null,
         paymentDisplay: null,
         paymentError: '',
+        selectedPaymentChannel: 'wechat',
         requestingRefund: false,
         refund: null,
         refundDisplay: null,
@@ -101,7 +103,7 @@ Page({
         data: buildPaymentPayload({
           requestId: createPaymentRequestId(this.data.order.orderNo),
           order: this.data.order,
-          channel: 'wechat'
+          channel: this.data.selectedPaymentChannel
         })
       });
       const payment = response.payment;
@@ -117,6 +119,16 @@ Page({
         paymentError: error instanceof Error ? error.message : '支付单创建失败'
       });
     }
+  },
+
+  selectPaymentChannel(event) {
+    const channel = event?.currentTarget?.dataset?.channel === 'alipay' ? 'alipay' : 'wechat';
+    this.setData({
+      selectedPaymentChannel: channel,
+      payment: null,
+      paymentDisplay: null,
+      paymentError: ''
+    });
   },
 
   async cancelOrder() {

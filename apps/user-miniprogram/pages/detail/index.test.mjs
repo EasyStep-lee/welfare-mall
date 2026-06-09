@@ -1,7 +1,10 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
+const detailWxml = readFileSync(fileURLToPath(new URL('./index.wxml', import.meta.url)), 'utf8');
 
 const detailResponse = {
   itemId: 'pool-item-001',
@@ -123,11 +126,17 @@ describe('user mini-program product detail checkout flow', () => {
     expect(page.data.previewText).toEqual({
       totalText: '¥139.80',
       welfareCardText: '¥50.00',
-      cashText: '¥89.80'
+      onlineRemainderText: '¥89.80'
     });
     expect(page.data.createdOrder).toMatchObject({
       orderNo: 'ORDER-20260603-001',
       status: 'pending_payment'
     });
+  });
+
+  it('labels the amount preview as welfare-card debit plus online remainder', () => {
+    expect(detailWxml).toContain('福利卡抵扣');
+    expect(detailWxml).toContain('线上补差');
+    expect(detailWxml).not.toContain('现金支付');
   });
 });

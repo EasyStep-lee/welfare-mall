@@ -1,7 +1,10 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
+const orderDetailWxml = readFileSync(fileURLToPath(new URL('./index.wxml', import.meta.url)), 'utf8');
 
 const order = {
   orderNo: 'ORDER-20260603-001',
@@ -99,7 +102,7 @@ function mountPage(options = {}) {
     request: vi.fn((request) => {
       requests.push(request);
       if (request.url.endsWith('/orders/payments')) {
-        request.success({ statusCode: 201, data: { payment } });
+        request.success({ statusCode: 201, data: { payment: options.paymentResponse || payment } });
         return;
       }
       if (request.url.endsWith('/orders/refunds')) {
@@ -154,7 +157,7 @@ describe('user mini-program order detail page', () => {
       statusText: '待支付',
       totalText: '¥139.80',
       welfareCardText: '¥50.00',
-      cashText: '¥89.80',
+      onlineRemainderText: '¥89.80',
       latestPaymentDisplay: {
         paymentNo: 'PAY-20260603-001',
         statusText: '待支付',
@@ -193,6 +196,34 @@ describe('user mini-program order detail page', () => {
       paymentNo: 'PAY-20260603-001',
       statusText: '待支付',
       channelText: '微信支付'
+    });
+  });
+
+  it('creates an Alipay online payment order from the loaded order snapshot', async () => {
+    const { page, requests } = mountPage({
+      paymentResponse: {
+        ...payment,
+        channel: 'alipay'
+      }
+    });
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    page.selectPaymentChannel({ currentTarget: { dataset: { channel: 'alipay' } } });
+    await page.submitPayment();
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/payments',
+      data: {
+        orderNo: 'ORDER-20260603-001',
+        channel: 'alipay',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
+      }
+    });
+    expect(page.data.paymentDisplay).toMatchObject({
+      channelText: '支付宝'
     });
   });
 
@@ -324,5 +355,12 @@ describe('user mini-program order detail page', () => {
       receiverText: '浦东直营网点',
       pickupCodeText: 'WM_PICKUP:FT-ORDER-20260603-001-MERCHANT-001-001'
     });
+  });
+
+  it('labels order payment split as welfare-card debit plus online remainder', () => {
+    expect(orderDetailWxml).toContain('福利卡抵扣');
+    expect(orderDetailWxml).toContain('线上补差');
+    expect(orderDetailWxml).toContain('选择支付宝支付渠道');
+    expect(orderDetailWxml).not.toContain('现金支付');
   });
 });

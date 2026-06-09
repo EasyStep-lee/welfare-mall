@@ -103,24 +103,14 @@
       "nextAction": "Test selected card account, issuer franchise validation, and online cash remainder."
     },
     {
-      "file": "apps/user-miniprogram/pages/detail/index.wxml",
-      "reason": "Mini program detail page still labels welfare-card amount as a raw input.",
-      "nextAction": "Replace with card selection and available balance display."
-    },
-    {
       "file": "apps/user-miniprogram/pages/order-detail/index.js",
-      "reason": "Mini program order detail still formats compatibility pickup and cash-channel facts.",
+      "reason": "Mini program order detail still formats compatibility pickup facts and uses local buyer order detail flow.",
       "nextAction": "Show sales franchise, fulfillment merchant, merchant address, and payment components."
     },
     {
       "file": "apps/user-miniprogram/pages/order-detail/index.test.mjs",
-      "reason": "Mini program order detail tests still include pickupStoreName and raw cash-channel displays.",
+      "reason": "Mini program order detail tests still include pickupStoreName compatibility and cash-channel negative regression fixtures.",
       "nextAction": "Rewrite around merchant address and combination payment display."
-    },
-    {
-      "file": "apps/user-miniprogram/pages/order-detail/index.wxml",
-      "reason": "Mini program order detail still displays welfare-card and cash amounts without card-account context.",
-      "nextAction": "Show welfare-card account component and wechat/alipay online cash component."
     },
     {
       "file": "apps/user-miniprogram/pages/orders/index.js",
@@ -144,23 +134,23 @@
     },
     {
       "file": "apps/user-miniprogram/utils/order.js",
-      "reason": "Order utility still formats pickupStoreName and cash text.",
+      "reason": "Order utility still formats pickupStoreName compatibility data.",
       "nextAction": "Format sales franchise, fulfillment merchant, merchant address, and payment components."
     },
     {
       "file": "apps/user-miniprogram/utils/order.test.mjs",
-      "reason": "Order utility tests still use pickupStoreName and old cash payment text.",
+      "reason": "Order utility tests still use pickupStoreName compatibility data.",
       "nextAction": "Rewrite around merchant address and combination payment components."
     },
     {
-      "file": "apps/user-miniprogram/utils/payment.js",
-      "reason": "Payment utility still maps cash as a user payment channel.",
-      "nextAction": "Remove cash and format only wechat/alipay online cash component plus welfare-card component."
+      "file": "apps/user-miniprogram/utils/payment.test.mjs",
+      "reason": "Payment utility tests intentionally use cash as a negative fixture to assert it is not accepted as a user payment channel.",
+      "nextAction": "Remove the cash fixture once the component payment contract no longer needs legacy-channel regression coverage."
     },
     {
-      "file": "apps/user-miniprogram/utils/refund.js",
-      "reason": "Refund utility still maps cash as a refund channel.",
-      "nextAction": "Refund welfare-card and online-cash components by original route."
+      "file": "apps/user-miniprogram/utils/refund.test.mjs",
+      "reason": "Refund utility tests intentionally use cash as a negative fixture to assert it is not accepted as a user refund channel.",
+      "nextAction": "Remove the cash fixture once the component refund contract no longer needs legacy-channel regression coverage."
     }
   ]
 }

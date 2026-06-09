@@ -29,6 +29,32 @@ describe('user mini-program payment helpers', () => {
     });
   });
 
+  it('supports Alipay as an online payment channel', () => {
+    expect(
+      buildPaymentPayload({
+        requestId: 'payment-request-002',
+        order,
+        channel: 'alipay'
+      })
+    ).toMatchObject({
+      channel: 'alipay',
+      welfareCardPayableAmount: 5000,
+      cashPayableAmount: 8980
+    });
+  });
+
+  it('does not send offline cash as a payment channel', () => {
+    expect(
+      buildPaymentPayload({
+        requestId: 'payment-request-cash',
+        order,
+        channel: 'cash'
+      })
+    ).toMatchObject({
+      channel: 'wechat'
+    });
+  });
+
   it('creates stable local payment request IDs', () => {
     expect(createPaymentRequestId('ORDER 001', () => 1780470000000)).toBe('mini-payment-ORDER-001-1780470000000');
   });
@@ -44,6 +70,18 @@ describe('user mini-program payment helpers', () => {
       paymentNo: 'PAY-20260603-001',
       statusText: '待支付',
       channelText: '微信支付'
+    });
+  });
+
+  it('does not map offline cash as a user payment channel', () => {
+    expect(
+      toPaymentDisplay({
+        paymentNo: 'PAY-CASH-001',
+        status: 'pending',
+        channel: 'cash'
+      })
+    ).toMatchObject({
+      channelText: '未知支付渠道'
     });
   });
 });

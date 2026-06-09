@@ -65,7 +65,7 @@ describe('user mini-program checkout helpers', () => {
     ).toEqual({
       totalText: '¥139.80',
       welfareCardText: '¥50.00',
-      cashText: '¥89.80'
+      onlineRemainderText: '¥89.80'
     });
   });
 });

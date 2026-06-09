@@ -36,7 +36,7 @@ function toPreviewDisplay(preview) {
   return {
     totalText: formatMoney(preview.totalAmount),
     welfareCardText: formatMoney(preview.welfareCardPayableAmount),
-    cashText: formatMoney(preview.cashPayableAmount)
+    onlineRemainderText: formatMoney(preview.cashPayableAmount)
   };
 }
 
