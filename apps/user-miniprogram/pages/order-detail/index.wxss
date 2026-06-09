@@ -64,6 +64,11 @@
   gap: 18rpx;
 }
 
+.channel-row {
+  display: flex;
+  gap: 12rpx;
+}
+
 .primary-button,
 .secondary-button {
   background: #1f7a5c;
@@ -79,6 +84,11 @@
   background: #ffffff;
   border: 2rpx solid #1f7a5c;
   color: #1f7a5c;
+}
+
+.active-channel {
+  background: #1f7a5c;
+  color: #ffffff;
 }
 
 .danger-button {

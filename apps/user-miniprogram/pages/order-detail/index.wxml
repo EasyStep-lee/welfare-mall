@@ -17,12 +17,12 @@
     <view class="section">
       <text class="section-title">支付拆分</text>
       <view class="line">
-        <text>福利卡支付</text>
+        <text>福利卡抵扣</text>
         <text>{{orderDisplay.welfareCardText}}</text>
       </view>
       <view class="line">
-        <text>现金支付</text>
-        <text>{{orderDisplay.cashText}}</text>
+        <text>线上补差</text>
+        <text>{{orderDisplay.onlineRemainderText}}</text>
       </view>
     </view>
 
@@ -43,8 +43,26 @@
     </view>
 
     <view wx:if="{{order.status === 'pending_payment'}}" class="section payment-action">
+      <view class="channel-row">
+        <button
+          class="secondary-button {{selectedPaymentChannel === 'wechat' ? 'active-channel' : ''}}"
+          data-channel="wechat"
+          aria-label="选择微信支付渠道"
+          bindtap="selectPaymentChannel"
+        >
+          微信支付
+        </button>
+        <button
+          class="secondary-button {{selectedPaymentChannel === 'alipay' ? 'active-channel' : ''}}"
+          data-channel="alipay"
+          aria-label="选择支付宝支付渠道"
+          bindtap="selectPaymentChannel"
+        >
+          支付宝
+        </button>
+      </view>
       <button class="primary-button" loading="{{creatingPayment}}" disabled="{{creatingPayment}}" bindtap="submitPayment">
-        发起微信支付
+        发起线上支付
       </button>
       <button wx:if="{{canCancelOrder}}" class="secondary-button danger-button" loading="{{cancellingOrder}}" disabled="{{cancellingOrder}}" bindtap="cancelOrder">
         取消订单

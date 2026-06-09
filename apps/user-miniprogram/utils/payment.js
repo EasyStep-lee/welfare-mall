@@ -8,8 +8,7 @@ const PaymentStatusText = {
 
 const PaymentChannelText = {
   wechat: '微信支付',
-  alipay: '支付宝',
-  cash: '现金'
+  alipay: '支付宝'
 };
 
 function buildPaymentPayload(input) {
@@ -18,7 +17,7 @@ function buildPaymentPayload(input) {
   return {
     requestId: normalizeText(input.requestId),
     orderNo: normalizeText(order.orderNo),
-    channel: normalizeText(input.channel),
+    channel: normalizeOnlinePaymentChannel(input.channel),
     totalAmount: normalizeInteger(order.totalAmount),
     welfareCardPayableAmount: normalizeInteger(order.welfareCardPayableAmount),
     cashPayableAmount: normalizeInteger(order.cashPayableAmount)
@@ -35,12 +34,16 @@ function toPaymentDisplay(payment) {
   return {
     paymentNo: payment.paymentNo,
     statusText: PaymentStatusText[payment.status] || payment.status,
-    channelText: PaymentChannelText[payment.channel] || payment.channel
+    channelText: PaymentChannelText[payment.channel] || '未知支付渠道'
   };
 }
 
 function normalizeText(value) {
   return String(value ?? '').trim();
+}
+
+function normalizeOnlinePaymentChannel(value) {
+  return normalizeText(value) === 'alipay' ? 'alipay' : 'wechat';
 }
 
 function normalizeInteger(value) {

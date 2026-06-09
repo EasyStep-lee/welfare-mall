@@ -31,7 +31,7 @@ function toOrderDetailDisplay(order) {
     ...toOrderSummaryDisplay(order),
     totalText: formatMoney(order.totalAmount),
     welfareCardText: formatMoney(order.welfareCardPayableAmount),
-    cashText: formatMoney(order.cashPayableAmount),
+    onlineRemainderText: formatMoney(order.cashPayableAmount),
     latestPaymentDisplay: order.latestPayment ? toPaymentDisplay(order.latestPayment) : null,
     latestRefundDisplay: order.latestRefund ? toRefundDisplay(order.latestRefund) : null,
     receiverText: isPickupOrder

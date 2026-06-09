@@ -63,7 +63,7 @@ describe('user mini-program order display helpers', () => {
       statusText: '待支付',
       totalText: '¥139.80',
       welfareCardText: '¥50.00',
-      cashText: '¥89.80',
+      onlineRemainderText: '¥89.80',
       latestPaymentDisplay: {
         paymentNo: 'PAY-20260603-001',
         statusText: '待支付',

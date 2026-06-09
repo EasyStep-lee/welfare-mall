@@ -8,8 +8,7 @@ const RefundStatusText = {
 
 const RefundChannelText = {
   wechat: '微信支付',
-  alipay: '支付宝',
-  cash: '现金'
+  alipay: '支付宝'
 };
 
 function canRequestRefund(order) {
@@ -24,7 +23,7 @@ function buildRefundPayload(input) {
     requestId: normalizeText(input.requestId),
     paymentNo: normalizeText(latestPayment.paymentNo),
     orderNo: normalizeText(order.orderNo),
-    channel: normalizeText(latestPayment.channel),
+    channel: normalizeOnlinePaymentChannel(latestPayment.channel),
     refundAmount: normalizeInteger(order.totalAmount),
     reason: 'after_sale'
   };
@@ -40,13 +39,17 @@ function toRefundDisplay(refund) {
   return {
     refundNo: refund.refundNo,
     statusText: RefundStatusText[refund.status] || refund.status,
-    channelText: RefundChannelText[refund.channel] || refund.channel,
+    channelText: RefundChannelText[refund.channel] || '未知退款渠道',
     refundAmountText: formatMoney(refund.refundAmount)
   };
 }
 
 function normalizeText(value) {
   return String(value ?? '').trim();
+}
+
+function normalizeOnlinePaymentChannel(value) {
+  return normalizeText(value) === 'alipay' ? 'alipay' : 'wechat';
 }
 
 function normalizeInteger(value) {

@@ -66,12 +66,12 @@
           <text>{{previewText.totalText}}</text>
         </view>
         <view class="line">
-          <text>福利卡支付</text>
+          <text>福利卡抵扣</text>
           <text>{{previewText.welfareCardText}}</text>
         </view>
         <view class="line">
-          <text>现金支付</text>
-          <text>{{previewText.cashText}}</text>
+          <text>线上补差</text>
+          <text>{{previewText.onlineRemainderText}}</text>
         </view>
       </view>
 
