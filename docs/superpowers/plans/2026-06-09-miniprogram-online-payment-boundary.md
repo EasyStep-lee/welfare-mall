@@ -87,8 +87,16 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/miniprogram-online-payment-boundary`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/miniprogram-online-payment-boundary`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Prepare docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature branch: `codex/miniprogram-online-payment-boundary`.
+- Feature commit: `10fe432 feat: align miniprogram online payment boundary`.
+- Feature PR: #253 `feat: align miniprogram online payment boundary`.
+- GitHub Actions for PR #253 passed: `Project docs check` run 510, including `project-foundation-check` and `docs-check`.
+- Feature PR #253 squash-merged to `main` at `4208137 feat: align miniprogram online payment boundary`.
+- Docs-only completion branch: `codex/docs-miniprogram-online-payment-boundary-complete`.
