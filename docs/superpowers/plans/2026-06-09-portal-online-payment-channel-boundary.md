@@ -79,8 +79,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/portal-online-payment-channel-boundary`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/portal-online-payment-channel-boundary`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Open docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature commit: `5de8743 feat: align portal online payment channels`.
+- Feature PR: `#251 feat: align portal online payment channels`.
+- GitHub Actions run `Project docs check` completed successfully, including `project-foundation-check` and `docs-check`.
+- Feature PR was squash-merged to `main` as `8c6ef8c feat: align portal online payment channels`.
+- Docs-only completion branch: `codex/docs-portal-online-payment-channel-boundary-complete`.
