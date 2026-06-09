@@ -1,5 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { OrderPaymentRepository } from '../../src/order/order-payment.repository';
+import { InsufficientWelfareCardBalanceError, OrderPaymentRepository } from '../../src/order/order-payment.repository';
 import { OrderPaymentService } from '../../src/order/order-payment.service';
 import { SettlementRepository } from '../../src/settlement/settlement.repository';
 
@@ -93,6 +93,27 @@ describe('OrderPaymentService', () => {
     expect(result).toEqual({ idempotentReplay: false, payment: paymentRecord });
   });
 
+  it('rejects offline cash payment channel before creating payment', async () => {
+    const { repository, service } = createServiceFixture();
+
+    await expect(
+      service.createPayment({
+        requestId: 'request-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'cash' as never,
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
+      })
+    ).rejects.toMatchObject({
+      response: {
+        message: expect.arrayContaining(['channel must be one of wechat, alipay.'])
+      }
+    });
+
+    expect(repository.createPayment).not.toHaveBeenCalled();
+  });
+
   it.each(['cancelled', 'closed', null])(
     'rejects payment creation when order state is %s',
     async (status) => {
@@ -161,6 +182,29 @@ describe('OrderPaymentService', () => {
         totalAmount: 13980,
         welfareCardPayableAmount: 3000,
         cashPayableAmount: 10980
+      })
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects payment when the franchise welfare card balance is insufficient', async () => {
+    const { repository, service } = createServiceFixture();
+    repository.createPayment.mockRejectedValue(
+      new InsufficientWelfareCardBalanceError({
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        requestedAmount: 5000,
+        balanceAmount: 1000
+      })
+    );
+
+    await expect(
+      service.createPayment({
+        requestId: 'request-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'wechat',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
       })
     ).rejects.toBeInstanceOf(ConflictException);
   });

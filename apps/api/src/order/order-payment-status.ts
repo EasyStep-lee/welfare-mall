@@ -1,6 +1,6 @@
 export type OrderPaymentStatus = 'pending' | 'paid' | 'failed';
 
-export type OrderPaymentChannel = 'wechat' | 'alipay' | 'cash';
+export type OrderPaymentChannel = 'wechat' | 'alipay';
 
 export const OrderPaymentStatuses = {
   Pending: 'pending',
@@ -10,12 +10,10 @@ export const OrderPaymentStatuses = {
 
 export const OrderPaymentChannels = {
   Wechat: 'wechat',
-  Alipay: 'alipay',
-  Cash: 'cash'
+  Alipay: 'alipay'
 } as const satisfies Record<string, OrderPaymentChannel>;
 
 export const OrderPaymentChannelCatalog: Array<{ code: OrderPaymentChannel; name: string }> = [
   { code: OrderPaymentChannels.Wechat, name: '微信支付' },
-  { code: OrderPaymentChannels.Alipay, name: '支付宝' },
-  { code: OrderPaymentChannels.Cash, name: '现金' }
+  { code: OrderPaymentChannels.Alipay, name: '支付宝' }
 ];

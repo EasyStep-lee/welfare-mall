@@ -628,8 +628,8 @@ function assertCreateOrderPaymentRequest(input: CreateOrderPaymentRequest | unde
     messages.push('orderNo is required.');
   }
 
-  if (!['wechat', 'alipay', 'cash'].includes(input?.channel ?? '')) {
-    messages.push('channel must be one of wechat, alipay, cash.');
+  if (!['wechat', 'alipay'].includes(input?.channel ?? '')) {
+    messages.push('channel must be one of wechat, alipay.');
   }
 
   if (!Number.isInteger(totalAmount) || (totalAmount ?? 0) <= 0) {
@@ -728,8 +728,8 @@ function assertCreateOrderRefundRequest(input: CreateOrderRefundRequest | undefi
     messages.push('orderNo is required.');
   }
 
-  if (!['wechat', 'alipay', 'cash'].includes(input?.channel ?? '')) {
-    messages.push('channel must be one of wechat, alipay, cash.');
+  if (!['wechat', 'alipay'].includes(input?.channel ?? '')) {
+    messages.push('channel must be one of wechat, alipay.');
   }
 
   if (!Number.isInteger(refundAmount) || (refundAmount ?? 0) <= 0) {

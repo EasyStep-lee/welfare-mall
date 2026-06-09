@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WelfareCardAccountStatuses, WelfareCardLedgerEntryTypes } from '../franchise/welfare-card-status';
 import { OrderPaymentStatus, OrderPaymentStatuses } from './order-payment-status';
 import { OrderStatuses } from './order-status';
 import {
@@ -62,7 +63,41 @@ export type ProcessOrderPaymentCallbackResult = {
   callback: OrderPaymentCallbackRecord;
 };
 
-type OrderPaymentTransaction = {
+export class InsufficientWelfareCardBalanceError extends Error {
+  constructor(
+    readonly details: {
+      franchiseId: string;
+      buyerUserId: string;
+      requestedAmount: number;
+      balanceAmount: number;
+    }
+  ) {
+    super(
+      `insufficient welfare card balance for franchise ${details.franchiseId}, buyer ${details.buyerUserId}`
+    );
+  }
+}
+
+type OrderPaymentCreateTransaction = {
+  product: {
+    findMany(args: unknown): Promise<Array<{ id: string; franchiseId: string }>>;
+  };
+  orderHeader: {
+    findUnique(args: unknown): Promise<PayableOrderForWelfareCard | null>;
+  };
+  orderPayment: {
+    create(args: unknown): Promise<OrderPaymentRecord>;
+  };
+  welfareCardAccount: {
+    findUnique(args: unknown): Promise<WelfareCardAccountForPayment | null>;
+    update(args: unknown): Promise<WelfareCardAccountForPayment>;
+  };
+  welfareCardLedgerEntry: {
+    create(args: unknown): Promise<unknown>;
+  };
+} & OrderStateClient;
+
+type OrderPaymentCallbackTransaction = {
   product: {
     findMany(args: unknown): Promise<Array<{ id: string; merchantId: string }>>;
   };
@@ -108,6 +143,26 @@ type PaidOrderForFulfillment = {
   }>;
 };
 
+type PayableOrderForWelfareCard = {
+  orderNo: string;
+  buyerUserId: string;
+  lines: Array<{
+    productId: string;
+  }>;
+};
+
+type WelfareCardAccountForPayment = {
+  id: string;
+  accountNo: string;
+  franchiseId: string;
+  buyerUserId: string;
+  status: string;
+  balanceAmount: number;
+  issuedAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 @Injectable()
 export class OrderPaymentRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -127,28 +182,36 @@ export class OrderPaymentRepository {
   }
 
   async createPayment(input: CreateOrderPaymentRecordInput): Promise<OrderPaymentRecord> {
-    const payment = await this.prisma.orderPayment.create({
-      data: {
-        paymentNo: input.paymentNo,
-        requestId: input.requestId,
-        orderNo: input.orderNo,
-        status: OrderPaymentStatuses.Pending,
-        channel: input.channel,
-        totalAmount: input.totalAmount,
-        welfareCardPayableAmount: input.welfareCardPayableAmount,
-        cashPayableAmount: input.cashPayableAmount
-      },
-      select: paymentSelect()
+    return this.prisma.$transaction(async (prismaTx) => {
+      const tx = prismaTx as unknown as OrderPaymentCreateTransaction;
+
+      if (input.welfareCardPayableAmount > 0) {
+        await debitWelfareCardForPayment(tx, input);
+      }
+
+      const payment = await tx.orderPayment.create({
+        data: {
+          paymentNo: input.paymentNo,
+          requestId: input.requestId,
+          orderNo: input.orderNo,
+          status: OrderPaymentStatuses.Pending,
+          channel: input.channel,
+          totalAmount: input.totalAmount,
+          welfareCardPayableAmount: input.welfareCardPayableAmount,
+          cashPayableAmount: input.cashPayableAmount
+        },
+        select: paymentSelect()
+      });
+
+      await ensurePendingPaymentOrderState(tx, input.orderNo);
+
+      return payment;
     });
-
-    await ensurePendingPaymentOrderState(this.prisma, input.orderNo);
-
-    return payment;
   }
 
   async processCallback(input: ProcessOrderPaymentCallbackInput): Promise<ProcessOrderPaymentCallbackResult | null> {
     return this.prisma.$transaction(async (prismaTx) => {
-      const tx = prismaTx as unknown as OrderPaymentTransaction;
+      const tx = prismaTx as unknown as OrderPaymentCallbackTransaction;
       const existingCallback = await tx.orderPaymentCallback.findUnique({
         where: { providerEventId: input.providerEventId },
         select: {
@@ -198,8 +261,112 @@ export class OrderPaymentRepository {
   }
 }
 
+async function debitWelfareCardForPayment(
+  tx: OrderPaymentCreateTransaction,
+  input: CreateOrderPaymentRecordInput
+): Promise<void> {
+  const order = (await tx.orderHeader.findUnique({
+    where: { orderNo: input.orderNo },
+    select: {
+      orderNo: true,
+      buyerUserId: true,
+      lines: {
+        select: {
+          productId: true,
+        }
+      }
+    }
+  })) as PayableOrderForWelfareCard | null;
+
+  const products = await tx.product.findMany({
+    where: { id: { in: Array.from(new Set(order?.lines.map((line) => line.productId) ?? [])) } },
+    select: { id: true, franchiseId: true }
+  });
+  const franchiseId = resolveSingleSalesFranchiseId(order, products);
+  const buyerUserId = order?.buyerUserId ?? '';
+  const account = await tx.welfareCardAccount.findUnique({
+    where: {
+      franchiseId_buyerUserId: {
+        franchiseId,
+        buyerUserId
+      }
+    },
+    select: welfareCardAccountForPaymentSelect()
+  });
+
+  if (
+    !account ||
+    account.status !== WelfareCardAccountStatuses.Active ||
+    account.balanceAmount < input.welfareCardPayableAmount
+  ) {
+    throw new InsufficientWelfareCardBalanceError({
+      franchiseId,
+      buyerUserId,
+      requestedAmount: input.welfareCardPayableAmount,
+      balanceAmount: account?.balanceAmount ?? 0
+    });
+  }
+
+  const debitedAccount = await tx.welfareCardAccount.update({
+    where: { id: account.id },
+    data: { balanceAmount: { decrement: input.welfareCardPayableAmount } },
+    select: welfareCardAccountForPaymentSelect()
+  });
+
+  await tx.welfareCardLedgerEntry.create({
+    data: {
+      ledgerNo: createWelfareCardPaymentLedgerNo(input.requestId),
+      requestId: createWelfareCardPaymentRequestId(input.requestId),
+      accountId: account.id,
+      franchiseId,
+      buyerUserId,
+      type: WelfareCardLedgerEntryTypes.Payment,
+      amount: -input.welfareCardPayableAmount,
+      balanceAfter: debitedAccount.balanceAmount,
+      orderNo: input.orderNo,
+      remark: null
+    },
+    select: { id: true }
+  });
+}
+
+function resolveSingleSalesFranchiseId(
+  order: PayableOrderForWelfareCard | null,
+  products: Array<{ id: string; franchiseId: string }>
+): string {
+  const franchiseIdByProductId = new Map(products.map((product) => [product.id, product.franchiseId]));
+  const franchiseIds = new Set(
+    order?.lines.map((line) => franchiseIdByProductId.get(line.productId)).filter(isNonEmptyString) ?? []
+  );
+
+  if (!order || franchiseIds.size !== 1) {
+    throw new InsufficientWelfareCardBalanceError({
+      franchiseId: '',
+      buyerUserId: order?.buyerUserId ?? '',
+      requestedAmount: 0,
+      balanceAmount: 0
+    });
+  }
+
+  const [franchiseId] = Array.from(franchiseIds);
+  if (!franchiseId) {
+    throw new InsufficientWelfareCardBalanceError({
+      franchiseId: '',
+      buyerUserId: order.buyerUserId,
+      requestedAmount: 0,
+      balanceAmount: 0
+    });
+  }
+
+  return franchiseId;
+}
+
+function isNonEmptyString(value: string | undefined): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
 async function updatePaymentFromCallback(
-  tx: OrderPaymentTransaction,
+  tx: OrderPaymentCallbackTransaction,
   payment: OrderPaymentRecord,
   input: ProcessOrderPaymentCallbackInput
 ): Promise<OrderPaymentRecord> {
@@ -244,7 +411,7 @@ async function updatePaymentFromCallback(
   return payment;
 }
 
-async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, orderNo: string): Promise<void> {
+async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentCallbackTransaction, orderNo: string): Promise<void> {
   const order = await tx.orderHeader.findUnique({
     where: { orderNo },
     select: {
@@ -342,7 +509,7 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentTransaction, o
 async function createInventoryReservationsForPaidOrder(
   orderNo: string,
   linesByMerchantId: Map<string, PaidOrderForFulfillment['lines']>,
-  tx: OrderPaymentTransaction
+  tx: OrderPaymentCallbackTransaction
 ): Promise<void> {
   const reservations = Array.from(linesByMerchantId.entries()).flatMap(([merchantId, lines]) =>
     lines.map((line) => ({
@@ -376,6 +543,32 @@ function createFulfillmentTaskNo(orderNo: string, merchantId: string): string {
   const normalizedMerchantId = merchantId.replace(/[^A-Za-z0-9]+/g, '-').toUpperCase();
 
   return `FT-${normalizedOrderNo}-${normalizedMerchantId}-${Date.now()}`;
+}
+
+function createWelfareCardPaymentRequestId(paymentRequestId: string): string {
+  return `payment:${paymentRequestId}`;
+}
+
+function createWelfareCardPaymentLedgerNo(paymentRequestId: string): string {
+  return `WCL-PAYMENT-${paymentRequestId
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')}`;
+}
+
+function welfareCardAccountForPaymentSelect() {
+  return {
+    id: true,
+    accountNo: true,
+    franchiseId: true,
+    buyerUserId: true,
+    status: true,
+    balanceAmount: true,
+    issuedAmount: true,
+    createdAt: true,
+    updatedAt: true
+  } as const;
 }
 
 function paymentSelect() {

@@ -83,6 +83,27 @@ describe('OrderRefundService', () => {
     expect(result).toEqual({ idempotentReplay: false, refund: refundRecord });
   });
 
+  it('rejects offline cash refund channel before creating refund', async () => {
+    const { repository, service } = createServiceFixture();
+
+    await expect(
+      service.createRefund({
+        requestId: 'refund-request-001',
+        paymentNo: 'PAY-20260603-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'cash' as never,
+        refundAmount: 5000,
+        reason: 'user_cancel'
+      })
+    ).rejects.toMatchObject({
+      response: {
+        message: expect.arrayContaining(['channel must be one of wechat, alipay.'])
+      }
+    });
+
+    expect(repository.createRefund).not.toHaveBeenCalled();
+  });
+
   it('returns existing refund for the same idempotent request', async () => {
     const { repository, service } = createServiceFixture();
     repository.findRefundByRequestId.mockResolvedValue(refundRecord);

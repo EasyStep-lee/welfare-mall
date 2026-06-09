@@ -1,6 +1,6 @@
 export type OrderRefundStatus = 'processing' | 'succeeded' | 'failed';
 
-export type OrderRefundChannel = 'wechat' | 'alipay' | 'cash';
+export type OrderRefundChannel = 'wechat' | 'alipay';
 
 export type OrderRefundReason = 'user_cancel' | 'merchant_out_of_stock' | 'after_sale';
 
@@ -12,8 +12,7 @@ export const OrderRefundStatuses = {
 
 export const OrderRefundChannels = {
   Wechat: 'wechat',
-  Alipay: 'alipay',
-  Cash: 'cash'
+  Alipay: 'alipay'
 } as const satisfies Record<string, OrderRefundChannel>;
 
 export const OrderRefundReasons = {

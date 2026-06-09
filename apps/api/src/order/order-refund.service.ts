@@ -122,7 +122,7 @@ function assertCreateRefundInput(input: CreateOrderRefundInput): void {
   }
 
   if (!Object.values(OrderRefundChannels).includes(input?.channel)) {
-    messages.push('channel must be one of wechat, alipay, cash.');
+    messages.push('channel must be one of wechat, alipay.');
   }
 
   if (!Number.isInteger(input?.refundAmount) || input.refundAmount <= 0) {
