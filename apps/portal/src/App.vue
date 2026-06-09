@@ -14,6 +14,7 @@ import {
   loginPortal,
   type AuthenticatedUser,
   type PortalCheckoutOrder,
+  type PortalOnlinePaymentChannel,
   type PortalOrderRecord,
   type PortalPayment,
   type PortalRefund,
@@ -56,6 +57,7 @@ const selectedOrder = ref<PortalOrderRecord | null>(null);
 const paymentLoading = ref(false);
 const paymentError = ref<string | null>(null);
 const createdPayment = ref<PortalPayment | null>(null);
+const selectedPaymentChannel = ref<PortalOnlinePaymentChannel>('wechat');
 const paymentConfirmLoading = ref(false);
 const paymentConfirmError = ref<string | null>(null);
 const confirmedPaymentMessage = ref<string | null>(null);
@@ -190,8 +192,7 @@ async function openOrderDetailByOrderNo(orderNo: string) {
   orderDetailLoading.value = true;
   orderDetailError.value = null;
   selectedOrder.value = null;
-  paymentError.value = null;
-  createdPayment.value = null;
+  resetPaymentCreation();
   resetPaymentConfirmation();
   resetOrderCancellation();
   resetRefundRequest();
@@ -211,12 +212,11 @@ async function openOrderDetailByOrderNo(orderNo: string) {
 
 function closeOrderDetail() {
   orderDetailError.value = null;
-  paymentError.value = null;
+  resetPaymentCreation();
   resetPaymentConfirmation();
   resetOrderCancellation();
   resetRefundRequest();
   selectedOrder.value = null;
-  createdPayment.value = null;
 }
 
 function closeProductDetail() {
@@ -255,8 +255,7 @@ function paymentStatusText(status: string) {
 function paymentChannelText(channel: string) {
   const labels: Record<string, string> = {
     wechat: '微信支付',
-    alipay: '支付宝',
-    cash: '现金'
+    alipay: '支付宝'
   };
 
   return labels[channel] ?? channel;
@@ -314,6 +313,12 @@ function selectCheckoutFulfillmentMode(mode: CheckoutFulfillmentMode) {
   checkoutFulfillmentMode.value = mode;
   checkoutError.value = null;
   createdOrder.value = null;
+}
+
+function selectPaymentChannel(channel: PortalOnlinePaymentChannel) {
+  selectedPaymentChannel.value = channel;
+  paymentError.value = null;
+  createdPayment.value = null;
 }
 
 function resetCheckout() {
@@ -391,6 +396,16 @@ function resetPaymentConfirmation() {
   confirmedPaymentMessage.value = null;
 }
 
+function resetPaymentCreation() {
+  selectedPaymentChannel.value = 'wechat';
+  paymentError.value = null;
+  createdPayment.value = null;
+}
+
+function onlinePaymentChannelFrom(channel: string): PortalOnlinePaymentChannel {
+  return channel === 'alipay' ? 'alipay' : 'wechat';
+}
+
 function resetOrderCancellation() {
   orderCancelError.value = null;
   orderCancelMessage.value = null;
@@ -446,7 +461,7 @@ async function submitLocalPayment() {
     const result = await createPortalPayment({
       requestId: createPaymentRequestId(selectedOrder.value.orderNo),
       orderNo: selectedOrder.value.orderNo,
-      channel: 'wechat',
+      channel: selectedPaymentChannel.value,
       totalAmount: selectedOrder.value.totalAmount,
       welfareCardPayableAmount: selectedOrder.value.welfareCardPayableAmount,
       cashPayableAmount: selectedOrder.value.cashPayableAmount
@@ -556,7 +571,7 @@ async function requestSelectedOrderRefund() {
       requestId: createRefundRequestId(orderNo),
       paymentNo: payment.paymentNo,
       orderNo,
-      channel: 'wechat',
+      channel: onlinePaymentChannelFrom(payment.channel),
       refundAmount: selectedOrder.value.totalAmount,
       reason: 'after_sale'
     });
@@ -784,7 +799,10 @@ async function confirmLatestRefund() {
           <div class="checkout-result">
             <span>支付单</span>
             <strong>{{ selectedOrder.latestPayment.paymentNo }}</strong>
-            <p>{{ formatMoney(selectedOrder.latestPayment.cashPayableAmount) }}</p>
+            <p>
+              福利卡抵扣 {{ formatMoney(selectedOrder.latestPayment.welfareCardPayableAmount) }} · 线上补差
+              {{ formatMoney(selectedOrder.latestPayment.cashPayableAmount) }}
+            </p>
           </div>
           <p
             v-if="createdPayment?.paymentNo === selectedOrder.latestPayment.paymentNo"
@@ -845,8 +863,29 @@ async function confirmLatestRefund() {
         </section>
         <section v-if="canCreateLocalPayment(selectedOrder)" class="payment-block">
           <div>
-            <h3>本地支付</h3>
-            <p>微信支付 · 应付 {{ formatMoney(selectedOrder.cashPayableAmount) }}</p>
+            <h3>线上支付</h3>
+            <p>福利卡抵扣 {{ formatMoney(selectedOrder.welfareCardPayableAmount) }}</p>
+            <p>线上补差 {{ formatMoney(selectedOrder.cashPayableAmount) }}</p>
+          </div>
+          <div class="payment-channel-control" aria-label="选择线上支付渠道">
+            <button
+              type="button"
+              class="mode-button"
+              :class="{ active: selectedPaymentChannel === 'wechat' }"
+              aria-label="选择微信支付渠道"
+              @click="selectPaymentChannel('wechat')"
+            >
+              微信支付
+            </button>
+            <button
+              type="button"
+              class="mode-button"
+              :class="{ active: selectedPaymentChannel === 'alipay' }"
+              aria-label="选择支付宝支付渠道"
+              @click="selectPaymentChannel('alipay')"
+            >
+              支付宝
+            </button>
           </div>
           <button
             type="button"
