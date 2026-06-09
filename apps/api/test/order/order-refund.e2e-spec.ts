@@ -87,6 +87,22 @@ describe('Order refund API contract', () => {
     expect(orderRefundService.createRefund).not.toHaveBeenCalled();
   });
 
+  it('rejects offline cash refund channel before calling service', async () => {
+    await request(app.getHttpServer())
+      .post('/api/orders/refunds')
+      .send({
+        requestId: 'refund-request-001',
+        paymentNo: 'PAY-20260603-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'cash',
+        refundAmount: 5000,
+        reason: 'user_cancel'
+      })
+      .expect(400);
+
+    expect(orderRefundService.createRefund).not.toHaveBeenCalled();
+  });
+
   it('processes a refund callback', async () => {
     orderRefundService.processCallback.mockResolvedValue({
       duplicate: false,

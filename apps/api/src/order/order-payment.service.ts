@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  InsufficientWelfareCardBalanceError,
   OrderPaymentRecord,
   OrderPaymentRepository,
   ProcessOrderPaymentCallbackResult
@@ -60,15 +61,27 @@ export class OrderPaymentService {
       throw new ConflictException('order is not payable.');
     }
 
-    const payment = await this.orderPaymentRepository.createPayment({
-      paymentNo: createPaymentNo(),
-      ...normalizedInput
-    });
+    const payment = await this.createPaymentRecord(normalizedInput);
 
     return {
       idempotentReplay: false,
       payment
     };
+  }
+
+  private async createPaymentRecord(input: CreateOrderPaymentInput): Promise<OrderPaymentRecord> {
+    try {
+      return await this.orderPaymentRepository.createPayment({
+        paymentNo: createPaymentNo(),
+        ...input
+      });
+    } catch (error) {
+      if (error instanceof InsufficientWelfareCardBalanceError) {
+        throw new ConflictException('franchise welfare card balance is insufficient.');
+      }
+
+      throw error;
+    }
   }
 
   async processCallback(input: ProcessOrderPaymentCallbackServiceInput): Promise<ProcessOrderPaymentCallbackResult> {
@@ -118,7 +131,7 @@ function assertCreatePaymentInput(input: CreateOrderPaymentInput): void {
   }
 
   if (!Object.values(OrderPaymentChannels).includes(input?.channel)) {
-    messages.push('channel must be one of wechat, alipay, cash.');
+    messages.push('channel must be one of wechat, alipay.');
   }
 
   if (!Number.isInteger(input?.totalAmount) || input.totalAmount <= 0) {

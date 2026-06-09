@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-08",
+  "updatedAt": "2026-06-09",
   "purpose": "Current known deviations from the enforced business boundary. New occurrences must fail verify:business-boundary unless this list is intentionally updated with a reason and nextAction.",
   "deviations": [
     {
@@ -48,34 +48,14 @@
       "nextAction": "Use merchant address snapshots for fulfillment display and pickup verification."
     },
     {
-      "file": "apps/api/src/order/order-payment-status.ts",
-      "reason": "Payment channel enum still contains cash, which is not allowed for user payment under the new boundary.",
-      "nextAction": "Remove cash from new payment paths and keep only wechat/alipay for online cash payment."
-    },
-    {
       "file": "apps/api/src/order/order-payment.repository.ts",
       "reason": "Payment persistence still stores one channel for the payment rather than explicit welfare-card plus online-cash components.",
       "nextAction": "Introduce combination payment components tied to welfare-card ledger and wechat/alipay cash channel."
     },
     {
-      "file": "apps/api/src/order/order-payment.service.ts",
-      "reason": "Payment service currently validates split amounts but does not validate card account, issuer franchise, or online cash channel components.",
-      "nextAction": "Validate user welfare-card balance and restrict cash component to wechat/alipay."
-    },
-    {
       "file": "apps/api/src/order/order-read.repository.ts",
       "reason": "Order reads still expose pickupStoreName and do not return sales franchise plus merchant address facts.",
       "nextAction": "Return sales franchise, fulfillment merchant, and merchant address snapshots in buyer/Admin reads."
-    },
-    {
-      "file": "apps/api/src/order/order-refund-status.ts",
-      "reason": "Refund channel enum still includes cash from the early payment model.",
-      "nextAction": "Refund by original payment component: welfare-card ledger reversal plus wechat/alipay refund."
-    },
-    {
-      "file": "apps/api/src/order/order-refund.service.ts",
-      "reason": "Refund service accepts channel strings before original-route welfare-card and online-cash refund is implemented.",
-      "nextAction": "Drive refunds from persisted payment components instead of caller-supplied cash channel values."
     },
     {
       "file": "apps/api/src/order/order.controller.ts",

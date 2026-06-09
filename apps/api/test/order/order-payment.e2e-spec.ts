@@ -87,6 +87,22 @@ describe('Order payment API contract', () => {
     expect(orderPaymentService.createPayment).not.toHaveBeenCalled();
   });
 
+  it('rejects offline cash payment channel before calling service', async () => {
+    await request(app.getHttpServer())
+      .post('/api/orders/payments')
+      .send({
+        requestId: 'request-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'cash',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980
+      })
+      .expect(400);
+
+    expect(orderPaymentService.createPayment).not.toHaveBeenCalled();
+  });
+
   it('processes a payment callback', async () => {
     orderPaymentService.processCallback.mockResolvedValue({
       duplicate: false,

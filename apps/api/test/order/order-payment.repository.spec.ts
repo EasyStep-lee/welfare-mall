@@ -1,4 +1,4 @@
-import { OrderPaymentRepository } from '../../src/order/order-payment.repository';
+import { InsufficientWelfareCardBalanceError, OrderPaymentRepository } from '../../src/order/order-payment.repository';
 
 const paymentRecord = {
   id: 'payment-001',
@@ -60,12 +60,53 @@ function createPrismaMock() {
       })
     },
     orderPayment: {
+      create: jest.fn().mockResolvedValue(paymentRecord),
       findUnique: jest.fn().mockResolvedValue(paymentRecord),
       update: jest.fn().mockResolvedValue({
         ...paymentRecord,
         status: 'paid',
         providerPaymentNo: 'wx-pay-001',
         paidAt: new Date('2026-06-03T00:05:00.000Z')
+      })
+    },
+    welfareCardAccount: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'wca-001',
+        accountNo: 'WCA-franchise-local-review-buyer-local',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        status: 'active',
+        balanceAmount: 10000,
+        issuedAmount: 10000,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:00:00.000Z')
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'wca-001',
+        accountNo: 'WCA-franchise-local-review-buyer-local',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        status: 'active',
+        balanceAmount: 5000,
+        issuedAmount: 10000,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:01:00.000Z')
+      })
+    },
+    welfareCardLedgerEntry: {
+      create: jest.fn().mockResolvedValue({
+        id: 'wcl-payment-001',
+        ledgerNo: 'WCL-PAYMENT-request-001',
+        requestId: 'payment:request-001',
+        accountId: 'wca-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        type: 'payment',
+        amount: -5000,
+        balanceAfter: 5000,
+        orderNo: 'ORDER-20260603-001',
+        remark: null,
+        createdAt: new Date('2026-06-03T00:01:00.000Z')
       })
     },
     orderPaymentCallback: {
@@ -83,6 +124,16 @@ function createPrismaMock() {
     },
     orderState: {
       findUnique: jest.fn().mockResolvedValue({
+        id: 'order-state-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending_payment',
+        paidAt: null,
+        refundRequestedAt: null,
+        refundedAt: null,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:00:00.000Z')
+      }),
+      upsert: jest.fn().mockResolvedValue({
         id: 'order-state-001',
         orderNo: 'ORDER-20260603-001',
         status: 'pending_payment',
@@ -118,6 +169,7 @@ function createPrismaMock() {
     }
   };
   const prisma = {
+    $transaction: jest.fn(async (callback) => callback(tx)),
     orderPayment: {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(paymentRecord)
@@ -133,8 +185,7 @@ function createPrismaMock() {
         createdAt: new Date('2026-06-03T00:00:00.000Z'),
         updatedAt: new Date('2026-06-03T00:00:00.000Z')
       })
-    },
-    $transaction: jest.fn(async (callback) => callback(tx))
+    }
   };
 
   return { prisma, tx };
@@ -143,9 +194,92 @@ function createPrismaMock() {
 describe('OrderPaymentRepository', () => {
   it('creates a pending payment order', async () => {
     const { prisma } = createPrismaMock();
+    const cashOnlyPaymentRecord = {
+      ...paymentRecord,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 13980
+    };
+    const paymentTx = {
+      orderPayment: {
+        create: jest.fn().mockResolvedValue(cashOnlyPaymentRecord)
+      },
+      orderState: {
+        upsert: jest.fn().mockResolvedValue({
+          id: 'order-state-001',
+          orderNo: 'ORDER-20260603-001',
+          status: 'pending_payment',
+          paidAt: null,
+          refundRequestedAt: null,
+          refundedAt: null,
+          createdAt: new Date('2026-06-03T00:00:00.000Z'),
+          updatedAt: new Date('2026-06-03T00:00:00.000Z')
+        })
+      }
+    };
+    prisma.$transaction.mockImplementationOnce(async (callback) => callback(paymentTx));
     const repository = new OrderPaymentRepository(prisma as never);
 
     const result = await repository.createPayment({
+      paymentNo: 'PAY-20260603-001',
+      requestId: 'request-001',
+      orderNo: 'ORDER-20260603-001',
+      channel: 'wechat',
+      totalAmount: 13980,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 13980
+    });
+
+    expect(paymentTx.orderPayment.create).toHaveBeenCalledWith({
+      data: {
+        paymentNo: 'PAY-20260603-001',
+        requestId: 'request-001',
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending',
+        channel: 'wechat',
+        totalAmount: 13980,
+        welfareCardPayableAmount: 0,
+        cashPayableAmount: 13980
+      },
+      select: expect.any(Object)
+    });
+    expect(paymentTx.orderState.upsert).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      create: {
+        orderNo: 'ORDER-20260603-001',
+        status: 'pending_payment'
+      },
+      update: {},
+      select: expect.any(Object)
+    });
+    expect(result).toEqual(cashOnlyPaymentRecord);
+  });
+
+  it('debits the sales franchise welfare card account when creating a mixed payment', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderHeader.findUnique.mockResolvedValue({
+      orderNo: 'ORDER-20260603-001',
+      buyerUserId: 'buyer-local',
+      lines: [
+        {
+          productId: 'product-001'
+        }
+      ]
+    });
+    tx.product.findMany.mockResolvedValue([{ id: 'product-001', franchiseId: 'franchise-local-review' }]);
+    tx.orderPayment.create = jest.fn().mockResolvedValue(paymentRecord);
+    tx.orderState.upsert = jest.fn().mockResolvedValue({
+      id: 'order-state-001',
+      orderNo: 'ORDER-20260603-001',
+      status: 'pending_payment',
+      paidAt: null,
+      refundRequestedAt: null,
+      refundedAt: null,
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-03T00:00:00.000Z')
+    });
+    const repository = new OrderPaymentRepository(prisma as never);
+
+    await repository.createPayment({
       paymentNo: 'PAY-20260603-001',
       requestId: 'request-001',
       orderNo: 'ORDER-20260603-001',
@@ -155,29 +289,89 @@ describe('OrderPaymentRepository', () => {
       cashPayableAmount: 8980
     });
 
-    expect(prisma.orderPayment.create).toHaveBeenCalledWith({
-      data: {
+    expect(tx.orderHeader.findUnique).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      select: expect.objectContaining({
+        buyerUserId: true,
+        lines: expect.any(Object)
+      })
+    });
+    expect(tx.product.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['product-001'] } },
+      select: { id: true, franchiseId: true }
+    });
+    expect(tx.welfareCardAccount.findUnique).toHaveBeenCalledWith({
+      where: {
+        franchiseId_buyerUserId: {
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'buyer-local'
+        }
+      },
+      select: expect.any(Object)
+    });
+    expect(tx.welfareCardAccount.update).toHaveBeenCalledWith({
+      where: { id: 'wca-001' },
+      data: { balanceAmount: { decrement: 5000 } },
+      select: expect.any(Object)
+    });
+    expect(tx.welfareCardLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        requestId: 'payment:request-001',
+        accountId: 'wca-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        type: 'payment',
+        amount: -5000,
+        balanceAfter: 5000,
+        orderNo: 'ORDER-20260603-001'
+      }),
+      select: expect.any(Object)
+    });
+  });
+
+  it('rejects welfare-card payment when the franchise card balance is insufficient', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderHeader.findUnique.mockResolvedValue({
+      orderNo: 'ORDER-20260603-001',
+      buyerUserId: 'buyer-local',
+      lines: [
+        {
+          productId: 'product-001'
+        }
+      ]
+    });
+    tx.product.findMany.mockResolvedValue([{ id: 'product-001', franchiseId: 'franchise-local-review' }]);
+    tx.welfareCardAccount.findUnique.mockResolvedValue({
+      id: 'wca-001',
+      accountNo: 'WCA-franchise-local-review-buyer-local',
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'buyer-local',
+      status: 'active',
+      balanceAmount: 1000,
+      issuedAmount: 10000,
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-03T00:00:00.000Z')
+    });
+    tx.orderPayment.create = jest.fn().mockResolvedValue(paymentRecord);
+    tx.orderState.upsert = jest.fn();
+    const repository = new OrderPaymentRepository(prisma as never);
+
+    await expect(
+      repository.createPayment({
         paymentNo: 'PAY-20260603-001',
         requestId: 'request-001',
         orderNo: 'ORDER-20260603-001',
-        status: 'pending',
         channel: 'wechat',
         totalAmount: 13980,
         welfareCardPayableAmount: 5000,
         cashPayableAmount: 8980
-      },
-      select: expect.any(Object)
-    });
-    expect(prisma.orderState.upsert).toHaveBeenCalledWith({
-      where: { orderNo: 'ORDER-20260603-001' },
-      create: {
-        orderNo: 'ORDER-20260603-001',
-        status: 'pending_payment'
-      },
-      update: {},
-      select: expect.any(Object)
-    });
-    expect(result).toEqual(paymentRecord);
+      })
+    ).rejects.toBeInstanceOf(InsufficientWelfareCardBalanceError);
+
+    expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
+    expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
+    expect(tx.orderPayment.create).not.toHaveBeenCalled();
+    expect(tx.orderState.upsert).not.toHaveBeenCalled();
   });
 
   it('marks a payment paid on the first paid callback event', async () => {
