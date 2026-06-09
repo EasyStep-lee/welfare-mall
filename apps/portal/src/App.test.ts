@@ -102,6 +102,21 @@ const orderDetailResponse = {
   order: orderListResponse.orders[0]
 };
 
+const mixedPaymentOrder = {
+  ...orderListResponse.orders[0],
+  totalAmount: 6990,
+  welfareCardPayableAmount: 1000,
+  cashPayableAmount: 5990
+};
+
+const mixedPaymentOrderListResponse = {
+  orders: [mixedPaymentOrder]
+};
+
+const mixedPaymentOrderDetailResponse = {
+  order: mixedPaymentOrder
+};
+
 const cancelledOrderResponse = {
   order: {
     ...orderListResponse.orders[0],
@@ -152,6 +167,19 @@ const paidOrderListResponse = {
 
 const paidOrderDetailResponse = {
   order: paidOrderListResponse.orders[0]
+};
+
+const paidAlipayLatestPaymentResponse = {
+  ...paidLatestPaymentResponse,
+  channel: 'alipay'
+};
+
+const paidAlipayOrderListResponse = {
+  orders: [{ ...orderListResponse.orders[0], status: 'paid', latestPayment: paidAlipayLatestPaymentResponse }]
+};
+
+const paidAlipayOrderDetailResponse = {
+  order: paidAlipayOrderListResponse.orders[0]
 };
 
 const paidOrderWithFulfillmentResponse = {
@@ -210,6 +238,16 @@ const paymentResponse = {
     welfareCardPayableAmount: 0,
     cashPayableAmount: 6990,
     providerPaymentNo: null
+  }
+};
+
+const alipayPaymentResponse = {
+  idempotentReplay: false,
+  payment: {
+    ...paymentResponse.payment,
+    channel: 'alipay',
+    welfareCardPayableAmount: 1000,
+    cashPayableAmount: 5990
   }
 };
 
@@ -736,6 +774,66 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('待支付');
   });
 
+  it('creates an Alipay online remainder payment while showing welfare-card debit separately', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/payments')) {
+          return {
+            ok: true,
+            json: async () => alipayPaymentResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('福利卡抵扣 ¥10.00');
+    expect(wrapper.text()).toContain('线上补差 ¥59.90');
+    expect(wrapper.text()).not.toContain('现金');
+
+    await wrapper.get('button[aria-label="选择支付宝支付渠道"]').trigger('click');
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').trigger('click');
+    await flushPromises();
+
+    const paymentCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders/payments'));
+    expect(paymentCall).toBeTruthy();
+    expect(JSON.parse(String(paymentCall?.[1]?.body))).toMatchObject({
+      orderNo: 'ORDER-20260607-PORTAL',
+      channel: 'alipay',
+      totalAmount: 6990,
+      welfareCardPayableAmount: 1000,
+      cashPayableAmount: 5990
+    });
+    expect(wrapper.text()).toContain('支付单创建成功');
+    expect(wrapper.text()).toContain('支付宝 · 待支付');
+  });
+
   it('cancels a pending buyer order from the order detail panel', async () => {
     let ordersRequestCount = 0;
 
@@ -1017,6 +1115,64 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('REF-20260607-PORTAL');
     expect(wrapper.text()).toContain('退款中');
     expect(wrapper.find('button[aria-label="为订单 ORDER-20260607-PORTAL 申请退款"]').exists()).toBe(false);
+  });
+
+  it('uses the original online payment channel when requesting a refund', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders/refunds')) {
+          return {
+            ok: true,
+            json: async () => ({
+              ...refundResponse,
+              refund: {
+                ...refundResponse.refund,
+                channel: 'alipay'
+              }
+            })
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => paidAlipayOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => paidAlipayOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 申请退款"]').trigger('click');
+    await flushPromises();
+
+    const refundCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders/refunds'));
+    expect(refundCall).toBeTruthy();
+    expect(JSON.parse(String(refundCall?.[1]?.body))).toMatchObject({
+      paymentNo: 'PAY-20260607-LATEST',
+      orderNo: 'ORDER-20260607-PORTAL',
+      channel: 'alipay',
+      refundAmount: 6990,
+      reason: 'after_sale'
+    });
   });
 
   it('confirms a processing local refund as succeeded and refreshes order reads', async () => {

@@ -668,6 +668,13 @@ h1 {
   gap: 8px;
 }
 
+.payment-channel-control {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .mode-button {
   background: #ffffff;
   border: 1px solid #c9d8d4;

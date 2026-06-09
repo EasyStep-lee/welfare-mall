@@ -180,11 +180,13 @@ export type PortalOrderCancelInput = {
 export type PortalPaymentInput = {
   requestId: string;
   orderNo: string;
-  channel: 'wechat';
+  channel: PortalOnlinePaymentChannel;
   totalAmount: number;
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
 };
+
+export type PortalOnlinePaymentChannel = 'wechat' | 'alipay';
 
 export type PortalPayment = {
   id?: string;
@@ -211,7 +213,7 @@ export type PortalRefundInput = {
   requestId: string;
   paymentNo: string;
   orderNo: string;
-  channel: 'wechat';
+  channel: PortalOnlinePaymentChannel;
   refundAmount: number;
   reason: 'after_sale';
 };
