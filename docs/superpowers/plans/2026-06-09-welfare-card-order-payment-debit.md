@@ -123,8 +123,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/welfare-card-order-payment-debit`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/welfare-card-order-payment-debit`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Open docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature commit: `2d32d8c feat: debit welfare card on order payment`.
+- Feature PR: `#249 feat: debit welfare card on order payment`.
+- GitHub Actions run `Project docs check` completed successfully, including `project-foundation-check` and `docs-check`.
+- Feature PR was squash-merged to `main` as `1676be8 feat: debit welfare card on order payment`.
+- Docs-only completion branch: `codex/docs-welfare-card-order-payment-debit-complete`.
