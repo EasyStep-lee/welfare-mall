@@ -739,15 +739,16 @@ describe('Portal product pool catalog', () => {
     await flushPromises();
 
     const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
-    expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
+    const checkoutBody = JSON.parse(String(checkoutCall?.[1]?.body));
+    expect(checkoutBody).toMatchObject({
       buyerUserId: 'user-001',
       items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
       welfareCardPaymentAmount: 0,
       fulfillment: {
-        type: 'pickup',
-        pickupStoreName: '商户自提'
+        type: 'pickup'
       }
     });
+    expect(checkoutBody.fulfillment).not.toHaveProperty('pickupStoreName');
     expect(wrapper.text()).toContain('商户自提');
     expect(wrapper.text()).toContain('merchant-local-review');
     expect(wrapper.text()).not.toContain('门店自提');
