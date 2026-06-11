@@ -40,6 +40,11 @@ const fulfillmentQueueResponse = {
       totalAmount: 13980,
       cashPayableAmount: 8980,
       welfareCardPayableAmount: 5000,
+      salesFranchiseId: 'franchise-001',
+      salesFranchiseName: '浦东福利加盟商',
+      fulfillmentMerchantId: 'merchant-local-review',
+      fulfillmentMerchantName: '浦东福利履约商户',
+      fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
       fulfillmentType: 'delivery',
       receiverName: 'Li Lei',
       receiverPhone: '13800000000',
@@ -202,6 +207,18 @@ describe('Merchant Vue workbench', () => {
     expect(wrapper.text()).toContain('履约订单');
   });
 
+  it('returns to merchant login when the stored merchant session is rejected', async () => {
+    vi.mocked(fetch).mockImplementation(async () => response({ message: 'Unauthorized' }, 401));
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(localStorage.getItem('welfareMallMerchantAccessToken')).toBeNull();
+    expect(localStorage.getItem('welfareMallMerchantUser')).toBeNull();
+    expect(wrapper.text()).toContain('商户登录');
+    expect(wrapper.text()).not.toContain('履约订单');
+  });
+
   it('renders Vue Element Plus merchant sections and loads core read models', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -213,6 +230,9 @@ describe('Merchant Vue workbench', () => {
     expect(wrapper.text()).toContain('东北五常大米福利装');
     expect(wrapper.text()).toContain('ORDER-20260603-001');
     expect(wrapper.text()).toContain('FT-ORDER-20260603-001-MERCHANT-001-001');
+    expect(wrapper.text()).toContain('销售加盟商 浦东福利加盟商');
+    expect(wrapper.text()).toContain('履约商户 浦东福利履约商户');
+    expect(wrapper.text()).toContain('履约地址 上海市浦东新区世纪大道 88 号');
     expect(wrapper.text()).toContain('MSS-20260606-001');
 
     expect(requestUrls()).toContain(
@@ -535,9 +555,10 @@ describe('Merchant Vue workbench', () => {
   });
 });
 
-function response(body: unknown) {
+function response(body: unknown, status = 200) {
   return {
-    ok: true,
+    ok: status >= 200 && status < 300,
+    status,
     json: async () => body
   } as Response;
 }

@@ -64,6 +64,11 @@ const adminOrdersResponse = {
       totalAmount: 13980,
       welfareCardPayableAmount: 5000,
       cashPayableAmount: 8980,
+      salesFranchiseId: 'franchise-001',
+      salesFranchiseName: '浦东福利加盟商',
+      fulfillmentMerchantId: 'merchant-001',
+      fulfillmentMerchantName: '浦东福利履约商户',
+      fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
       fulfillmentType: 'delivery',
       receiverName: 'Li Lei',
       receiverPhone: '13800000000',
@@ -356,6 +361,18 @@ describe('Admin Vue workbench', () => {
     );
   });
 
+  it('returns to platform login when the stored admin session is rejected', async () => {
+    vi.mocked(fetch).mockImplementation(async () => response({ message: 'Unauthorized' }, 401));
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(localStorage.getItem('welfareMallAdminAccessToken')).toBeNull();
+    expect(localStorage.getItem('welfareMallAdminUser')).toBeNull();
+    expect(wrapper.text()).toContain('平台登录');
+    expect(wrapper.text()).not.toContain('订单管理');
+  });
+
   it('renders Vue Element Plus admin sections and loads core read models', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -628,7 +645,10 @@ describe('Admin Vue workbench', () => {
 
     expect(wrapper.text()).toContain('履约任务');
     expect(wrapper.text()).toContain('FT-001');
-    expect(wrapper.text()).toContain('merchant-001');
+    expect(wrapper.text()).toContain('销售加盟商 浦东福利加盟商');
+    expect(wrapper.text()).toContain('履约商户 浦东福利履约商户');
+    expect(wrapper.text()).toContain('履约地址 上海市浦东新区世纪大道 88 号');
+    expect(wrapper.text()).not.toContain('履约商户 merchant-001');
     expect(wrapper.text()).toContain('待履约');
   });
 
@@ -734,9 +754,10 @@ describe('Admin Vue workbench', () => {
   });
 });
 
-function response(body: unknown) {
+function response(body: unknown, status = 200) {
   return {
-    ok: true,
+    ok: status >= 200 && status < 300,
+    status,
     json: async () => body
   } as Response;
 }

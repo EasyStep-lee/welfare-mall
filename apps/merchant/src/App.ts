@@ -119,6 +119,12 @@ export default defineComponent({
         draftItems.value = draftResponse.items;
         statements.value = statementResponse.statements;
       } catch (loadError) {
+        if (isUnauthorizedError(loadError)) {
+          clearAuthState('welfareMallMerchantAccessToken', 'welfareMallMerchantUser');
+          authUser.value = null;
+          error.value = null;
+          return;
+        }
         error.value = loadError instanceof Error ? loadError.message : '商户运营数据加载失败';
       } finally {
         loading.value = false;
@@ -279,6 +285,15 @@ function storeAuthState(tokenKey: string, userKey: string, accessToken: string, 
   localStorage.setItem(userKey, JSON.stringify(user));
 }
 
+function clearAuthState(tokenKey: string, userKey: string) {
+  localStorage.removeItem(tokenKey);
+  localStorage.removeItem(userKey);
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message.includes('401');
+}
+
 function renderLoginShell(
   title: string,
   buttonLabel: string,
@@ -349,6 +364,9 @@ function renderFulfillmentPanel(
                   ? h(ElButton, { size: 'small', type: 'primary', loading: actionLoading, onClick: () => actions.completeOrder(order) }, () => '确认完成')
                   : null
               ]),
+              h('p', { class: 'muted' }, `销售加盟商 ${orderSalesFranchiseText(order)}`),
+              h('p', { class: 'muted' }, `履约商户 ${orderFulfillmentMerchantText(order)}`),
+              h('p', { class: 'muted' }, `履约地址 ${orderFulfillmentAddressText(order)}`),
               h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / ')),
               h('p', { class: 'muted' }, order.receiverName ? `${order.receiverName} / ${order.receiverPhone} / ${order.receiverAddress}` : order.pickupStoreName ?? '自提'),
               order.fulfillmentType === 'pickup' && order.status === 'paid'
@@ -359,6 +377,18 @@ function renderFulfillmentPanel(
           )
         )
   ]);
+}
+
+function orderSalesFranchiseText(order: MerchantFulfillmentOrder) {
+  return order.salesFranchiseName?.trim() || '待确认';
+}
+
+function orderFulfillmentMerchantText(order: MerchantFulfillmentOrder) {
+  return order.fulfillmentMerchantName?.trim() || '待确认';
+}
+
+function orderFulfillmentAddressText(order: MerchantFulfillmentOrder) {
+  return order.fulfillmentMerchantAddress?.trim() || '待确认';
 }
 
 function renderDraftPanel(

@@ -110,6 +110,12 @@ export default defineComponent({
         stocks.value = stockResponse.stocks;
         statements.value = statementResponse.statements;
       } catch (loadError) {
+        if (isUnauthorizedError(loadError)) {
+          clearAuthState('welfareMallAdminAccessToken', 'welfareMallAdminUser');
+          authUser.value = null;
+          error.value = null;
+          return;
+        }
         error.value = loadError instanceof Error ? loadError.message : '平台管理数据加载失败';
       } finally {
         loading.value = false;
@@ -441,6 +447,15 @@ function storeAuthState(tokenKey: string, userKey: string, accessToken: string, 
   localStorage.setItem(userKey, JSON.stringify(user));
 }
 
+function clearAuthState(tokenKey: string, userKey: string) {
+  localStorage.removeItem(tokenKey);
+  localStorage.removeItem(userKey);
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message.includes('401');
+}
+
 function renderLoginShell(
   title: string,
   buttonLabel: string,
@@ -654,6 +669,9 @@ function renderOrdersPanel(
           orders.map((order) =>
             h('article', { class: 'list-row', key: order.orderNo }, [
               h('div', [h('strong', order.orderNo), h('p', `${order.buyerUserId} / ${order.receiverName ?? '自提'} / ${formatMoney(order.totalAmount)}`)]),
+              h('p', { class: 'muted' }, `销售加盟商 ${orderSalesFranchiseText(order)}`),
+              h('p', { class: 'muted' }, `履约商户 ${orderFulfillmentMerchantText(order)}`),
+              h('p', { class: 'muted' }, `履约地址 ${orderFulfillmentAddressText(order)}`),
               h(ElSpace, { wrap: true }, () => [
                 h(ElTag, { type: order.status === 'paid' ? 'success' : 'info' }, () => label(adminOrderStatusLabels, order.status)),
                 h(ElTag, () => `履约 ${order.fulfillmentSummary.totalTasks} 项`),
@@ -688,13 +706,25 @@ function renderOrderFulfillmentTasks(order: AdminOrder) {
     ...order.fulfillmentTasks.map((task) =>
       h('div', { class: 'order-fulfillment-task', key: task.taskNo }, [
         h('strong', task.taskNo),
-        h('span', task.merchantId),
+        h('span', orderFulfillmentMerchantText(order)),
         h('span', label(adminFulfillmentStatusLabels, task.status)),
         task.pickupCode ? h('span', `取货码 ${task.pickupCode}`) : null,
         task.completedAt ? h('span', `完成 ${task.completedAt}`) : null
       ])
     )
   ]);
+}
+
+function orderSalesFranchiseText(order: AdminOrder) {
+  return order.salesFranchiseName?.trim() || '待确认';
+}
+
+function orderFulfillmentMerchantText(order: AdminOrder) {
+  return order.fulfillmentMerchantName?.trim() || '待确认';
+}
+
+function orderFulfillmentAddressText(order: AdminOrder) {
+  return order.fulfillmentMerchantAddress?.trim() || '待确认';
 }
 
 function renderOrderFilters(
