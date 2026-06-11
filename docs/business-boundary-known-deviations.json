@@ -58,13 +58,8 @@
       "nextAction": "Move pickup to merchant address and payment to combination components."
     },
     {
-      "file": "apps/merchant/src/App.ts",
-      "reason": "Merchant Vue still displays pickupStoreName compatibility data for legacy pickup fulfillment records.",
-      "nextAction": "Display merchant address snapshots for pickup fulfillment and remove pickupStoreName from the active Merchant UI."
-    },
-    {
       "file": "apps/merchant/src/App.test.ts",
-      "reason": "Merchant tests still assert fixed local merchant IDs and pickupStoreName compatibility.",
+      "reason": "Merchant tests still carry fixed local merchant IDs and pickupStoreName compatibility fixtures.",
       "nextAction": "Rewrite tests around logged-in Merchant identity and merchant address display."
     },
     {

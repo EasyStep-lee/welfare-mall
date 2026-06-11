@@ -398,7 +398,7 @@ function renderFulfillmentPanel(
               h('p', { class: 'muted' }, `履约商户 ${orderFulfillmentMerchantText(order)}`),
               h('p', { class: 'muted' }, `履约地址 ${orderFulfillmentAddressText(order)}`),
               h('p', { class: 'muted' }, order.lines.map((line) => `${line.displayName} x${line.quantity}`).join(' / ')),
-              h('p', { class: 'muted' }, order.receiverName ? `${order.receiverName} / ${order.receiverPhone} / ${order.receiverAddress}` : order.pickupStoreName ?? '自提'),
+              h('p', { class: 'muted' }, orderContactOrPickupText(order)),
               order.fulfillmentType === 'pickup' && order.status === 'paid'
                 ? draftInput('提货码', pickupCodes[order.orderNo] ?? '', (value) => actions.updatePickupCode(order.orderNo, value))
                 : null,
@@ -419,6 +419,14 @@ function orderFulfillmentMerchantText(order: MerchantFulfillmentOrder) {
 
 function orderFulfillmentAddressText(order: MerchantFulfillmentOrder) {
   return order.fulfillmentMerchantAddress?.trim() || '待确认';
+}
+
+function orderContactOrPickupText(order: MerchantFulfillmentOrder) {
+  if (order.fulfillmentType === 'pickup') {
+    return `自提地址 ${orderFulfillmentAddressText(order)}`;
+  }
+
+  return order.receiverName ? `${order.receiverName} / ${order.receiverPhone} / ${order.receiverAddress}` : '收货信息待确认';
 }
 
 function renderDraftPanel(
