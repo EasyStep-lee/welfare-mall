@@ -74,7 +74,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/order-sales-franchise-name-snapshot`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/order-sales-franchise-name-snapshot`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/order-sales-franchise-name-snapshot`.
+- Feature commit: `7c929fb feat: persist order sales franchise name`.
+- Feature PR: #257 `feat: persist order sales franchise name`.
+- GitHub Actions for PR #257 passed: `Project docs check` run 518, including `docs-check` and `project-foundation-check`.
+- Feature PR #257 squash-merged to `main` at `c5cf6ea feat: persist order sales franchise name`.
+- Docs-only completion branch: `codex/docs-order-sales-franchise-name-complete`.
