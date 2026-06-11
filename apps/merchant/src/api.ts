@@ -126,6 +126,11 @@ export type MerchantFulfillmentOrder = {
   totalAmount: number;
   cashPayableAmount: number;
   welfareCardPayableAmount: number;
+  salesFranchiseId?: string | null;
+  salesFranchiseName?: string | null;
+  fulfillmentMerchantId?: string | null;
+  fulfillmentMerchantName?: string | null;
+  fulfillmentMerchantAddress?: string | null;
   fulfillmentType: string;
   receiverName: string | null;
   receiverPhone: string | null;
