@@ -105,10 +105,15 @@ Evidence:
 
 ### Task 5: Completion
 
-- [ ] Commit feature work on `codex/merchant-draft-master-context`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/merchant-draft-master-context`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
 
 Evidence:
 - Feature branch: `codex/merchant-draft-master-context`.
+- Feature commit: `e1491dce60e4c2426f7830ee0630d8283dd1f4a2`.
+- Feature PR: #267 `feat: derive merchant draft context from api`.
+- GitHub Actions for PR #267 passed: `Project docs check` run 538, including `docs-check` and `project-foundation-check`.
+- Feature PR #267 squash-merged to `main` at `6c4cdb66ea21b9d811c5b4215876baf4f2fd2ec4`.
+- Docs-only completion branch: `codex/docs-merchant-draft-master-context-complete`.
