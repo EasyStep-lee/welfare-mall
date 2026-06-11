@@ -68,7 +68,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/portal-order-business-subject-display`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/portal-order-business-subject-display`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/portal-order-business-subject-display`.
+- Feature commit: `4f16f57 feat: show portal order business subjects`.
+- Feature PR: #259 `feat: show portal order business subjects`.
+- GitHub Actions for PR #259 passed: `Project docs check` run 522, including `docs-check` and `project-foundation-check`.
+- Feature PR #259 squash-merged to `main` at `0ed6602 feat: show portal order business subjects`.
+- Docs-only completion branch: `codex/docs-portal-order-business-subject-display-complete`.
