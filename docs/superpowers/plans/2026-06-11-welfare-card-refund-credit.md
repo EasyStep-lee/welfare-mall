@@ -25,8 +25,8 @@
 - [x] 对缺失订单销售加盟商、购买用户、福利卡账户、非 active 福利卡账户做失败保护，避免静默丢失退款资金。
 - [x] 运行 focused API 测试、类型检查和全量 `pnpm run verify`。
 - [x] 如涉及 Docker 运行态，重建/刷新 API 后用真实 HTTP + 数据库记录验证退款流水。
-- [ ] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
-- [ ] 合并后使用 docs-only 分支把本计划标记完成，文档继续保持中文。
+- [x] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
+- [x] 合并后使用 docs-only 分支把本计划标记完成，文档继续保持中文。
 
 ## 验收标准
 
@@ -45,3 +45,20 @@
   - 退款归属销售加盟商下的用户福利卡账户。
   - 不引入线下现金支付。
   - 不引入门店/商店主链路。
+
+## 完成记录
+
+- 代码 PR：#281 `fix: credit welfare card refunds`，已合并回 `main`。
+- GitHub checks：`docs-check`、`project-foundation-check` 均通过。
+- 本地验证：
+  - `pnpm --filter @welfare-mall/api run test -- test/order/order-refund.repository.spec.ts --runInBand`
+  - `pnpm --filter @welfare-mall/api run typecheck`
+  - `pnpm run verify`
+  - `docker compose up -d --build api`
+  - `pnpm run docker:runtime:smoke`
+- Docker 真实链路验证：
+  - 发卡 -> 下单 -> 组合支付 -> 支付回调 -> 退款申请 -> 退款成功回调 -> 重复回调。
+  - 验证订单：`ORDER-20260611130312039-9O4IFW`。
+  - 验证退款：`REF-20260611130312244-J89QQH`。
+  - MySQL 福利卡流水：`issue 20000`、`payment -1000`、`refund 1000`。
+  - 福利卡余额：`20000 -> 19000 -> 20000`。
