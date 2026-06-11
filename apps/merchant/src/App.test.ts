@@ -495,7 +495,8 @@ describe('Merchant Vue workbench', () => {
     const wrapper = mount(App);
     await flushPromises();
 
-    expect(wrapper.text()).toContain('浦东福利自提点');
+    expect(wrapper.text()).toContain('自提地址 上海市浦东新区世纪大道 88 号');
+    expect(wrapper.text()).not.toContain('浦东福利自提点');
     await setFieldValue(wrapper, '提货码', 'PICKUP-8899');
     await clickButton(wrapper, '确认完成');
     await flushPromises();
