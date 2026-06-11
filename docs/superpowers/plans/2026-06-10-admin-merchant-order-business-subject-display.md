@@ -83,7 +83,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/admin-merchant-order-business-subject-display`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/admin-merchant-order-business-subject-display`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/admin-merchant-order-business-subject-display`.
+- Feature commit: `a680250 feat: show admin merchant order business subjects`.
+- Feature PR: #261 `feat: show admin merchant order business subjects`.
+- GitHub Actions for PR #261 passed: `Project docs check` run 526, including `docs-check` and `project-foundation-check`.
+- Feature PR #261 squash-merged to `main` at `4c300b6 feat: show admin merchant order business subjects`.
+- Docs-only completion branch: `codex/docs-admin-merchant-order-business-subject-display-complete`.
