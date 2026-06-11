@@ -288,12 +288,16 @@ function hasFulfillmentProgress(order: PortalOrderRecord) {
   return (order.fulfillmentSummary?.totalTasks ?? 0) > 0;
 }
 
-function orderLineMerchantText(order: PortalOrderRecord) {
-  const merchantIds = [
-    ...new Set(order.lines.map((line) => line.merchantId).filter((merchantId): merchantId is string => Boolean(merchantId)))
-  ];
+function orderSalesFranchiseText(order: PortalOrderRecord) {
+  return order.salesFranchiseName ?? '待确认';
+}
 
-  return merchantIds.length > 0 ? merchantIds.join(' / ') : '待确认';
+function orderFulfillmentMerchantText(order: PortalOrderRecord) {
+  return order.fulfillmentMerchantName ?? '待确认';
+}
+
+function orderFulfillmentAddressText(order: PortalOrderRecord) {
+  return order.fulfillmentMerchantAddress ?? '待确认';
 }
 
 function fulfillmentFactLabel(order: PortalOrderRecord) {
@@ -704,7 +708,8 @@ async function confirmLatestRefund() {
           <small v-if="order.latestPayment" class="order-payment-summary">
             最近支付 {{ order.latestPayment.paymentNo }} · {{ paymentSummaryText(order.latestPayment) }}
           </small>
-          <small class="order-payment-summary">履约商户 {{ orderLineMerchantText(order) }}</small>
+          <small class="order-payment-summary">销售加盟商 {{ orderSalesFranchiseText(order) }}</small>
+          <small class="order-payment-summary">履约商户 {{ orderFulfillmentMerchantText(order) }}</small>
           <small v-if="hasFulfillmentProgress(order)" class="order-payment-summary">
             履约 待履约 {{ order.fulfillmentSummary?.pendingTasks ?? 0 }} · 已完成
             {{ order.fulfillmentSummary?.completedTasks ?? 0 }}
@@ -739,6 +744,18 @@ async function confirmLatestRefund() {
             <strong>{{ selectedOrder.receiverName ?? '待补充' }}</strong>
           </div>
           <div>
+            <span>销售加盟商</span>
+            <strong>{{ orderSalesFranchiseText(selectedOrder) }}</strong>
+          </div>
+          <div>
+            <span>履约商户</span>
+            <strong>{{ orderFulfillmentMerchantText(selectedOrder) }}</strong>
+          </div>
+          <div>
+            <span>履约地址</span>
+            <strong>{{ orderFulfillmentAddressText(selectedOrder) }}</strong>
+          </div>
+          <div>
             <span>{{ fulfillmentFactLabel(selectedOrder) }}</span>
             <strong>{{ fulfillmentFactText(selectedOrder) }}</strong>
           </div>
@@ -753,7 +770,7 @@ async function confirmLatestRefund() {
             <div>
               <h3>{{ line.displayName }}</h3>
               <p>{{ line.displaySkuCode ?? '默认规格' }} · x{{ line.quantity }}</p>
-              <p>履约商户 {{ line.merchantId ?? '待确认' }}</p>
+              <p>履约商户 {{ orderFulfillmentMerchantText(selectedOrder) }}</p>
             </div>
             <strong>{{ formatMoney(line.lineTotalAmount) }}</strong>
           </article>

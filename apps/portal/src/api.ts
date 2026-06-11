@@ -117,6 +117,11 @@ export type PortalCheckoutOrder = {
   totalAmount: number;
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
+  salesFranchiseId?: string | null;
+  salesFranchiseName?: string | null;
+  fulfillmentMerchantId?: string | null;
+  fulfillmentMerchantName?: string | null;
+  fulfillmentMerchantAddress?: string | null;
 };
 
 export type PortalOrderLine = {
@@ -142,6 +147,11 @@ export type PortalOrderRecord = PortalCheckoutOrder & {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  salesFranchiseId: string | null;
+  salesFranchiseName: string | null;
+  fulfillmentMerchantId: string | null;
+  fulfillmentMerchantName: string | null;
+  fulfillmentMerchantAddress: string | null;
   pickupCode?: string | null;
   createdAt: string;
   updatedAt: string;
