@@ -9,6 +9,51 @@ export type ProductPoolCatalogItem = {
   displayImageUrl: string;
 };
 
+type AccessTokenProvider = () => string | null;
+type ApiHeaders = Record<string, string>;
+
+function defaultPortalAccessTokenProvider() {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+    return null;
+  }
+
+  return localStorage.getItem('welfareMallPortalAccessToken');
+}
+
+let portalAccessTokenProvider: AccessTokenProvider = defaultPortalAccessTokenProvider;
+
+export function setPortalAccessTokenProvider(provider: AccessTokenProvider) {
+  portalAccessTokenProvider = provider;
+}
+
+export function resetPortalAccessTokenProvider() {
+  portalAccessTokenProvider = defaultPortalAccessTokenProvider;
+}
+
+function withAuthHeaders(headers: ApiHeaders = {}) {
+  const token = portalAccessTokenProvider()?.trim();
+  if (!token) {
+    return headers;
+  }
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`
+  };
+}
+
+function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const token = portalAccessTokenProvider()?.trim();
+  if (!token) {
+    return init ? fetch(input, init) : fetch(input);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers: withAuthHeaders(init?.headers as ApiHeaders | undefined)
+  });
+}
+
 export type AuthenticatedUser = {
   username: string;
   displayName: string;
@@ -332,7 +377,7 @@ export async function fetchProductPoolItemDetail(itemId: string): Promise<Produc
 }
 
 export async function createPortalOrder(input: PortalOrderCheckoutInput): Promise<PortalOrderCheckoutResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -354,7 +399,7 @@ export async function createPortalOrder(input: PortalOrderCheckoutInput): Promis
 export async function fetchPortalOrders(buyerUserId: string): Promise<PortalOrderListResponse> {
   const url = new URL(`${apiBaseUrl()}/orders`);
   url.searchParams.set('buyerUserId', buyerUserId);
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
 
   if (!response.ok) {
     throw new Error(`Failed to load orders: ${response.status}`);
@@ -369,7 +414,7 @@ export async function fetchPortalOrderDetail(input: {
 }): Promise<PortalOrderDetailResponse> {
   const url = new URL(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}`);
   url.searchParams.set('buyerUserId', input.buyerUserId);
-  const response = await fetch(url.toString());
+  const response = await apiFetch(url.toString());
 
   if (!response.ok) {
     throw new Error(`Failed to load order detail: ${response.status}`);
@@ -379,7 +424,7 @@ export async function fetchPortalOrderDetail(input: {
 }
 
 export async function cancelPortalOrder(input: PortalOrderCancelInput): Promise<PortalOrderDetailResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}/cancel`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}/cancel`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -396,7 +441,7 @@ export async function cancelPortalOrder(input: PortalOrderCancelInput): Promise<
 }
 
 export async function createPortalPayment(input: PortalPaymentInput): Promise<PortalPaymentResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/payments`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/payments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -410,7 +455,7 @@ export async function createPortalPayment(input: PortalPaymentInput): Promise<Po
 }
 
 export async function createPortalRefund(input: PortalRefundInput): Promise<PortalRefundResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/refunds`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/refunds`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -424,7 +469,7 @@ export async function createPortalRefund(input: PortalRefundInput): Promise<Port
 }
 
 export async function confirmPortalPayment(input: PortalPaymentCallbackInput): Promise<PortalPaymentCallbackResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/payments/callbacks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
@@ -438,7 +483,7 @@ export async function confirmPortalPayment(input: PortalPaymentCallbackInput): P
 }
 
 export async function confirmPortalRefund(input: PortalRefundCallbackInput): Promise<PortalRefundCallbackResponse> {
-  const response = await fetch(`${apiBaseUrl()}/orders/refunds/callbacks`, {
+  const response = await apiFetch(`${apiBaseUrl()}/orders/refunds/callbacks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
