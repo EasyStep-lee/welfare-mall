@@ -98,7 +98,15 @@ Evidence:
 
 ### Task 5: Completion
 
-- [ ] Commit feature work on `codex/admin-settlement-merchant-input`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/admin-settlement-merchant-input`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/admin-settlement-merchant-input`.
+- Feature commit: `cb0f4211532547ec203844d390183c8fa89ddec7`.
+- Feature PR: #271 `fix: drive admin settlement generation from merchant input`.
+- GitHub Actions for PR #271 passed: `Project docs check` run 546, including `docs-check` and `project-foundation-check`.
+- Feature PR #271 squash-merged to `main` at `d9ef4bf016c768e65d4192a0c5ac1d4505d8a9b3`.
+- Docs-only completion branch: `codex/docs-admin-settlement-merchant-input-complete`.
