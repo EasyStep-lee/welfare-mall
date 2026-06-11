@@ -158,13 +158,6 @@ function assertCheckoutInput(input: OrderCheckoutInput): void {
     }
   }
 
-  if (
-    input?.fulfillment?.type === 'pickup' &&
-    (typeof input.fulfillment.pickupStoreName !== 'string' || input.fulfillment.pickupStoreName.trim().length === 0)
-  ) {
-    messages.push('fulfillment.pickupStoreName is required for pickup.');
-  }
-
   if (messages.length > 0) {
     throw new BadRequestException(messages);
   }

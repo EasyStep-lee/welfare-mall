@@ -127,6 +127,42 @@ describe('OrderCheckoutService', () => {
     expect(result).toEqual({ idempotentReplay: false, order: orderRecord });
   });
 
+  it('creates a pickup order without legacy pickup-store input', async () => {
+    const amountService = createAmountServiceMock();
+    const repository = createRepositoryMock();
+    const service = new OrderCheckoutService(
+      amountService as unknown as OrderAmountService,
+      repository as unknown as OrderCheckoutRepository
+    );
+
+    await service.createOrder({
+      ...checkoutInput,
+      requestId: 'checkout-request-pickup-001',
+      welfareCardPaymentAmount: undefined,
+      fulfillment: {
+        type: 'pickup'
+      }
+    });
+
+    expect(amountService.previewAmount).toHaveBeenCalledWith({
+      items: [{ productPoolItemId: 'pool-item-001', quantity: 2 }],
+      welfareCardPaymentAmount: undefined
+    });
+    expect(repository.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'checkout-request-pickup-001',
+        buyerUserId: 'user-001',
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980,
+        fulfillmentType: 'pickup',
+        receiverName: null,
+        receiverPhone: null,
+        receiverAddress: null,
+        pickupStoreName: null
+      })
+    );
+  });
+
   it('returns an existing order for the same idempotent checkout request', async () => {
     const amountService = createAmountServiceMock();
     const repository = createRepositoryMock();
