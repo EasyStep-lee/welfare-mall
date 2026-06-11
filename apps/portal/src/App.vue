@@ -44,6 +44,7 @@ const checkoutLoading = ref(false);
 const checkoutError = ref<string | null>(null);
 const createdOrder = ref<PortalCheckoutOrder | null>(null);
 const checkoutFulfillmentMode = ref<CheckoutFulfillmentMode>('delivery');
+const checkoutWelfareCardAmountText = ref('0.00');
 const ordersLoading = ref(Boolean(authUser.value));
 const ordersError = ref<string | null>(null);
 const orders = ref<PortalOrderRecord[]>([]);
@@ -81,6 +82,10 @@ const checkoutSummary = computed(() =>
   checkoutFulfillmentMode.value === 'pickup'
     ? `数量 1，商户自提 ${selectedDetail.value?.product.merchantId ?? '待选择商户'}`
     : `数量 1，配送至 ${localDelivery.receiverAddress}`
+);
+const checkoutWelfareCardPreviewAmount = computed(() => parseCheckoutWelfareCardAmount() ?? 0);
+const checkoutOnlineRemainderAmount = computed(() =>
+  Math.max((selectedDetail.value?.displayPriceAmount ?? 0) - checkoutWelfareCardPreviewAmount.value, 0)
 );
 
 onMounted(() => {
@@ -352,6 +357,20 @@ function resetCheckout() {
   checkoutError.value = null;
   createdOrder.value = null;
   checkoutFulfillmentMode.value = 'delivery';
+  checkoutWelfareCardAmountText.value = '0.00';
+}
+
+function parseCheckoutWelfareCardAmount() {
+  const normalized = String(checkoutWelfareCardAmountText.value).trim();
+  if (!normalized) {
+    return 0;
+  }
+
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    return null;
+  }
+
+  return Math.round(Number(normalized) * 100);
 }
 
 function checkoutFulfillmentPayload() {
@@ -451,6 +470,17 @@ async function submitLocalOrder() {
     return;
   }
 
+  const welfareCardPaymentAmount = parseCheckoutWelfareCardAmount();
+  if (welfareCardPaymentAmount === null) {
+    checkoutError.value = '福利卡抵扣金额必须为非负金额';
+    return;
+  }
+
+  if (welfareCardPaymentAmount > selectedDetail.value.displayPriceAmount) {
+    checkoutError.value = '福利卡抵扣金额不能超过商品金额';
+    return;
+  }
+
   checkoutLoading.value = true;
   checkoutError.value = null;
   createdOrder.value = null;
@@ -461,7 +491,7 @@ async function submitLocalOrder() {
       buyerUserId: resolveAuthenticatedBuyerUserId(),
       productPoolItemId: selectedDetail.value.id,
       quantity: 1,
-      welfareCardPaymentAmount: 0,
+      welfareCardPaymentAmount,
       fulfillment: checkoutFulfillmentPayload()
     });
     createdOrder.value = result.order;
@@ -1079,6 +1109,19 @@ async function confirmLatestRefund() {
               >
                 商户自提
               </button>
+            </div>
+            <label class="checkout-amount-field">
+              <span>福利卡抵扣金额</span>
+              <input
+                v-model="checkoutWelfareCardAmountText"
+                aria-label="福利卡抵扣金额"
+                inputmode="decimal"
+                type="text"
+              />
+            </label>
+            <div class="checkout-split-preview">
+              <span>福利卡抵扣 {{ formatMoney(checkoutWelfareCardPreviewAmount) }}</span>
+              <span>线上补差 {{ formatMoney(checkoutOnlineRemainderAmount) }}</span>
             </div>
             <button
               type="button"
