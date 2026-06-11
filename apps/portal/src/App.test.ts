@@ -73,6 +73,11 @@ const orderListResponse = {
       receiverPhone: '13800000000',
       receiverAddress: '本地联调地址',
       pickupStoreName: null,
+      salesFranchiseId: 'franchise-local-review',
+      salesFranchiseName: '本地福利卡中心',
+      fulfillmentMerchantId: 'merchant-local-review',
+      fulfillmentMerchantName: '本地优选商户',
+      fulfillmentMerchantAddress: '上海市浦东新区本地联调路 88 号',
       createdAt: '2026-06-07T00:00:00.000Z',
       updatedAt: '2026-06-07T00:00:00.000Z',
       latestPayment: null,
@@ -100,6 +105,19 @@ const orderListResponse = {
 
 const orderDetailResponse = {
   order: orderListResponse.orders[0]
+};
+
+const legacyOrderListResponse = {
+  orders: [
+    {
+      ...orderListResponse.orders[0],
+      salesFranchiseId: null,
+      salesFranchiseName: null,
+      fulfillmentMerchantId: null,
+      fulfillmentMerchantName: null,
+      fulfillmentMerchantAddress: null
+    }
+  ]
 };
 
 const mixedPaymentOrder = {
@@ -664,8 +682,37 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
     expect(wrapper.text()).toContain('待支付');
     expect(wrapper.text()).toContain('¥69.90');
+    expect(wrapper.text()).toContain('销售加盟商 本地福利卡中心');
     expect(wrapper.text()).toContain('履约商户');
-    expect(wrapper.text()).toContain('merchant-local-review');
+    expect(wrapper.text()).toContain('本地优选商户');
+    expect(wrapper.text()).not.toContain('履约商户 merchant-local-review');
+  });
+
+  it('does not expose internal merchant IDs for legacy orders without snapshots', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+          return {
+            ok: true,
+            json: async () => legacyOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('销售加盟商 待确认');
+    expect(wrapper.text()).toContain('履约商户 待确认');
+    expect(wrapper.text()).not.toContain('merchant-local-review');
   });
 
   it('opens a local buyer order detail from the order list', async () => {
@@ -708,8 +755,13 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('SKU-LOCAL-REVIEW-5KG');
     expect(wrapper.text()).toContain('本地用户');
     expect(wrapper.text()).toContain('本地联调地址');
+    expect(wrapper.text()).toContain('销售加盟商');
+    expect(wrapper.text()).toContain('本地福利卡中心');
     expect(wrapper.text()).toContain('履约商户');
-    expect(wrapper.text()).toContain('merchant-local-review');
+    expect(wrapper.text()).toContain('本地优选商户');
+    expect(wrapper.text()).toContain('履约地址');
+    expect(wrapper.text()).toContain('上海市浦东新区本地联调路 88 号');
+    expect(wrapper.text()).not.toContain('履约商户 merchant-local-review');
     expect(wrapper.text()).toContain('¥69.90');
   });
 
@@ -1316,10 +1368,11 @@ describe('Portal product pool catalog', () => {
     await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PICKUP 详情"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('履约方式');
-    expect(wrapper.text()).toContain('商户自提');
     expect(wrapper.text()).toContain('履约商户');
-    expect(wrapper.text()).toContain('merchant-local-review');
+    expect(wrapper.text()).toContain('本地优选商户');
+    expect(wrapper.text()).toContain('履约地址');
+    expect(wrapper.text()).toContain('上海市浦东新区本地联调路 88 号');
+    expect(wrapper.text()).not.toContain('履约商户 merchant-local-review');
     expect(wrapper.text()).not.toContain('本地自提点');
     expect(wrapper.text()).not.toContain('门店自提');
     expect(wrapper.text()).toContain('取货码');
