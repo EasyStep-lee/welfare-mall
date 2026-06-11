@@ -10,6 +10,7 @@ import {
   AdminSettlementStatement,
   AdminSettlementStatementStatusFilter,
   AuthenticatedUser,
+  IssueWelfareCardResponse,
   ReviewQueueItem,
   ReviewQueueStatus,
   adminFulfillmentStatusLabels,
@@ -25,6 +26,7 @@ import {
   fetchAdminSettlementStatements,
   fetchReviewQueue,
   generateSettlementStatement,
+  issueWelfareCard,
   loginAdmin,
   processOrderPaymentCallback,
   processOrderRefundCallback,
@@ -62,6 +64,13 @@ type LoginForm = {
   password: string;
 };
 
+type WelfareCardIssueForm = {
+  franchiseId: string;
+  buyerUserId: string;
+  amount: string;
+  remark: string;
+};
+
 export default defineComponent({
   name: 'AdminApp',
   setup() {
@@ -79,6 +88,13 @@ export default defineComponent({
     const stockFilters = ref<StockLookupForm>({ merchantId: '', productId: '', skuId: '' });
     const settlementStatus = ref<AdminSettlementStatementStatusFilter>('generated');
     const settlementMerchantId = ref('');
+    const welfareCardIssueForm = ref<WelfareCardIssueForm>({
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'buyer-local',
+      amount: '20000',
+      remark: '本地加盟商福利卡发行'
+    });
+    const welfareCardIssueResult = ref<IssueWelfareCardResponse | null>(null);
     const orders = ref<AdminOrder[]>([]);
     const reservations = ref<AdminInventoryReservation[]>([]);
     const stocks = ref<AdminInventoryStock[]>([]);
@@ -209,6 +225,39 @@ export default defineComponent({
 
     function updateSettlementMerchantId(value: string) {
       settlementMerchantId.value = value;
+    }
+
+    function updateWelfareCardIssueField(field: keyof WelfareCardIssueForm, value: string) {
+      welfareCardIssueForm.value = { ...welfareCardIssueForm.value, [field]: value };
+    }
+
+    async function submitWelfareCardIssue() {
+      const franchiseId = welfareCardIssueForm.value.franchiseId.trim();
+      const buyerUserId = welfareCardIssueForm.value.buyerUserId.trim();
+      const amount = Number(welfareCardIssueForm.value.amount);
+      if (!franchiseId || !buyerUserId || !Number.isInteger(amount) || amount <= 0) {
+        message.value = null;
+        error.value = '请填写发卡加盟商ID、发卡用户ID和正整数发卡金额';
+        return;
+      }
+
+      actionLoading.value = true;
+      error.value = null;
+      try {
+        const result = await issueWelfareCard({
+          franchiseId,
+          buyerUserId,
+          amount,
+          requestId: `ADMIN-WELFARE-ISSUE-${buyerUserId}-${amount}`,
+          remark: welfareCardIssueForm.value.remark
+        });
+        welfareCardIssueResult.value = result;
+        message.value = `${buyerUserId} 福利卡已发放 ${formatMoney(result.ledgerEntry.amount)}`;
+      } catch (actionError) {
+        error.value = actionError instanceof Error ? actionError.message : '福利卡发放失败';
+      } finally {
+        actionLoading.value = false;
+      }
     }
 
     async function generateSettlement() {
@@ -426,6 +475,12 @@ export default defineComponent({
           ),
           renderReservationPanel(reservations.value, reservationStatus.value, reservationFilters.value, { loadReservations, updateReservationFilter }, actionLoading.value),
           renderStockPanel(stocks.value, stockFilters.value, { loadStocks, updateStockFilter }, actionLoading.value),
+          renderWelfareCardIssuePanel(
+            welfareCardIssueForm.value,
+            welfareCardIssueResult.value,
+            { submitWelfareCardIssue, updateWelfareCardIssueField },
+            actionLoading.value
+          ),
           renderSettlementPanel(
             statements.value,
             settlementStatus.value,
@@ -910,6 +965,38 @@ function renderStockPanel(
             ])
           )
         )
+  ]);
+}
+
+function renderWelfareCardIssuePanel(
+  form: WelfareCardIssueForm,
+  result: IssueWelfareCardResponse | null,
+  actions: {
+    submitWelfareCardIssue: () => Promise<void>;
+    updateWelfareCardIssueField: (field: keyof WelfareCardIssueForm, value: string) => void;
+  },
+  actionLoading: boolean
+) {
+  return panel('福利卡发放', [
+    h('p', { class: 'muted' }, '加盟商发卡操作，Admin 仅作为本地监管入口'),
+    h('div', { class: 'lookup-row' }, [
+      textInput('发卡加盟商ID', form.franchiseId, (value) => actions.updateWelfareCardIssueField('franchiseId', value)),
+      textInput('发卡用户ID', form.buyerUserId, (value) => actions.updateWelfareCardIssueField('buyerUserId', value)),
+      textInput('发卡金额(分)', form.amount, (value) => actions.updateWelfareCardIssueField('amount', value)),
+      textInput('发卡备注', form.remark, (value) => actions.updateWelfareCardIssueField('remark', value)),
+      h(ElButton, { size: 'small', type: 'success', plain: true, loading: actionLoading, onClick: actions.submitWelfareCardIssue }, () => '发放福利卡')
+    ]),
+    result
+      ? h('article', { class: 'list-row' }, [
+          h('strong', result.account.accountNo),
+          h('p', `${result.account.buyerUserId} / ${result.account.franchiseId}`),
+          h(ElSpace, { wrap: true }, () => [
+            h(ElTag, { type: 'success' }, () => `发卡流水 ${result.ledgerEntry.ledgerNo}`),
+            h(ElTag, () => `账户余额 ${formatMoney(result.account.balanceAmount)}`),
+            h(ElTag, () => `累计发行 ${formatMoney(result.account.issuedAmount)}`)
+          ])
+        ])
+      : h('p', { class: 'empty-state' }, '暂无本次发卡结果')
   ]);
 }
 
