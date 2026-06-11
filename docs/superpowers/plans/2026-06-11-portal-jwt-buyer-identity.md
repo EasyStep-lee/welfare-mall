@@ -79,7 +79,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/portal-jwt-buyer-identity`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/portal-jwt-buyer-identity`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/portal-jwt-buyer-identity`.
+- Feature commit: `40b9dd68873e4d9f075b24e065815428798e5f2d`.
+- Feature PR: #263 `feat: drive portal orders from jwt buyer`.
+- GitHub Actions for PR #263 passed: `Project docs check` run 530, including `docs-check` and `project-foundation-check`.
+- Feature PR #263 squash-merged to `main` at `81af0260aec5beb2e9b6da6fbdbcfe82cc1a2d5c`.
+- Docs-only completion branch: `codex/docs-portal-jwt-buyer-identity-complete`.
