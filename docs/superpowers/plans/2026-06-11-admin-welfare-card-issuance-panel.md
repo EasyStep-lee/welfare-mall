@@ -24,8 +24,8 @@
 - [x] 运行 Admin focused 测试，确认 RED -> GREEN。
 - [x] 运行 `pnpm run verify:frontend-stack`、`pnpm run verify:business-boundary`、Admin typecheck/test 和全量 `pnpm run verify`。
 - [x] 如涉及 Docker served bundle，重建 Admin 容器并验证源码、served bundle、真实 HTTP/API/DB 运行态；本轮未获得可调用的 in-app Browser 工具，因此不声称已完成点击验收。
-- [ ] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
-- [ ] 合并后使用 docs-only 分支把本计划标记完成，文档保持中文。
+- [x] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
+- [x] 合并后使用 docs-only 分支把本计划标记完成，文档保持中文。
 
 ## 验收标准
 
@@ -49,3 +49,12 @@
 - Admin served bundle `http://localhost:5173/assets/index-DaKlfeSW.js` 已包含 `福利卡发放`、`发卡加盟商ID`、`welfare-cards/issue`、`加盟商发卡操作`。
 - HTTP/API/DB 运行态验证：使用 Admin JWT 调用 `POST /api/franchises/franchise-local-review/welfare-cards/issue` 成功创建福利卡账户与 `issue` 流水，DB 余额与累计发行金额均为 `12345`。
 - 备注：`docker compose up -d --build admin` 在本机 Docker/BuildKit session 阶段出现 `x-docker-expose-session-sharedkey` 非可打印字符错误；已使用直接 `docker build` + `docker compose up -d --no-build admin` 完成镜像与运行态刷新。
+
+## 完成记录
+
+- 功能分支：`codex/admin-welfare-card-issuance-panel`
+- 功能 PR：#283 `feat: add admin welfare card issuance panel`
+- PR checks：`docs-check` 通过，`project-foundation-check` 通过。
+- 合并方式：squash 合并回 `main`，合并后 `main` 快进到 `866dcce`。
+- 计划完成分支：`codex/docs-admin-welfare-card-issuance-panel-complete`
+- 结论：本切片只完成 Admin 本地监管/过渡发卡入口；独立加盟商登录与 Franchise 工作台仍是后续主链路任务。
