@@ -90,7 +90,15 @@ Evidence:
 
 ### Task 5: Completion
 
-- [ ] Commit feature work on `codex/admin-jwt-actor`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/admin-jwt-actor`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature branch: `codex/admin-jwt-actor`.
+- Feature commit: `e4d6e14f6c64b0e8ffe7eccc0c9f27fe4bf1ad0c`.
+- Feature PR: #269 `feat: drive admin actions from jwt actor`.
+- GitHub Actions for PR #269 passed: `Project docs check` run 542, including `docs-check` and `project-foundation-check`.
+- Feature PR #269 squash-merged to `main` at `09335c6476f93dfec4acdbfe8b85c60079042ef3`.
+- Docs-only completion branch: `codex/docs-admin-jwt-actor-complete`.
