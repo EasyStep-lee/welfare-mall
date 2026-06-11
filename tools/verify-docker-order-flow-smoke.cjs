@@ -141,6 +141,10 @@ async function main() {
   assert(order.status === 'pending_payment', `Created order status was ${order.status}, expected pending_payment`);
   assert(order.totalAmount === item.displayPriceAmount, `Created order total was ${order.totalAmount}, expected ${item.displayPriceAmount}`);
   assert(order.salesFranchiseId === 'franchise-local-review', `Created order salesFranchiseId was ${order.salesFranchiseId}`);
+  assert(
+    order.salesFranchiseName === '本地福利卡中心',
+    `Created order salesFranchiseName was ${order.salesFranchiseName}`
+  );
   assert(order.fulfillmentMerchantId === localMerchantId, `Created order fulfillmentMerchantId was ${order.fulfillmentMerchantId}`);
   assert(
     typeof order.fulfillmentMerchantAddress === 'string' && order.fulfillmentMerchantAddress.trim().length > 0,

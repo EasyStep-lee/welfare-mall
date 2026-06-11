@@ -446,6 +446,7 @@ model OrderHeader {
   receiverAddress          String?
   pickupStoreName          String?
   salesFranchiseId         String?
+  salesFranchiseName       String?
   fulfillmentMerchantId    String?
   fulfillmentMerchantName  String?
   fulfillmentMerchantAddress String?
