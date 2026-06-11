@@ -236,6 +236,25 @@ export type GenerateSettlementStatementResponse = {
   statement: AdminSettlementStatement | null;
 };
 
+export type IssueWelfareCardResponse = {
+  idempotentReplay: boolean;
+  account: {
+    accountNo: string;
+    franchiseId: string;
+    buyerUserId: string;
+    status: string;
+    balanceAmount: number;
+    issuedAmount: number;
+  };
+  ledgerEntry: {
+    ledgerNo: string;
+    requestId: string;
+    type: string;
+    amount: number;
+    balanceAfter: number;
+  };
+};
+
 export type CreateOrderRefundInput = {
   requestId: string;
   paymentNo: string;
@@ -553,6 +572,34 @@ export async function confirmSettlementOfflinePayout(input: {
   }
 
   return response.json() as Promise<ConfirmSettlementOfflinePayoutResponse>;
+}
+
+export async function issueWelfareCard(input: {
+  franchiseId: string;
+  requestId: string;
+  buyerUserId: string;
+  amount: number;
+  remark?: string | null;
+}): Promise<IssueWelfareCardResponse> {
+  const response = await apiFetch(
+    `${apiBaseUrl()}/franchises/${encodeURIComponent(input.franchiseId.trim())}/welfare-cards/issue`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestId: input.requestId.trim(),
+        buyerUserId: input.buyerUserId.trim(),
+        amount: input.amount,
+        remark: input.remark?.trim() || undefined
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to issue welfare card: ${response.status}`);
+  }
+
+  return response.json() as Promise<IssueWelfareCardResponse>;
 }
 
 export async function createOrderRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResponse> {

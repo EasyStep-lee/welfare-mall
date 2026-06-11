@@ -267,6 +267,26 @@ describe('Admin Vue workbench', () => {
             }
           });
         }
+        if (url.includes('/franchises/franchise-local-review/welfare-cards/issue')) {
+          return response({
+            idempotentReplay: false,
+            account: {
+              accountNo: 'WCA-franchise-local-review-buyer-local',
+              franchiseId: 'franchise-local-review',
+              buyerUserId: 'buyer-local',
+              status: 'active',
+              balanceAmount: 20000,
+              issuedAmount: 20000
+            },
+            ledgerEntry: {
+              ledgerNo: 'WCL-admin-issue-001',
+              requestId: 'ADMIN-WELFARE-ISSUE-buyer-local',
+              type: 'issue',
+              amount: 20000,
+              balanceAfter: 20000
+            }
+          });
+        }
         if (url.includes('/products/product-001/review-decisions')) {
           return response({
             productId: 'product-001',
@@ -389,6 +409,7 @@ describe('Admin Vue workbench', () => {
     expect(wrapper.text()).toContain('库存预占');
     expect(wrapper.text()).toContain('库存余额');
     expect(wrapper.text()).toContain('结算管理');
+    expect(wrapper.text()).toContain('福利卡发放');
     expect(wrapper.text()).toContain('东北五常大米福利装');
     expect(wrapper.text()).toContain('ORDER-20260603-001');
     expect(wrapper.text()).toContain('product-001:sku-001');
@@ -411,6 +432,51 @@ describe('Admin Vue workbench', () => {
     expect(requestUrls()).toContain('http://localhost:3000/api/orders/admin/inventory-reservations');
     expect(requestUrls()).toContain('http://localhost:3000/api/orders/admin/inventory-stocks');
     expect(requestUrls()).toContain('http://localhost:3000/api/settlements/merchant-statements?status=generated');
+  });
+
+  it('issues welfare card balance through the visible Admin transition panel', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '发卡加盟商ID', 'franchise-local-review');
+    await setFieldValue(wrapper, '发卡用户ID', 'buyer-local');
+    await setFieldValue(wrapper, '发卡金额(分)', '20000');
+    await setFieldValue(wrapper, '发卡备注', '端到端发卡验证');
+    await clickButton(wrapper, '发放福利卡');
+    await flushPromises();
+
+    const issueCall = findRequest('/franchises/franchise-local-review/welfare-cards/issue');
+    expect(issueCall?.[1]).toMatchObject({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    expect(JSON.parse(String(issueCall?.[1]?.body))).toEqual({
+      requestId: 'ADMIN-WELFARE-ISSUE-buyer-local-20000',
+      buyerUserId: 'buyer-local',
+      amount: 20000,
+      remark: '端到端发卡验证'
+    });
+    expect(wrapper.text()).toContain('buyer-local 福利卡已发放 ¥200.00');
+    expect(wrapper.text()).toContain('发卡流水 WCL-admin-issue-001');
+    expect(wrapper.text()).toContain('账户余额 ¥200.00');
+    expect(wrapper.text()).toContain('累计发行 ¥200.00');
+  });
+
+  it('requires franchise, buyer, and a positive amount before issuing welfare card balance', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await setFieldValue(wrapper, '发卡加盟商ID', '');
+    await setFieldValue(wrapper, '发卡用户ID', '');
+    await setFieldValue(wrapper, '发卡金额(分)', '0');
+    await clickButton(wrapper, '发放福利卡');
+    await flushPromises();
+
+    const issueCalls = vi
+      .mocked(fetch)
+      .mock.calls.filter(([input, init]) => String(input).includes('/welfare-cards/issue') && init?.method === 'POST');
+    expect(issueCalls).toHaveLength(0);
+    expect(wrapper.text()).toContain('请填写发卡加盟商ID、发卡用户ID和正整数发卡金额');
   });
 
   it('approves a pending product review and refreshes the Vue queue', async () => {
