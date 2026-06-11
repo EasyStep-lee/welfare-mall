@@ -84,10 +84,15 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/merchant-jwt-identity`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/merchant-jwt-identity`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
 
 Evidence:
 - Feature branch: `codex/merchant-jwt-identity`.
+- Feature commit: `9573328fd66b559c447909dde04f67e179eae8e3`.
+- Feature PR: #265 `feat: drive merchant workbench from jwt identity`.
+- GitHub Actions for PR #265 passed: `Project docs check` run 534, including `docs-check` and `project-foundation-check`.
+- Feature PR #265 squash-merged to `main` at `9a48dd9441f89959fdf008a41a75bd2cc302bd5e`.
+- Docs-only completion branch: `codex/docs-merchant-jwt-identity-complete`.
