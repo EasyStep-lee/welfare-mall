@@ -106,6 +106,13 @@ const merchantSettlementStatementsResponse = {
   ]
 };
 
+const merchantDraftContextResponse = {
+  merchant: { id: 'merchant-local-review', code: 'M-LOCAL-REVIEW', name: '本地优选商户' },
+  franchise: { id: 'franchise-local-review', code: 'F-LOCAL-REVIEW', name: '本地福利卡中心' },
+  defaultCategory: { id: 'category-local-review', code: 'local-grain', name: '粮油副食' },
+  defaultBrand: { id: 'brand-local-review', code: 'local-wuchang', name: '五常香米' }
+};
+
 describe('Merchant Vue workbench', () => {
   beforeEach(() => {
     installLocalStorageMock();
@@ -150,6 +157,13 @@ describe('Merchant Vue workbench', () => {
         if (url.includes('/orders/merchant/fulfillment')) {
           fulfillmentLoads += 1;
           return response(fulfillmentLoads === 1 ? fulfillmentQueueResponse : { orders: [] });
+        }
+        if (url.includes('/merchants/') && url.includes('/draft-context')) {
+          const merchantId = url.match(/\/merchants\/([^/]+)\/draft-context/)?.[1] ?? 'merchant-local-review';
+          return response({
+            ...merchantDraftContextResponse,
+            merchant: { ...merchantDraftContextResponse.merchant, id: decodeURIComponent(merchantId) }
+          });
         }
         if (url.includes('/products/review-queue')) {
           draftLoads += 1;
@@ -270,6 +284,66 @@ describe('Merchant Vue workbench', () => {
     expect(saveBody.payload.merchantId).toBe('merchant-auth-999');
   });
 
+  it('uses the authenticated merchant draft context for product master data', async () => {
+    localStorage.setItem('welfareMallMerchantAccessToken', 'merchant-token-999');
+    localStorage.setItem(
+      'welfareMallMerchantUser',
+      JSON.stringify({
+        sub: 'user-merchant-auth-999',
+        username: 'merchant-auth',
+        displayName: '授权商户操作员',
+        subjectType: 'merchant',
+        subjectId: 'merchant-auth-999'
+      })
+    );
+
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/orders/merchant/fulfillment')) {
+        return response(fulfillmentQueueResponse);
+      }
+      if (url.includes('/settlements/merchant-statements')) {
+        return response(merchantSettlementStatementsResponse);
+      }
+      if (url.includes('/products/review-queue')) {
+        return response(draftQueueResponse);
+      }
+      if (url.includes('/merchants/merchant-auth-999/draft-context')) {
+        return response({
+          merchant: { id: 'merchant-auth-999', code: 'M-AUTH-999', name: '授权商户' },
+          franchise: { id: 'franchise-auth-999', code: 'F-AUTH-999', name: '授权加盟商' },
+          defaultCategory: { id: 'category-auth-999', code: 'auth-grain', name: '授权粮油' },
+          defaultBrand: { id: 'brand-auth-999', code: 'auth-brand', name: '授权品牌' }
+        });
+      }
+      if (url.includes('/products/drafts/save')) {
+        return response({
+          productId: 'product-001',
+          draftSnapshotId: 'snapshot-001',
+          payload: JSON.parse(String(init?.body)).payload
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(requestUrls()).toContain('http://localhost:3000/api/merchants/merchant-auth-999/draft-context');
+
+    await clickButton(wrapper, '保存草稿');
+    await flushPromises();
+
+    const saveCall = findRequest('/products/drafts/save');
+    const saveBody = JSON.parse(String(saveCall?.[1]?.body));
+    expect(saveBody.payload).toMatchObject({
+      merchantId: 'merchant-auth-999',
+      franchiseId: 'franchise-auth-999',
+      categoryId: 'category-auth-999',
+      brandId: 'brand-auth-999'
+    });
+  });
+
   it('renders Vue Element Plus merchant sections and loads core read models', async () => {
     const wrapper = mount(App);
     await flushPromises();
@@ -372,6 +446,9 @@ describe('Merchant Vue workbench', () => {
         if (url.includes('/settlements/merchant-statements')) {
           return response({ statements: [] });
         }
+        if (url.includes('/merchants/') && url.includes('/draft-context')) {
+          return response(merchantDraftContextResponse);
+        }
         throw new Error(`Unexpected request: ${url}`);
       })
     );
@@ -407,6 +484,9 @@ describe('Merchant Vue workbench', () => {
         }
         if (url.includes('/settlements/merchant-statements')) {
           return response({ statements: [] });
+        }
+        if (url.includes('/merchants/') && url.includes('/draft-context')) {
+          return response(merchantDraftContextResponse);
         }
         throw new Error(`Unexpected request: ${url}`);
       })
@@ -535,6 +615,9 @@ describe('Merchant Vue workbench', () => {
         }
         if (url.includes('/settlements/merchant-statements')) {
           return response({ statements: [] });
+        }
+        if (url.includes('/merchants/') && url.includes('/draft-context')) {
+          return response(merchantDraftContextResponse);
         }
         throw new Error(`Unexpected request: ${url}`);
       })
