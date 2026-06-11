@@ -196,7 +196,13 @@ describe('Admin Vue workbench', () => {
     localStorage.setItem('welfareMallAdminAccessToken', 'admin-token-local');
     localStorage.setItem(
       'welfareMallAdminUser',
-      JSON.stringify({ username: 'admin-local', displayName: '本地平台管理员', subjectType: 'platform', subjectId: 'platform' })
+      JSON.stringify({
+        sub: 'admin-user-from-jwt',
+        username: 'admin-local',
+        displayName: '本地平台管理员',
+        subjectType: 'platform',
+        subjectId: 'platform'
+      })
     );
     let reviewQueueLoads = 0;
     let settlementLoads = 0;
@@ -421,7 +427,7 @@ describe('Admin Vue workbench', () => {
     });
     expect(JSON.parse(String(decisionCall?.[1]?.body))).toEqual({
       action: 'approve',
-      actorUserId: 'admin-user-001',
+      actorUserId: 'admin-user-from-jwt',
       reason: null
     });
     expect(wrapper.text()).toContain('东北五常大米福利装 已通过审核');
@@ -497,7 +503,7 @@ describe('Admin Vue workbench', () => {
     });
     expect(JSON.parse(String(publishCall?.[1]?.body))).toEqual({
       productId: 'product-001',
-      actorUserId: 'admin-user-001'
+      actorUserId: 'admin-user-from-jwt'
     });
     expect(wrapper.text()).toContain('东北五常大米福利装 已发布到商品池');
   });
@@ -516,7 +522,7 @@ describe('Admin Vue workbench', () => {
     });
     expect(JSON.parse(String(decisionCall?.[1]?.body))).toEqual({
       action: 'reject',
-      actorUserId: 'admin-user-001',
+      actorUserId: 'admin-user-from-jwt',
       reason: '资料不完整'
     });
     expect(wrapper.text()).toContain('东北五常大米福利装 已驳回审核');

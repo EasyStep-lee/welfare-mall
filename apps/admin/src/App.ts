@@ -35,7 +35,6 @@ import { summarizeAdminOrders } from './orderSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
-const adminActorUserId = 'admin-user-001';
 const defaultRejectReason = '资料不完整';
 const localSettlementMerchantId = 'merchant-local-review';
 const localSettlementPaidAt = '2026-06-06T08:00:00.000Z';
@@ -141,6 +140,15 @@ export default defineComponent({
       loginForm.value = { ...loginForm.value, [field]: value };
     }
 
+    function resolveAdminActorUserId() {
+      const actorUserId = authUser.value?.sub?.trim() || authUser.value?.username.trim();
+      if (!actorUserId) {
+        throw new Error('平台登录身份缺少操作人');
+      }
+
+      return actorUserId;
+    }
+
     async function reloadReviewQueue(status: ReviewQueueStatus = reviewStatus.value) {
       reviewStatus.value = status;
       const response = await fetchReviewQueue(status);
@@ -151,7 +159,7 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        await decideProductReview({ productId: item.productId, action: 'approve', actorUserId: adminActorUserId });
+        await decideProductReview({ productId: item.productId, action: 'approve', actorUserId: resolveAdminActorUserId() });
         message.value = `${item.name} 已通过审核`;
         await reloadReviewQueue('approved');
       } catch (actionError) {
@@ -168,7 +176,7 @@ export default defineComponent({
         await decideProductReview({
           productId: item.productId,
           action: 'reject',
-          actorUserId: adminActorUserId,
+          actorUserId: resolveAdminActorUserId(),
           reason: defaultRejectReason
         });
         message.value = `${item.name} 已驳回审核`;
@@ -184,7 +192,7 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        await publishProductToPool({ productId: item.productId, actorUserId: adminActorUserId });
+        await publishProductToPool({ productId: item.productId, actorUserId: resolveAdminActorUserId() });
         message.value = `${item.name} 已发布到商品池`;
         await reloadReviewQueue('approved');
       } catch (actionError) {
