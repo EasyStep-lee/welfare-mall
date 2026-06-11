@@ -152,7 +152,6 @@ export type PortalOrderCheckoutInput = {
       }
     | {
         type: 'pickup';
-        pickupStoreName: string;
       };
 };
 

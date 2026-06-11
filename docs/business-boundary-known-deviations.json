@@ -34,8 +34,8 @@
     },
     {
       "file": "apps/api/src/order/order-checkout.service.ts",
-      "reason": "Checkout validation still requires pickupStoreName for pickup compatibility.",
-      "nextAction": "Validate pickup against merchant address instead of pickupStoreName."
+      "reason": "Checkout service still normalizes pickupStoreName as legacy compatibility input for old clients.",
+      "nextAction": "Remove pickupStoreName from checkout service compatibility input after all clients use merchant address snapshots."
     },
     {
       "file": "apps/api/src/order/order-fulfillment.repository.ts",
@@ -66,11 +66,6 @@
       "file": "apps/merchant/src/api.ts",
       "reason": "Merchant client still accepts explicit merchant IDs and uses localStorage token fallback.",
       "nextAction": "Use JWT identity as the source of merchant scope and remove explicit conflicting merchant IDs from commands."
-    },
-    {
-      "file": "apps/portal/src/App.vue",
-      "reason": "Portal still uses fixed buyer ID, local pickup payload, and merchant wording before buyer login and merchant address snapshots are implemented.",
-      "nextAction": "Use logged-in buyer identity, welfare-card account selection, sales franchise display, fulfillment merchant, and merchant address."
     },
     {
       "file": "apps/portal/src/App.test.ts",

@@ -28,9 +28,6 @@ const localDelivery = {
   receiverPhone: '13800000000',
   receiverAddress: '本地联调地址'
 };
-const localPickup = {
-  pickupStoreName: '商户自提'
-};
 type CheckoutFulfillmentMode = 'delivery' | 'pickup';
 
 const authUser = ref<AuthenticatedUser | null>(readStoredUser('welfareMallPortalUser'));
@@ -360,8 +357,7 @@ function resetCheckout() {
 function checkoutFulfillmentPayload() {
   if (checkoutFulfillmentMode.value === 'pickup') {
     return {
-      type: 'pickup' as const,
-      ...localPickup
+      type: 'pickup' as const
     };
   }
 
