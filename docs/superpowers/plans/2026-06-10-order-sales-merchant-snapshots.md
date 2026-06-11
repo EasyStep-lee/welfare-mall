@@ -78,8 +78,16 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/order-sales-merchant-snapshots`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks.
-- [ ] Merge PR to `main`.
-- [ ] Open docs-only completion PR marking this plan complete after the feature merge.
+- [x] Commit feature work on `codex/order-sales-merchant-snapshots`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks.
+- [x] Merge PR to `main`.
+- [x] Prepare docs-only completion PR marking this plan complete after the feature merge.
+
+Evidence:
+- Feature branch: `codex/order-sales-merchant-snapshots`.
+- Feature commit: `21c5ecd feat: persist order sales merchant snapshots`.
+- Feature PR: #255 `feat: persist order sales merchant snapshots`.
+- GitHub Actions for PR #255 passed: `Project docs check` run 514, including `project-foundation-check` and `docs-check`.
+- Feature PR #255 squash-merged to `main` at `fe3be94 feat: persist order sales merchant snapshots`.
+- Docs-only completion branch: `codex/docs-order-sales-merchant-snapshots-complete`.
