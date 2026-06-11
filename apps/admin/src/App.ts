@@ -36,7 +36,6 @@ import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
 const defaultRejectReason = '资料不完整';
-const localSettlementMerchantId = 'merchant-local-review';
 const localSettlementPaidAt = '2026-06-06T08:00:00.000Z';
 const localSettlementPayoutRemark = '本地线下打款确认';
 const localPaymentPaidAt = '2026-06-06T08:10:00.000Z';
@@ -216,8 +215,15 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        const response = await generateSettlementStatement({ merchantId: localSettlementMerchantId });
-        message.value = response.statement ? `已生成结算单 ${response.statement.statementNo}` : `${localSettlementMerchantId} 暂无可生成结算单`;
+        const merchantId = settlementMerchantId.value.trim();
+        if (!merchantId) {
+          message.value = null;
+          error.value = '请先输入结算商户ID';
+          return;
+        }
+
+        const response = await generateSettlementStatement({ merchantId });
+        message.value = response.statement ? `已生成结算单 ${response.statement.statementNo}` : `${merchantId} 暂无可生成结算单`;
         await loadSettlementStatements('generated');
       } catch (actionError) {
         error.value = actionError instanceof Error ? actionError.message : '结算单生成失败';
