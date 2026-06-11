@@ -86,7 +86,12 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/portal-pickup-checkout-no-store-name`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/portal-pickup-checkout-no-store-name`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature commit `4b935d0 fix: omit store name from portal pickup checkout` was pushed to `codex/portal-pickup-checkout-no-store-name`.
+- PR #277 `fix: omit store name from portal pickup checkout` passed `Project docs check` and was squash-merged to `main` as `baab13e3`.
+- Docs completion branch `codex/docs-portal-pickup-checkout-no-store-name-complete` records this plan as complete after the feature merge.
