@@ -34,8 +34,8 @@
     },
     {
       "file": "apps/api/src/order/order-checkout.repository.ts",
-      "reason": "Checkout persistence still stores pickupStoreName and derives merchant without persisted sales-franchise order facts.",
-      "nextAction": "Persist salesFranchiseId, fulfillmentMerchantId, and merchant address snapshots during checkout."
+      "reason": "Checkout persistence still stores pickupStoreName compatibility data while sales-franchise and fulfillment-merchant snapshots are being introduced.",
+      "nextAction": "Remove pickupStoreName from checkout persistence after merchant address snapshots replace pickup compatibility."
     },
     {
       "file": "apps/api/src/order/order-checkout.service.ts",
@@ -54,8 +54,8 @@
     },
     {
       "file": "apps/api/src/order/order-read.repository.ts",
-      "reason": "Order reads still expose pickupStoreName and do not return sales franchise plus merchant address facts.",
-      "nextAction": "Return sales franchise, fulfillment merchant, and merchant address snapshots in buyer/Admin reads."
+      "reason": "Order reads still expose pickupStoreName compatibility data while returning sales-franchise and fulfillment-merchant snapshots.",
+      "nextAction": "Remove pickupStoreName from buyer/Admin reads after merchant address display is wired through every frontend."
     },
     {
       "file": "apps/api/src/order/order.controller.ts",

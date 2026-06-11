@@ -16,6 +16,10 @@ const orderRecord = {
   receiverPhone: '13800000000',
   receiverAddress: '上海市浦东新区世纪大道 1 号',
   pickupStoreName: null,
+  salesFranchiseId: 'franchise-001',
+  fulfillmentMerchantId: 'merchant-001',
+  fulfillmentMerchantName: '浦东福利履约商户',
+  fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
   createdAt: new Date('2026-06-03T00:00:00.000Z'),
   updatedAt: new Date('2026-06-03T00:00:00.000Z'),
   lines: [
@@ -42,7 +46,18 @@ function createPrismaMock() {
       create: jest.fn().mockResolvedValue(orderRecord)
     },
     product: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'product-001', merchantId: 'merchant-001' }])
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'product-001',
+          franchiseId: 'franchise-001',
+          merchantId: 'merchant-001',
+          merchant: {
+            id: 'merchant-001',
+            name: '浦东福利履约商户',
+            address: '上海市浦东新区世纪大道 88 号'
+          }
+        }
+      ])
     },
     inventoryStock: {
       updateMany: jest.fn().mockResolvedValue({ count: 1 })
@@ -139,6 +154,10 @@ describe('OrderCheckoutRepository', () => {
         receiverPhone: '13800000000',
         receiverAddress: '上海市浦东新区世纪大道 1 号',
         pickupStoreName: null,
+        salesFranchiseId: 'franchise-001',
+        fulfillmentMerchantId: 'merchant-001',
+        fulfillmentMerchantName: '浦东福利履约商户',
+        fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
         lines: {
           create: [
             {
@@ -168,7 +187,18 @@ describe('OrderCheckoutRepository', () => {
     });
     expect(tx.product.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['product-001'] } },
-      select: { id: true, merchantId: true }
+      select: {
+        id: true,
+        franchiseId: true,
+        merchantId: true,
+        merchant: {
+          select: {
+            id: true,
+            name: true,
+            address: true
+          }
+        }
+      }
     });
     expect(tx.inventoryStock.updateMany).toHaveBeenCalledWith({
       where: {

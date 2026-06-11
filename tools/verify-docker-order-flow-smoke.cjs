@@ -140,6 +140,12 @@ async function main() {
   assert(order?.orderNo, 'Checkout response did not include order.orderNo');
   assert(order.status === 'pending_payment', `Created order status was ${order.status}, expected pending_payment`);
   assert(order.totalAmount === item.displayPriceAmount, `Created order total was ${order.totalAmount}, expected ${item.displayPriceAmount}`);
+  assert(order.salesFranchiseId === 'franchise-local-review', `Created order salesFranchiseId was ${order.salesFranchiseId}`);
+  assert(order.fulfillmentMerchantId === localMerchantId, `Created order fulfillmentMerchantId was ${order.fulfillmentMerchantId}`);
+  assert(
+    typeof order.fulfillmentMerchantAddress === 'string' && order.fulfillmentMerchantAddress.trim().length > 0,
+    'Created order did not include a fulfillment merchant address snapshot'
+  );
 
   const paymentResult = await expectJson('POST', '/orders/payments', 201, {
     requestId: `docker-payment-${runId}`,

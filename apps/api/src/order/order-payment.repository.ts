@@ -421,6 +421,10 @@ async function createFulfillmentTasksForPaidOrder(tx: OrderPaymentCallbackTransa
       receiverPhone: true,
       receiverAddress: true,
       pickupStoreName: true,
+      salesFranchiseId: true,
+      fulfillmentMerchantId: true,
+      fulfillmentMerchantName: true,
+      fulfillmentMerchantAddress: true,
       lines: {
         select: {
           id: true,
