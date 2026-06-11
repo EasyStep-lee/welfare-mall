@@ -22,10 +22,7 @@ import { summarizeMerchantFulfillmentOrders } from './fulfillmentSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
 
-const merchantId = 'merchant-local-review';
-const merchantActorUserId = 'merchant-user-local';
-const fixedMerchantContext = {
-  merchantId,
+const localDraftMasterDataContext = {
   franchiseId: 'franchise-local-review',
   categoryId: 'category-local-review',
   brandId: 'brand-local-review'
@@ -96,13 +93,13 @@ export default defineComponent({
 
     async function loadFulfillment(status: MerchantFulfillmentStatusFilter = fulfillmentStatus.value) {
       fulfillmentStatus.value = status;
-      const response = await fetchMerchantFulfillmentOrders(merchantId, status, fulfillmentFilters.value);
+      const response = await fetchMerchantFulfillmentOrders(resolveAuthenticatedMerchantId(), status, fulfillmentFilters.value);
       fulfillmentOrders.value = response.orders;
     }
 
     async function loadSettlementStatements(status: MerchantSettlementStatementStatusFilter = settlementStatus.value) {
       settlementStatus.value = status;
-      const response = await fetchMerchantSettlementStatements(merchantId, status);
+      const response = await fetchMerchantSettlementStatements(resolveAuthenticatedMerchantId(), status);
       statements.value = response.statements;
     }
 
@@ -111,9 +108,9 @@ export default defineComponent({
       error.value = null;
       try {
         const [fulfillmentResponse, draftResponse, statementResponse] = await Promise.all([
-          fetchMerchantFulfillmentOrders(merchantId, fulfillmentStatus.value, fulfillmentFilters.value),
+          fetchMerchantFulfillmentOrders(resolveAuthenticatedMerchantId(), fulfillmentStatus.value, fulfillmentFilters.value),
           fetchMerchantSubmissionQueue('draft'),
-          fetchMerchantSettlementStatements(merchantId, settlementStatus.value)
+          fetchMerchantSettlementStatements(resolveAuthenticatedMerchantId(), settlementStatus.value)
         ]);
         fulfillmentOrders.value = fulfillmentResponse.orders;
         draftItems.value = draftResponse.items;
@@ -150,11 +147,33 @@ export default defineComponent({
       loginForm.value = { ...loginForm.value, [field]: value };
     }
 
+    function resolveAuthenticatedMerchantId() {
+      const subjectId = authUser.value?.subjectType === 'merchant' ? authUser.value.subjectId.trim() : '';
+      if (!subjectId) {
+        throw new Error('请先登录商户工作台');
+      }
+
+      return subjectId;
+    }
+
+    function resolveMerchantActorUserId() {
+      const actorUserId = authUser.value?.sub?.trim() || authUser.value?.username?.trim() || '';
+      if (!actorUserId) {
+        throw new Error('请重新登录商户工作台');
+      }
+
+      return actorUserId;
+    }
+
     async function completeOrder(order: MerchantFulfillmentOrder) {
       actionLoading.value = true;
       error.value = null;
       try {
-        await completeMerchantFulfillmentOrder({ merchantId, orderNo: order.orderNo, pickupCode: pickupCodes.value[order.orderNo] });
+        await completeMerchantFulfillmentOrder({
+          merchantId: resolveAuthenticatedMerchantId(),
+          orderNo: order.orderNo,
+          pickupCode: pickupCodes.value[order.orderNo]
+        });
         message.value = `${order.orderNo} 已确认完成`;
         await loadFulfillment();
       } catch (actionError) {
@@ -168,7 +187,7 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        await submitProductForReview({ productId: item.productId, actorUserId: merchantActorUserId });
+        await submitProductForReview({ productId: item.productId, actorUserId: resolveMerchantActorUserId() });
         message.value = `${item.name} 已提交审核`;
         const response = await fetchMerchantSubmissionQueue('draft');
         draftItems.value = response.items;
@@ -183,8 +202,8 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        const payload = toProductDraftPayload(draftForm.value);
-        await saveProductDraft({ payload, actorUserId: merchantActorUserId });
+        const payload = toProductDraftPayload(draftForm.value, resolveAuthenticatedMerchantId());
+        await saveProductDraft({ payload, actorUserId: resolveMerchantActorUserId() });
         message.value = `${payload.name} 草稿已保存`;
         const response = await fetchMerchantSubmissionQueue('draft');
         draftItems.value = response.items;
@@ -534,7 +553,7 @@ function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
 }
 
-function toProductDraftPayload(input: MerchantDraftForm): ProductDraftPayload {
+function toProductDraftPayload(input: MerchantDraftForm, merchantId: string): ProductDraftPayload {
   const code = input.code.trim();
   const name = input.name.trim();
   const priceAmount = Math.round(Number(input.priceYuan) * 100);
@@ -544,10 +563,10 @@ function toProductDraftPayload(input: MerchantDraftForm): ProductDraftPayload {
   return {
     code,
     name,
-    merchantId: fixedMerchantContext.merchantId,
-    franchiseId: fixedMerchantContext.franchiseId,
-    categoryId: fixedMerchantContext.categoryId,
-    brandId: fixedMerchantContext.brandId,
+    merchantId,
+    franchiseId: localDraftMasterDataContext.franchiseId,
+    categoryId: localDraftMasterDataContext.categoryId,
+    brandId: localDraftMasterDataContext.brandId,
     originCountry: '中国',
     originProvince,
     originCity,
