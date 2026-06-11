@@ -61,7 +61,7 @@ const orderListResponse = {
       id: 'order-local-001',
       orderNo: 'ORDER-20260607-PORTAL',
       requestId: 'portal-checkout-pool-item-local-review-001',
-      buyerUserId: 'local-user-001',
+      buyerUserId: 'user-001',
       status: 'pending_payment',
       subtotalAmount: 6990,
       discountAmount: 0,
@@ -371,7 +371,7 @@ describe('Portal product pool catalog', () => {
         if (url.includes('/product-pools/catalog')) {
           return response(catalogResponse);
         }
-        if (url.includes('/orders?buyerUserId=local-user-001')) {
+        if (url.includes('/orders?buyerUserId=user-001')) {
           return response(orderListResponse);
         }
 
@@ -394,6 +394,104 @@ describe('Portal product pool catalog', () => {
     expect(localStorage.getItem('welfareMallPortalAccessToken')).toBe('buyer-token-001');
     expect(wrapper.text()).toContain('本地用户');
     expect(wrapper.text()).toContain('企业福利商品目录');
+  });
+
+  it('returns to buyer login when the stored Portal token is rejected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/orders?buyerUserId=user-001')) {
+          return {
+            ok: false,
+            status: 401,
+            json: async () => ({ message: 'Unauthorized' })
+          } as Response;
+        }
+
+        return response(catalogResponse);
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith('welfareMallPortalAccessToken');
+    expect(localStorage.removeItem).toHaveBeenCalledWith('welfareMallPortalUser');
+    expect(wrapper.text()).toContain('用户登录');
+    expect(wrapper.text()).not.toContain('我的订单');
+  });
+
+  it('uses the authenticated buyer subject for order reads and checkout', async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/auth/login')) {
+          return response({
+            tokenType: 'Bearer',
+            accessToken: 'buyer-token-999',
+            expiresIn: 3600,
+            user: {
+              username: 'buyer-auth',
+              displayName: '授权用户',
+              subjectType: 'buyer',
+              subjectId: 'buyer-auth-999'
+            }
+          });
+        }
+        if (url.includes('/product-pools/catalog')) {
+          return response(catalogResponse);
+        }
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return response(detailResponse);
+        }
+        if (url.endsWith('/orders?buyerUserId=buyer-auth-999')) {
+          return response({ orders: [] });
+        }
+        if (url.endsWith('/orders')) {
+          return response({
+            idempotentReplay: false,
+            order: {
+              orderNo: 'ORDER-AUTH-BUYER-999',
+              status: 'pending_payment',
+              totalAmount: 6990,
+              welfareCardPayableAmount: 0,
+              cashPayableAmount: 6990
+            }
+          });
+        }
+
+        return {
+          ok: false,
+          json: async () => ({ message: `unexpected ${url}` })
+        } as Response;
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('input[aria-label="账号"]').setValue('buyer-auth');
+    await wrapper.get('input[aria-label="密码"]').setValue('local-dev-password');
+    await wrapper.get('button[aria-label="登录用户端"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders?buyerUserId=buyer-auth-999', {
+      headers: { Authorization: 'Bearer buyer-token-999' }
+    });
+    const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
+    expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
+      buyerUserId: 'buyer-auth-999'
+    });
+    expect(checkoutCall?.[1]).toMatchObject({
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer buyer-token-999' }
+    });
   });
 
   it('loads and renders product pool item snapshots', async () => {
@@ -519,7 +617,7 @@ describe('Portal product pool catalog', () => {
       headers: { 'Content-Type': 'application/json' }
     });
     expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
-      buyerUserId: 'local-user-001',
+      buyerUserId: 'user-001',
       items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
       welfareCardPaymentAmount: 0,
       fulfillment: {
@@ -547,7 +645,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailResponse
@@ -588,7 +686,8 @@ describe('Portal product pool catalog', () => {
     await flushPromises();
 
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001'
+      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=user-001',
+      { headers: { Authorization: 'Bearer buyer-token-local' } }
     );
     expect(wrapper.text()).toContain('订单详情');
     expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
@@ -641,7 +740,7 @@ describe('Portal product pool catalog', () => {
 
     const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
     expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
-      buyerUserId: 'local-user-001',
+      buyerUserId: 'user-001',
       items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
       welfareCardPaymentAmount: 0,
       fulfillment: {
@@ -660,7 +759,7 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderListResponse
@@ -677,7 +776,9 @@ describe('Portal product pool catalog', () => {
     const wrapper = mount(App);
     await flushPromises();
 
-    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders?buyerUserId=local-user-001');
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/orders?buyerUserId=user-001', {
+      headers: { Authorization: 'Bearer buyer-token-local' }
+    });
     expect(wrapper.text()).toContain('我的订单');
     expect(wrapper.text()).toContain('ORDER-20260607-PORTAL');
     expect(wrapper.text()).toContain('待支付');
@@ -693,7 +794,7 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => legacyOrderListResponse
@@ -720,14 +821,14 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderListResponse
@@ -748,7 +849,8 @@ describe('Portal product pool catalog', () => {
     await flushPromises();
 
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001'
+      'http://localhost:3000/api/orders/ORDER-20260607-PORTAL?buyerUserId=user-001',
+      { headers: { Authorization: 'Bearer buyer-token-local' } }
     );
     expect(wrapper.text()).toContain('订单详情');
     expect(wrapper.text()).toContain('本地审核五常大米福利装');
@@ -777,14 +879,14 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderListResponse
@@ -838,14 +940,14 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => mixedPaymentOrderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => mixedPaymentOrderListResponse
@@ -900,14 +1002,14 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           ordersRequestCount += 1;
           return {
             ok: true,
@@ -939,7 +1041,7 @@ describe('Portal product pool catalog', () => {
       headers: { 'Content-Type': 'application/json' }
     });
     expect(JSON.parse(String(cancelCall?.[1]?.body))).toEqual({
-      buyerUserId: 'local-user-001',
+      buyerUserId: 'user-001',
       reason: 'user_cancel'
     });
     expect(ordersRequestCount).toBe(2);
@@ -953,14 +1055,14 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailWithLatestPaymentResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderListWithLatestPaymentResponse
@@ -995,14 +1097,14 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderDetailWithLatestPaymentResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => orderListWithLatestPaymentResponse
@@ -1041,7 +1143,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           detailRequestCount += 1;
           return {
             ok: true,
@@ -1049,7 +1151,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           ordersRequestCount += 1;
           return {
             ok: true,
@@ -1113,7 +1215,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           detailRequestCount += 1;
           return {
             ok: true,
@@ -1122,7 +1224,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           ordersRequestCount += 1;
           return {
             ok: true,
@@ -1187,14 +1289,14 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => paidAlipayOrderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => paidAlipayOrderListResponse
@@ -1242,7 +1344,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           detailRequestCount += 1;
           return {
             ok: true,
@@ -1250,7 +1352,7 @@ describe('Portal product pool catalog', () => {
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           ordersRequestCount += 1;
           return {
             ok: true,
@@ -1304,14 +1406,14 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => paidOrderWithFulfillmentResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => paidOrderListResponse
@@ -1341,14 +1443,14 @@ describe('Portal product pool catalog', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.endsWith('/orders/ORDER-20260607-PICKUP?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders/ORDER-20260607-PICKUP?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => pickupOrderDetailResponse
           };
         }
 
-        if (url.endsWith('/orders?buyerUserId=local-user-001')) {
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
           return {
             ok: true,
             json: async () => pickupOrderListResponse

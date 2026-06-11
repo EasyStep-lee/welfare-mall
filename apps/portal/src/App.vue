@@ -23,7 +23,6 @@ import {
   type ProductPoolItemDetail
 } from './api';
 
-const localBuyerUserId = 'local-user-001';
 const localDelivery = {
   receiverName: '本地用户',
   receiverPhone: '13800000000',
@@ -139,6 +138,25 @@ function storeAuthState(tokenKey: string, userKey: string, accessToken: string, 
   localStorage.setItem(userKey, JSON.stringify(user));
 }
 
+function clearAuthState() {
+  if (typeof localStorage !== 'undefined' && typeof localStorage.removeItem === 'function') {
+    localStorage.removeItem('welfareMallPortalAccessToken');
+    localStorage.removeItem('welfareMallPortalUser');
+  }
+  authUser.value = null;
+  orders.value = [];
+  selectedOrder.value = null;
+}
+
+function resolveAuthenticatedBuyerUserId() {
+  const subjectId = authUser.value?.subjectType === 'buyer' ? authUser.value.subjectId.trim() : '';
+  if (!subjectId) {
+    throw new Error('请先登录用户端');
+  }
+
+  return subjectId;
+}
+
 async function loadCatalog() {
   loading.value = true;
   error.value = null;
@@ -159,14 +177,22 @@ async function loadLocalOrders() {
   ordersError.value = null;
 
   try {
-    const response = await fetchPortalOrders(localBuyerUserId);
+    const response = await fetchPortalOrders(resolveAuthenticatedBuyerUserId());
     orders.value = response.orders ?? [];
   } catch (loadError) {
     orders.value = [];
+    if (isUnauthorizedError(loadError)) {
+      clearAuthState();
+      return;
+    }
     ordersError.value = loadError instanceof Error ? loadError.message : '订单列表加载失败';
   } finally {
     ordersLoading.value = false;
   }
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message.endsWith(': 401');
 }
 
 async function openProductDetail(item: ProductPoolCatalogItem) {
@@ -200,7 +226,7 @@ async function openOrderDetailByOrderNo(orderNo: string) {
   try {
     const response = await fetchPortalOrderDetail({
       orderNo,
-      buyerUserId: localBuyerUserId
+      buyerUserId: resolveAuthenticatedBuyerUserId()
     });
     selectedOrder.value = response.order;
   } catch (loadError) {
@@ -436,7 +462,7 @@ async function submitLocalOrder() {
   try {
     const result = await createPortalOrder({
       requestId: createCheckoutRequestId(selectedDetail.value.id),
-      buyerUserId: localBuyerUserId,
+      buyerUserId: resolveAuthenticatedBuyerUserId(),
       productPoolItemId: selectedDetail.value.id,
       quantity: 1,
       welfareCardPaymentAmount: 0,
@@ -509,7 +535,7 @@ async function confirmLatestPayment() {
     await loadLocalOrders();
     const response = await fetchPortalOrderDetail({
       orderNo,
-      buyerUserId: localBuyerUserId
+      buyerUserId: resolveAuthenticatedBuyerUserId()
     });
     selectedOrder.value = response.order;
     confirmedPaymentMessage.value = '支付已确认';
@@ -538,7 +564,7 @@ async function cancelSelectedOrder() {
   try {
     const response = await cancelPortalOrder({
       orderNo: selectedOrder.value.orderNo,
-      buyerUserId: localBuyerUserId,
+      buyerUserId: resolveAuthenticatedBuyerUserId(),
       reason: 'user_cancel'
     });
     selectedOrder.value = response.order;
@@ -584,7 +610,7 @@ async function requestSelectedOrderRefund() {
     await loadLocalOrders();
     const response = await fetchPortalOrderDetail({
       orderNo,
-      buyerUserId: localBuyerUserId
+      buyerUserId: resolveAuthenticatedBuyerUserId()
     });
     selectedOrder.value = response.order;
     refundMessage.value = '退款申请已提交';
@@ -626,7 +652,7 @@ async function confirmLatestRefund() {
     await loadLocalOrders();
     const response = await fetchPortalOrderDetail({
       orderNo,
-      buyerUserId: localBuyerUserId
+      buyerUserId: resolveAuthenticatedBuyerUserId()
     });
     selectedOrder.value = response.order;
     refundConfirmMessage.value = '退款已确认';
