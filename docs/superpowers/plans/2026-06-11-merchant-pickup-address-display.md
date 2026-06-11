@@ -90,7 +90,12 @@ Evidence:
 
 ### Task 5: Completion
 
-- [ ] Commit feature work on `codex/merchant-pickup-address-display`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/merchant-pickup-address-display`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature commit `43b6473 fix: show merchant pickup address from merchant snapshot` was pushed on `codex/merchant-pickup-address-display`.
+- PR #273 `fix: show merchant pickup address from merchant snapshot` passed GitHub `Project docs check` and was squash-merged into `main` as `10717fd`.
+- Docs-only completion branch `codex/docs-merchant-pickup-address-display-complete` records this completion state.
