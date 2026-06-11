@@ -63,9 +63,50 @@ function createPrismaMock() {
       })
     },
     orderHeader: {
+      findUnique: jest.fn().mockResolvedValue({
+        orderNo: 'ORDER-20260603-001',
+        buyerUserId: 'user-local-001',
+        salesFranchiseId: 'franchise-local-review'
+      }),
       update: jest.fn().mockResolvedValue({
         orderNo: 'ORDER-20260603-001',
         status: 'refunded'
+      })
+    },
+    orderPayment: {
+      findUnique: jest.fn().mockResolvedValue({
+        paymentNo: 'PAY-20260603-001',
+        orderNo: 'ORDER-20260603-001',
+        welfareCardPayableAmount: 1000
+      })
+    },
+    welfareCardAccount: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'welfare-card-account-001',
+        accountNo: 'WCA-LOCAL-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-local-001',
+        status: 'active',
+        balanceAmount: 4000,
+        issuedAmount: 10000,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:00:00.000Z')
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'welfare-card-account-001',
+        accountNo: 'WCA-LOCAL-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-local-001',
+        status: 'active',
+        balanceAmount: 5000,
+        issuedAmount: 10000,
+        createdAt: new Date('2026-06-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-03T00:15:00.000Z')
+      })
+    },
+    welfareCardLedgerEntry: {
+      create: jest.fn().mockResolvedValue({
+        id: 'welfare-card-ledger-refund-001'
       })
     },
     inventoryReservation: {
@@ -246,6 +287,52 @@ describe('OrderRefundRepository', () => {
         reservedQuantity: { decrement: 2 }
       }
     });
+    expect(tx.orderPayment.findUnique).toHaveBeenCalledWith({
+      where: { paymentNo: 'PAY-20260603-001' },
+      select: {
+        paymentNo: true,
+        orderNo: true,
+        welfareCardPayableAmount: true
+      }
+    });
+    expect(tx.orderHeader.findUnique).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260603-001' },
+      select: {
+        orderNo: true,
+        buyerUserId: true,
+        salesFranchiseId: true
+      }
+    });
+    expect(tx.welfareCardAccount.findUnique).toHaveBeenCalledWith({
+      where: {
+        franchiseId_buyerUserId: {
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001'
+        }
+      },
+      select: expect.any(Object)
+    });
+    expect(tx.welfareCardAccount.update).toHaveBeenCalledWith({
+      where: { id: 'welfare-card-account-001' },
+      data: {
+        balanceAmount: { increment: 1000 }
+      },
+      select: expect.any(Object)
+    });
+    expect(tx.welfareCardLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ledgerNo: 'WCL-REFUND-refund-request-001',
+        requestId: 'refund:refund-request-001',
+        accountId: 'welfare-card-account-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-local-001',
+        type: 'refund',
+        amount: 1000,
+        balanceAfter: 5000,
+        orderNo: 'ORDER-20260603-001'
+      }),
+      select: { id: true }
+    });
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: false,
@@ -285,9 +372,74 @@ describe('OrderRefundRepository', () => {
     expect(tx.inventoryReservation.findMany).not.toHaveBeenCalled();
     expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
     expect(tx.inventoryStock.updateMany).not.toHaveBeenCalled();
+    expect(tx.orderPayment.findUnique).not.toHaveBeenCalled();
+    expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
+    expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         duplicate: true,
+        refund: expect.objectContaining({ status: 'succeeded', providerRefundNo: 'wx-refund-001' })
+      })
+    );
+  });
+
+  it('does not credit welfare card when the original payment has no welfare card amount', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderPayment.findUnique.mockResolvedValue({
+      paymentNo: 'PAY-20260603-001',
+      orderNo: 'ORDER-20260603-001',
+      welfareCardPayableAmount: 0
+    });
+    const repository = new OrderRefundRepository(prisma as never);
+
+    await repository.processCallback({
+      providerEventId: 'refund-event-cash-only-001',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001',
+      status: 'succeeded',
+      succeededAt: new Date('2026-06-03T00:15:00.000Z'),
+      payload: { event: 'refund.succeeded' }
+    });
+
+    expect(tx.orderPayment.findUnique).toHaveBeenCalledWith({
+      where: { paymentNo: 'PAY-20260603-001' },
+      select: {
+        paymentNo: true,
+        orderNo: true,
+        welfareCardPayableAmount: true
+      }
+    });
+    expect(tx.orderHeader.findUnique).not.toHaveBeenCalled();
+    expect(tx.welfareCardAccount.findUnique).not.toHaveBeenCalled();
+    expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
+    expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('does not credit welfare card again when a new callback arrives after refund already succeeded', async () => {
+    const { prisma, tx } = createPrismaMock();
+    tx.orderRefund.findUnique.mockResolvedValue({
+      ...refundRecord,
+      status: 'succeeded',
+      providerRefundNo: 'wx-refund-001',
+      succeededAt: new Date('2026-06-03T00:15:00.000Z')
+    });
+    const repository = new OrderRefundRepository(prisma as never);
+
+    const result = await repository.processCallback({
+      providerEventId: 'refund-event-late-001',
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001',
+      status: 'succeeded',
+      succeededAt: new Date('2026-06-03T00:16:00.000Z'),
+      payload: { event: 'refund.succeeded' }
+    });
+
+    expect(tx.orderPayment.findUnique).not.toHaveBeenCalled();
+    expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
+    expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        duplicate: false,
         refund: expect.objectContaining({ status: 'succeeded', providerRefundNo: 'wx-refund-001' })
       })
     );
