@@ -633,6 +633,101 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('待支付');
   });
 
+  it('uses the selected welfare-card checkout amount when creating an order', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        if (url.endsWith('/orders')) {
+          return {
+            ok: true,
+            json: async () => ({
+              idempotentReplay: false,
+              order: {
+                orderNo: 'ORDER-20260611-WELFARE-CHECKOUT',
+                status: 'pending_payment',
+                totalAmount: 6990,
+                welfareCardPayableAmount: 1000,
+                cashPayableAmount: 5990
+              }
+            })
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('input[aria-label="福利卡抵扣金额"]').setValue('10.00');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('福利卡抵扣 ¥10.00');
+    expect(wrapper.text()).toContain('线上补差 ¥59.90');
+    expect(wrapper.text()).not.toContain('现金');
+
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+
+    const checkoutCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders'));
+    expect(checkoutCall).toBeTruthy();
+    expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
+      buyerUserId: 'user-001',
+      items: [{ productPoolItemId: 'pool-item-local-review', quantity: 1 }],
+      welfareCardPaymentAmount: 1000
+    });
+    expect(wrapper.text()).toContain('ORDER-20260611-WELFARE-CHECKOUT');
+  });
+
+  it('blocks a welfare-card checkout amount greater than the product amount', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('input[aria-label="福利卡抵扣金额"]').setValue('80.00');
+    await wrapper.get('button[aria-label="为 本地审核五常大米福利装 创建订单"]').trigger('click');
+    await flushPromises();
+
+    const checkoutCall = vi
+      .mocked(fetch)
+      .mock.calls.find((call) => String(call[0]).endsWith('/orders') && call[1]?.method === 'POST');
+    expect(checkoutCall).toBeUndefined();
+    expect(wrapper.text()).toContain('福利卡抵扣金额不能超过商品金额');
+  });
+
   it('opens the newly created checkout order detail from the checkout result', async () => {
     vi.stubGlobal(
       'fetch',

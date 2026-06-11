@@ -675,6 +675,47 @@ h1 {
   gap: 8px;
 }
 
+.checkout-amount-field {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 240px;
+}
+
+.checkout-amount-field span {
+  color: #40575f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checkout-amount-field input {
+  border: 1px solid #c9d8d4;
+  border-radius: 8px;
+  color: #17353a;
+  font: inherit;
+  min-height: 38px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.checkout-split-preview {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkout-split-preview span {
+  background: #edf4f1;
+  border: 1px solid #cfe1d9;
+  border-radius: 8px;
+  color: #174c43;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
 .mode-button {
   background: #ffffff;
   border: 1px solid #c9d8d4;
