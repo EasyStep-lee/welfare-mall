@@ -533,6 +533,7 @@ describe('Admin Vue workbench', () => {
     const wrapper = mount(App);
     await flushPromises();
 
+    await setFieldValue(wrapper, '结算商户ID', 'merchant-settlement-scope-009');
     await clickButton(wrapper, '生成结算单');
     await flushPromises();
 
@@ -541,9 +542,25 @@ describe('Admin Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-local-review' });
+    expect(JSON.parse(String(generateCall?.[1]?.body))).toEqual({ merchantId: 'merchant-settlement-scope-009' });
     expect(wrapper.text()).toContain('已生成结算单 MSS-20260606-002');
-    expect(requestUrls().filter((url) => url.includes('/settlements/merchant-statements?status=generated')).length).toBeGreaterThanOrEqual(2);
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-settlement-scope-009&status=generated'
+    );
+  });
+
+  it('requires a visible settlement merchant before generating a statement', async () => {
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await clickButton(wrapper, '生成结算单');
+    await flushPromises();
+
+    const generateCalls = vi
+      .mocked(fetch)
+      .mock.calls.filter(([input, init]) => String(input).includes('/settlements/merchant-statements/generate') && init?.method === 'POST');
+    expect(generateCalls).toHaveLength(0);
+    expect(wrapper.text()).toContain('请先输入结算商户ID');
   });
 
   it('confirms offline payout for a generated settlement statement', async () => {

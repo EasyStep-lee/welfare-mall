@@ -3,11 +3,6 @@
   "purpose": "Current known deviations from the enforced business boundary. New occurrences must fail verify:business-boundary unless this list is intentionally updated with a reason and nextAction.",
   "deviations": [
     {
-      "file": "apps/admin/src/App.ts",
-      "reason": "Admin Vue still uses local merchant filters and local settlement merchant defaults before formal department-scoped Admin filters are implemented.",
-      "nextAction": "Replace local merchant filter/default values with scoped business selectors from authenticated Admin permissions."
-    },
-    {
       "file": "apps/admin/src/App.test.ts",
       "reason": "Admin tests still assert local merchant IDs for current local-only settlement, fulfillment, and inventory flows.",
       "nextAction": "Rewrite tests around authenticated Admin business scopes and merchant selectors."
