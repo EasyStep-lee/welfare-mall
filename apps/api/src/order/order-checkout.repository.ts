@@ -69,6 +69,7 @@ export type OrderCheckoutRecord = {
   receiverAddress: string | null;
   pickupStoreName: string | null;
   salesFranchiseId: string | null;
+  salesFranchiseName: string | null;
   fulfillmentMerchantId: string | null;
   fulfillmentMerchantName: string | null;
   fulfillmentMerchantAddress: string | null;
@@ -142,6 +143,10 @@ type OrderCheckoutTransaction = {
 type OrderProductBusinessFact = {
   id: string;
   franchiseId: string;
+  franchise: {
+    id: string;
+    name: string;
+  };
   merchantId: string;
   merchant: {
     id: string;
@@ -152,6 +157,7 @@ type OrderProductBusinessFact = {
 
 type OrderBusinessSnapshot = {
   salesFranchiseId: string;
+  salesFranchiseName: string;
   fulfillmentMerchantId: string | null;
   fulfillmentMerchantName: string | null;
   fulfillmentMerchantAddress: string | null;
@@ -190,6 +196,7 @@ export class OrderCheckoutRepository {
           receiverAddress: input.receiverAddress,
           pickupStoreName: input.pickupStoreName,
           salesFranchiseId: businessSnapshot.salesFranchiseId,
+          salesFranchiseName: businessSnapshot.salesFranchiseName,
           fulfillmentMerchantId: businessSnapshot.fulfillmentMerchantId,
           fulfillmentMerchantName: businessSnapshot.fulfillmentMerchantName,
           fulfillmentMerchantAddress: businessSnapshot.fulfillmentMerchantAddress,
@@ -241,7 +248,8 @@ async function resolveOrderBusinessSnapshot(
   }
 
   const [salesFranchiseId] = Array.from(franchiseIds);
-  if (!salesFranchiseId) {
+  const salesFranchise = orderedProducts.find((product) => product.franchiseId === salesFranchiseId)?.franchise;
+  if (!salesFranchiseId || !salesFranchise) {
     throw new InsufficientInventoryError({
       productId: productIds[0] ?? '',
       skuId: null,
@@ -253,6 +261,7 @@ async function resolveOrderBusinessSnapshot(
 
   return {
     salesFranchiseId,
+    salesFranchiseName: salesFranchise.name,
     fulfillmentMerchantId: singleMerchant?.id ?? null,
     fulfillmentMerchantName: singleMerchant?.name ?? null,
     fulfillmentMerchantAddress: singleMerchant?.address ?? null,
@@ -323,6 +332,12 @@ function productBusinessFactSelect() {
   return {
     id: true,
     franchiseId: true,
+    franchise: {
+      select: {
+        id: true,
+        name: true
+      }
+    },
     merchantId: true,
     merchant: {
       select: {
@@ -360,6 +375,7 @@ function orderSelect() {
     receiverAddress: true,
     pickupStoreName: true,
     salesFranchiseId: true,
+    salesFranchiseName: true,
     fulfillmentMerchantId: true,
     fulfillmentMerchantName: true,
     fulfillmentMerchantAddress: true,

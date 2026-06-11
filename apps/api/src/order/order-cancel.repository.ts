@@ -174,6 +174,7 @@ function orderHeaderSelect() {
     receiverAddress: true,
     pickupStoreName: true,
     salesFranchiseId: true,
+    salesFranchiseName: true,
     fulfillmentMerchantId: true,
     fulfillmentMerchantName: true,
     fulfillmentMerchantAddress: true,

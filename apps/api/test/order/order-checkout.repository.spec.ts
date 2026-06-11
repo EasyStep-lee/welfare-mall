@@ -17,6 +17,7 @@ const orderRecord = {
   receiverAddress: '上海市浦东新区世纪大道 1 号',
   pickupStoreName: null,
   salesFranchiseId: 'franchise-001',
+  salesFranchiseName: '浦东福利加盟商',
   fulfillmentMerchantId: 'merchant-001',
   fulfillmentMerchantName: '浦东福利履约商户',
   fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
@@ -50,6 +51,10 @@ function createPrismaMock() {
         {
           id: 'product-001',
           franchiseId: 'franchise-001',
+          franchise: {
+            id: 'franchise-001',
+            name: '浦东福利加盟商'
+          },
           merchantId: 'merchant-001',
           merchant: {
             id: 'merchant-001',
@@ -155,6 +160,7 @@ describe('OrderCheckoutRepository', () => {
         receiverAddress: '上海市浦东新区世纪大道 1 号',
         pickupStoreName: null,
         salesFranchiseId: 'franchise-001',
+        salesFranchiseName: '浦东福利加盟商',
         fulfillmentMerchantId: 'merchant-001',
         fulfillmentMerchantName: '浦东福利履约商户',
         fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
@@ -190,6 +196,12 @@ describe('OrderCheckoutRepository', () => {
       select: {
         id: true,
         franchiseId: true,
+        franchise: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         merchantId: true,
         merchant: {
           select: {
