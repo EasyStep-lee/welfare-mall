@@ -126,6 +126,51 @@ describe('Order checkout API contract', () => {
     );
   });
 
+  it('creates a pickup order without legacy pickup-store input', async () => {
+    orderCheckoutService.createOrder.mockResolvedValue({
+      idempotentReplay: false,
+      order: {
+        orderNo: 'ORDER-20260603-003',
+        requestId: 'checkout-request-003',
+        buyerUserId: 'user-001',
+        status: 'pending_payment',
+        totalAmount: 6990,
+        welfareCardPayableAmount: 0,
+        cashPayableAmount: 6990,
+        fulfillmentType: 'pickup',
+        pickupStoreName: null,
+        fulfillmentMerchantAddress: '上海市浦东新区世纪大道 88 号',
+        lines: []
+      }
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/orders')
+      .send({
+        requestId: 'checkout-request-003',
+        buyerUserId: 'user-001',
+        items: [{ productPoolItemId: 'pool-item-001', quantity: 1 }],
+        fulfillment: {
+          type: 'pickup'
+        }
+      })
+      .expect(201);
+
+    expect(orderCheckoutService.createOrder).toHaveBeenCalledWith({
+      requestId: 'checkout-request-003',
+      buyerUserId: 'user-001',
+      items: [{ productPoolItemId: 'pool-item-001', quantity: 1 }],
+      welfareCardPaymentAmount: undefined,
+      fulfillment: {
+        type: 'pickup',
+        receiverName: null,
+        receiverPhone: null,
+        receiverAddress: null,
+        pickupStoreName: null
+      }
+    });
+  });
+
   it('rejects invalid checkout request fields before calling service', async () => {
     await request(app.getHttpServer())
       .post('/api/orders')
