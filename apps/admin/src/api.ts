@@ -12,6 +12,7 @@ export type AdminInventoryReservationStatusFilter = 'all' | 'reserved' | 'releas
 export type AdminSettlementStatementStatusFilter = 'all' | 'generated' | 'paid_offline';
 
 export type AuthenticatedUser = {
+  sub?: string;
   username: string;
   displayName: string;
   subjectType: string;
