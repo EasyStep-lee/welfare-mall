@@ -173,6 +173,10 @@ function orderHeaderSelect() {
     receiverPhone: true,
     receiverAddress: true,
     pickupStoreName: true,
+    salesFranchiseId: true,
+    fulfillmentMerchantId: true,
+    fulfillmentMerchantName: true,
+    fulfillmentMerchantAddress: true,
     createdAt: true,
     updatedAt: true
   } as const;

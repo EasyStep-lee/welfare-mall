@@ -68,6 +68,10 @@ export type OrderCheckoutRecord = {
   receiverPhone: string | null;
   receiverAddress: string | null;
   pickupStoreName: string | null;
+  salesFranchiseId: string | null;
+  fulfillmentMerchantId: string | null;
+  fulfillmentMerchantName: string | null;
+  fulfillmentMerchantAddress: string | null;
   createdAt: Date;
   updatedAt: Date;
   lines: OrderCheckoutLineRecord[];
@@ -122,7 +126,7 @@ export class InsufficientInventoryError extends Error {
 
 type OrderCheckoutTransaction = {
   product: {
-    findMany(args: unknown): Promise<Array<{ id: string; merchantId: string }>>;
+    findMany(args: unknown): Promise<OrderProductBusinessFact[]>;
   };
   inventoryStock: {
     updateMany(args: unknown): Promise<{ count: number }>;
@@ -134,6 +138,25 @@ type OrderCheckoutTransaction = {
     create(args: unknown): Promise<OrderCheckoutRecord>;
   };
 } & OrderStateClient;
+
+type OrderProductBusinessFact = {
+  id: string;
+  franchiseId: string;
+  merchantId: string;
+  merchant: {
+    id: string;
+    name: string;
+    address: string | null;
+  };
+};
+
+type OrderBusinessSnapshot = {
+  salesFranchiseId: string;
+  fulfillmentMerchantId: string | null;
+  fulfillmentMerchantName: string | null;
+  fulfillmentMerchantAddress: string | null;
+  productFacts: OrderProductBusinessFact[];
+};
 
 @Injectable()
 export class OrderCheckoutRepository {
@@ -149,6 +172,7 @@ export class OrderCheckoutRepository {
   async createOrder(input: CreateOrderCheckoutRecordInput): Promise<OrderCheckoutRecord> {
     return this.prisma.$transaction(async (prismaTx) => {
       const tx = prismaTx as unknown as OrderCheckoutTransaction;
+      const businessSnapshot = await resolveOrderBusinessSnapshot(tx, input.lines);
       const order = await tx.orderHeader.create({
         data: {
           orderNo: input.orderNo,
@@ -165,6 +189,10 @@ export class OrderCheckoutRepository {
           receiverPhone: input.receiverPhone,
           receiverAddress: input.receiverAddress,
           pickupStoreName: input.pickupStoreName,
+          salesFranchiseId: businessSnapshot.salesFranchiseId,
+          fulfillmentMerchantId: businessSnapshot.fulfillmentMerchantId,
+          fulfillmentMerchantName: businessSnapshot.fulfillmentMerchantName,
+          fulfillmentMerchantAddress: businessSnapshot.fulfillmentMerchantAddress,
           lines: {
             create: input.lines.map((line) => ({
               productPoolItemId: line.productPoolItemId,
@@ -183,23 +211,64 @@ export class OrderCheckoutRepository {
       });
 
       await ensurePendingPaymentOrderState(tx, input.orderNo);
-      await reserveInventoryForOrder(tx, order);
+      await reserveInventoryForOrder(tx, order, businessSnapshot.productFacts);
 
       return order;
     });
   }
 }
 
-async function reserveInventoryForOrder(tx: OrderCheckoutTransaction, order: OrderCheckoutRecord): Promise<void> {
+async function resolveOrderBusinessSnapshot(
+  tx: OrderCheckoutTransaction,
+  lines: CreateOrderCheckoutLineInput[]
+): Promise<OrderBusinessSnapshot> {
+  const productIds = Array.from(new Set(lines.map((line) => line.productId)));
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: productBusinessFactSelect()
+  });
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const orderedProducts = lines.map((line) => productById.get(line.productId)).filter(isDefined);
+  const franchiseIds = new Set(orderedProducts.map((product) => product.franchiseId));
+  const merchantIds = new Set(orderedProducts.map((product) => product.merchantId));
+
+  if (orderedProducts.length !== productIds.length || franchiseIds.size !== 1) {
+    throw new InsufficientInventoryError({
+      productId: productIds[0] ?? '',
+      skuId: null,
+      requestedQuantity: 0
+    });
+  }
+
+  const [salesFranchiseId] = Array.from(franchiseIds);
+  if (!salesFranchiseId) {
+    throw new InsufficientInventoryError({
+      productId: productIds[0] ?? '',
+      skuId: null,
+      requestedQuantity: 0
+    });
+  }
+
+  const singleMerchant = merchantIds.size === 1 ? orderedProducts[0]?.merchant ?? null : null;
+
+  return {
+    salesFranchiseId,
+    fulfillmentMerchantId: singleMerchant?.id ?? null,
+    fulfillmentMerchantName: singleMerchant?.name ?? null,
+    fulfillmentMerchantAddress: singleMerchant?.address ?? null,
+    productFacts: products
+  };
+}
+
+async function reserveInventoryForOrder(
+  tx: OrderCheckoutTransaction,
+  order: OrderCheckoutRecord,
+  products: OrderProductBusinessFact[]
+): Promise<void> {
   if (order.lines.length === 0) {
     return;
   }
 
-  const productIds = Array.from(new Set(order.lines.map((line) => line.productId)));
-  const products = await tx.product.findMany({
-    where: { id: { in: productIds } },
-    select: { id: true, merchantId: true }
-  });
   const merchantIdByProductId = new Map(products.map((product) => [product.id, product.merchantId]));
   const reservations = [];
 
@@ -250,6 +319,25 @@ async function reserveInventoryForOrder(tx: OrderCheckoutTransaction, order: Ord
   });
 }
 
+function productBusinessFactSelect() {
+  return {
+    id: true,
+    franchiseId: true,
+    merchantId: true,
+    merchant: {
+      select: {
+        id: true,
+        name: true,
+        address: true
+      }
+    }
+  } as const;
+}
+
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
 function inventoryStockKey(productId: string, skuId: string | null): string {
   return `${productId}:${skuId ?? 'default'}`;
 }
@@ -271,6 +359,10 @@ function orderSelect() {
     receiverPhone: true,
     receiverAddress: true,
     pickupStoreName: true,
+    salesFranchiseId: true,
+    fulfillmentMerchantId: true,
+    fulfillmentMerchantName: true,
+    fulfillmentMerchantAddress: true,
     createdAt: true,
     updatedAt: true,
     lines: {

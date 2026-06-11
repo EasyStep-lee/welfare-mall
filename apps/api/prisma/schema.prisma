@@ -106,6 +106,7 @@ model Merchant {
   status         String
   franchiseId    String
   regionId       String?
+  address        String?
   businessScopes Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -444,6 +445,10 @@ model OrderHeader {
   receiverPhone            String?
   receiverAddress          String?
   pickupStoreName          String?
+  salesFranchiseId         String?
+  fulfillmentMerchantId    String?
+  fulfillmentMerchantName  String?
+  fulfillmentMerchantAddress String?
   createdAt                DateTime    @default(now())
   updatedAt                DateTime    @updatedAt
   lines                    OrderLine[]
@@ -451,6 +456,8 @@ model OrderHeader {
 
   @@index([buyerUserId])
   @@index([status])
+  @@index([salesFranchiseId])
+  @@index([fulfillmentMerchantId])
   @@map("order_header")
 }
 

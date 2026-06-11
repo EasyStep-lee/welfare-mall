@@ -106,6 +106,7 @@ export async function seedLocalReviewProduct(prisma: SeedPrisma) {
         name: '本地优选商户',
         status: 'active',
         franchiseId: ids.franchiseId,
+        address: '上海市浦东新区本地联调路 88 号',
         businessScopes: ['粮油副食']
       },
       create: {
@@ -114,6 +115,7 @@ export async function seedLocalReviewProduct(prisma: SeedPrisma) {
         name: '本地优选商户',
         status: 'active',
         franchiseId: ids.franchiseId,
+        address: '上海市浦东新区本地联调路 88 号',
         businessScopes: ['粮油副食']
       }
     });
