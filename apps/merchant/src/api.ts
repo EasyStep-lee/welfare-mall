@@ -65,7 +65,7 @@ export type ProductDraftPayload = {
   merchantId: string;
   franchiseId: string;
   categoryId: string;
-  brandId: string;
+  brandId: string | null;
   originCountry: string;
   originProvince: string;
   originCity: string;
@@ -107,6 +107,13 @@ export type ProductDraftPayload = {
     content: string;
     sortOrder: number;
   }>;
+};
+
+export type MerchantDraftContext = {
+  merchant: BusinessParty & { address: string | null };
+  franchise: BusinessParty;
+  defaultCategory: BusinessParty | null;
+  defaultBrand: BusinessParty | null;
 };
 
 export type MerchantFulfillmentOrderLine = {
@@ -285,6 +292,15 @@ export async function fetchMerchantSubmissionQueue(status: SubmissionQueueStatus
   }
 
   return response.json() as Promise<SubmissionQueueResponse>;
+}
+
+export async function fetchMerchantDraftContext(merchantId: string): Promise<MerchantDraftContext> {
+  const response = await apiFetch(`${apiBaseUrl()}/merchants/${merchantId.trim()}/draft-context`);
+  if (!response.ok) {
+    throw new Error(`Failed to load merchant draft context: ${response.status}`);
+  }
+
+  return response.json() as Promise<MerchantDraftContext>;
 }
 
 export async function submitProductForReview(input: { productId: string; actorUserId: string }) {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  fetchMerchantDraftContext,
   fetchMerchantFulfillmentOrders,
   resetMerchantAccessTokenProvider,
   setMerchantAccessTokenProvider,
@@ -44,6 +45,16 @@ describe('merchant API auth client', () => {
         Authorization: 'Bearer merchant-token-002'
       },
       body: JSON.stringify({ actorUserId: 'merchant-user-001' })
+    });
+  });
+
+  it('loads merchant draft context with the configured JWT bearer token', async () => {
+    setMerchantAccessTokenProvider(() => 'merchant-token-003');
+
+    await fetchMerchantDraftContext('merchant-001');
+
+    expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/merchants/merchant-001/draft-context', {
+      headers: { Authorization: 'Bearer merchant-token-003' }
     });
   });
 });

@@ -1,6 +1,6 @@
 import { ElButton, ElCard, ElCol, ElRow, ElSpace, ElTag } from 'element-plus';
 import { computed, defineComponent, h, onMounted, ref } from 'vue';
-import type { AuthenticatedUser, ProductDraftPayload } from './api';
+import type { AuthenticatedUser, MerchantDraftContext, ProductDraftPayload } from './api';
 import {
   MerchantFulfillmentOrder,
   MerchantFulfillmentStatusFilter,
@@ -8,6 +8,7 @@ import {
   MerchantSettlementStatementStatusFilter,
   SubmissionQueueItem,
   completeMerchantFulfillmentOrder,
+  fetchMerchantDraftContext,
   fetchMerchantFulfillmentOrders,
   fetchMerchantSettlementStatements,
   fetchMerchantSubmissionQueue,
@@ -21,12 +22,6 @@ import {
 import { summarizeMerchantFulfillmentOrders } from './fulfillmentSummary';
 import { buildSettlementCsv } from './settlementExport';
 import { summarizeSettlementStatements } from './settlementSummary';
-
-const localDraftMasterDataContext = {
-  franchiseId: 'franchise-local-review',
-  categoryId: 'category-local-review',
-  brandId: 'brand-local-review'
-};
 
 type MerchantDraftForm = {
   code: string;
@@ -66,6 +61,7 @@ export default defineComponent({
     const fulfillmentFilters = ref<FulfillmentLookupForm>({ orderNo: '', taskNo: '' });
     const pickupCodes = ref<Record<string, string>>({});
     const draftItems = ref<SubmissionQueueItem[]>([]);
+    const draftContext = ref<MerchantDraftContext | null>(null);
     const statements = ref<MerchantSettlementStatement[]>([]);
     const settlementStatus = ref<MerchantSettlementStatementStatusFilter>('generated');
     const loading = ref(Boolean(authUser.value));
@@ -107,13 +103,16 @@ export default defineComponent({
       loading.value = true;
       error.value = null;
       try {
-        const [fulfillmentResponse, draftResponse, statementResponse] = await Promise.all([
-          fetchMerchantFulfillmentOrders(resolveAuthenticatedMerchantId(), fulfillmentStatus.value, fulfillmentFilters.value),
+        const merchantId = resolveAuthenticatedMerchantId();
+        const [fulfillmentResponse, draftResponse, statementResponse, draftContextResponse] = await Promise.all([
+          fetchMerchantFulfillmentOrders(merchantId, fulfillmentStatus.value, fulfillmentFilters.value),
           fetchMerchantSubmissionQueue('draft'),
-          fetchMerchantSettlementStatements(resolveAuthenticatedMerchantId(), settlementStatus.value)
+          fetchMerchantSettlementStatements(merchantId, settlementStatus.value),
+          fetchMerchantDraftContext(merchantId)
         ]);
         fulfillmentOrders.value = fulfillmentResponse.orders;
         draftItems.value = draftResponse.items;
+        draftContext.value = draftContextResponse;
         statements.value = statementResponse.statements;
       } catch (loadError) {
         if (isUnauthorizedError(loadError)) {
@@ -165,6 +164,18 @@ export default defineComponent({
       return actorUserId;
     }
 
+    function resolveDraftContext() {
+      if (!draftContext.value) {
+        throw new Error('商户商品草稿上下文未加载');
+      }
+
+      if (!draftContext.value.defaultCategory) {
+        throw new Error('商户商品草稿缺少默认分类');
+      }
+
+      return draftContext.value;
+    }
+
     async function completeOrder(order: MerchantFulfillmentOrder) {
       actionLoading.value = true;
       error.value = null;
@@ -202,7 +213,7 @@ export default defineComponent({
       actionLoading.value = true;
       error.value = null;
       try {
-        const payload = toProductDraftPayload(draftForm.value, resolveAuthenticatedMerchantId());
+        const payload = toProductDraftPayload(draftForm.value, resolveAuthenticatedMerchantId(), resolveDraftContext());
         await saveProductDraft({ payload, actorUserId: resolveMerchantActorUserId() });
         message.value = `${payload.name} 草稿已保存`;
         const response = await fetchMerchantSubmissionQueue('draft');
@@ -553,7 +564,7 @@ function label(labels: Record<string, string>, value: string) {
   return labels[value] ?? value;
 }
 
-function toProductDraftPayload(input: MerchantDraftForm, merchantId: string): ProductDraftPayload {
+function toProductDraftPayload(input: MerchantDraftForm, merchantId: string, draftContext: MerchantDraftContext): ProductDraftPayload {
   const code = input.code.trim();
   const name = input.name.trim();
   const priceAmount = Math.round(Number(input.priceYuan) * 100);
@@ -564,9 +575,9 @@ function toProductDraftPayload(input: MerchantDraftForm, merchantId: string): Pr
     code,
     name,
     merchantId,
-    franchiseId: localDraftMasterDataContext.franchiseId,
-    categoryId: localDraftMasterDataContext.categoryId,
-    brandId: localDraftMasterDataContext.brandId,
+    franchiseId: draftContext.franchise.id,
+    categoryId: draftContext.defaultCategory?.id ?? '',
+    brandId: draftContext.defaultBrand?.id ?? null,
     originCountry: '中国',
     originProvince,
     originCity,
