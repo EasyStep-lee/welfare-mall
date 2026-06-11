@@ -80,7 +80,13 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/pickup-order-merchant-address-snapshot`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/pickup-order-merchant-address-snapshot`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature commit `3c5b797 fix: allow pickup checkout without store name` was pushed on `codex/pickup-order-merchant-address-snapshot`.
+- PR #275 `fix: allow pickup checkout without store name` passed GitHub `Project docs check`.
+- PR #275 was squash-merged into `main` as `4b6a271`.
+- Docs-only completion branch `codex/docs-pickup-order-merchant-address-snapshot-complete` records this completion state.
