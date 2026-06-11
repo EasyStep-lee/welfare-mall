@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WelfareCardAccountStatuses, WelfareCardLedgerEntryTypes } from '../franchise/welfare-card-status';
 import { OrderStatuses } from './order-status';
 import { OrderRefundStatus, OrderRefundStatuses } from './order-refund-status';
 import { applySystemOrderTransition, OrderStateClient } from './order-state.repository';
@@ -56,6 +57,37 @@ export type ProcessOrderRefundCallbackResult = {
   callback: OrderRefundCallbackRecord;
 };
 
+export class WelfareCardRefundCreditError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WelfareCardRefundCreditError';
+  }
+}
+
+type OrderPaymentForRefundCredit = {
+  paymentNo: string;
+  orderNo: string;
+  welfareCardPayableAmount: number;
+};
+
+type OrderForRefundCredit = {
+  orderNo: string;
+  buyerUserId: string;
+  salesFranchiseId: string | null;
+};
+
+type WelfareCardAccountForRefundCredit = {
+  id: string;
+  accountNo: string;
+  franchiseId: string;
+  buyerUserId: string;
+  status: string;
+  balanceAmount: number;
+  issuedAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type OrderRefundTransaction = {
   orderRefund: {
     findUnique(args: unknown): Promise<(OrderRefundRecord & { callbacks?: unknown[] }) | null>;
@@ -66,7 +98,18 @@ type OrderRefundTransaction = {
     create(args: unknown): Promise<OrderRefundCallbackRecord>;
   };
   orderHeader: {
+    findUnique(args: unknown): Promise<OrderForRefundCredit | null>;
     update(args: unknown): Promise<unknown>;
+  };
+  orderPayment: {
+    findUnique(args: unknown): Promise<OrderPaymentForRefundCredit | null>;
+  };
+  welfareCardAccount: {
+    findUnique(args: unknown): Promise<WelfareCardAccountForRefundCredit | null>;
+    update(args: unknown): Promise<WelfareCardAccountForRefundCredit>;
+  };
+  welfareCardLedgerEntry: {
+    create(args: unknown): Promise<unknown>;
   };
   inventoryReservation: {
     findMany(args: unknown): Promise<Array<{ productId: string; skuId: string | null; quantity: number }>>;
@@ -188,6 +231,7 @@ async function updateRefundFromCallback(
       });
     }
     await releaseInventoryReservations(tx, refund.orderNo, input.succeededAt);
+    await creditWelfareCardForSucceededRefund(tx, refund);
 
     return tx.orderRefund.update({
       where: { id: refund.id },
@@ -223,6 +267,88 @@ async function updateRefundFromCallback(
   }
 
   return refund;
+}
+
+async function creditWelfareCardForSucceededRefund(
+  tx: OrderRefundTransaction,
+  refund: OrderRefundRecord
+): Promise<void> {
+  const payment = await tx.orderPayment.findUnique({
+    where: { paymentNo: refund.paymentNo },
+    select: {
+      paymentNo: true,
+      orderNo: true,
+      welfareCardPayableAmount: true
+    }
+  });
+
+  if (!payment) {
+    throw new WelfareCardRefundCreditError(`Payment ${refund.paymentNo} not found for refund ${refund.refundNo}.`);
+  }
+
+  const welfareCardRefundAmount = Math.min(payment.welfareCardPayableAmount, refund.refundAmount);
+  if (welfareCardRefundAmount <= 0) {
+    return;
+  }
+
+  const order = await tx.orderHeader.findUnique({
+    where: { orderNo: refund.orderNo },
+    select: {
+      orderNo: true,
+      buyerUserId: true,
+      salesFranchiseId: true
+    }
+  });
+
+  if (!order?.buyerUserId || !order.salesFranchiseId) {
+    throw new WelfareCardRefundCreditError(
+      `Order ${refund.orderNo} is missing buyer or sales franchise for welfare card refund.`
+    );
+  }
+
+  const account = await tx.welfareCardAccount.findUnique({
+    where: {
+      franchiseId_buyerUserId: {
+        franchiseId: order.salesFranchiseId,
+        buyerUserId: order.buyerUserId
+      }
+    },
+    select: welfareCardAccountForRefundCreditSelect()
+  });
+
+  if (!account) {
+    throw new WelfareCardRefundCreditError(
+      `Welfare card account not found for franchise ${order.salesFranchiseId} and buyer ${order.buyerUserId}.`
+    );
+  }
+
+  if (account.status !== WelfareCardAccountStatuses.Active) {
+    throw new WelfareCardRefundCreditError(`Welfare card account ${account.accountNo} is not active.`);
+  }
+
+  const creditedAccount = await tx.welfareCardAccount.update({
+    where: { id: account.id },
+    data: {
+      balanceAmount: { increment: welfareCardRefundAmount }
+    },
+    select: welfareCardAccountForRefundCreditSelect()
+  });
+
+  await tx.welfareCardLedgerEntry.create({
+    data: {
+      ledgerNo: createWelfareCardRefundLedgerNo(refund.requestId),
+      requestId: createWelfareCardRefundRequestId(refund.requestId),
+      accountId: account.id,
+      franchiseId: order.salesFranchiseId,
+      buyerUserId: order.buyerUserId,
+      type: WelfareCardLedgerEntryTypes.Refund,
+      amount: welfareCardRefundAmount,
+      balanceAfter: creditedAccount.balanceAmount,
+      orderNo: refund.orderNo,
+      remark: null
+    },
+    select: { id: true }
+  });
 }
 
 async function releaseInventoryReservations(tx: OrderRefundTransaction, orderNo: string, releasedAt: Date | null): Promise<void> {
@@ -297,4 +423,31 @@ function callbackSelect() {
     payload: true,
     createdAt: true
   } as const;
+}
+
+function welfareCardAccountForRefundCreditSelect() {
+  return {
+    id: true,
+    accountNo: true,
+    franchiseId: true,
+    buyerUserId: true,
+    status: true,
+    balanceAmount: true,
+    issuedAmount: true,
+    createdAt: true,
+    updatedAt: true
+  } as const;
+}
+
+function createWelfareCardRefundRequestId(refundRequestId: string): string {
+  return `refund:${refundRequestId}`;
+}
+
+function createWelfareCardRefundLedgerNo(refundRequestId: string): string {
+  const normalizedRequestId = refundRequestId
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `WCL-REFUND-${normalizedRequestId}`;
 }
