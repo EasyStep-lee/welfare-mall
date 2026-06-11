@@ -115,7 +115,13 @@ Evidence:
 
 ### Task 4: Completion
 
-- [ ] Commit feature work on `codex/portal-welfare-card-checkout-amount`.
-- [ ] Push branch and open PR.
-- [ ] Wait for GitHub checks and merge.
-- [ ] Create docs-only completion PR after feature merge.
+- [x] Commit feature work on `codex/portal-welfare-card-checkout-amount`.
+- [x] Push branch and open PR.
+- [x] Wait for GitHub checks and merge.
+- [x] Create docs-only completion PR after feature merge.
+
+Evidence:
+- Feature commit `68be2fc feat: allow portal welfare card checkout amount` was pushed to `codex/portal-welfare-card-checkout-amount`.
+- PR #279 `feat: allow portal welfare card checkout amount` passed `Project docs check`, including `docs-check` and `project-foundation-check`.
+- PR #279 was squash-merged to `main` as `ca5ad0c`.
+- Docs completion branch `codex/docs-portal-welfare-card-checkout-amount-complete` records this plan as complete after the feature merge.
