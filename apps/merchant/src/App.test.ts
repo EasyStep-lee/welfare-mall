@@ -112,7 +112,13 @@ describe('Merchant Vue workbench', () => {
     localStorage.setItem('welfareMallMerchantAccessToken', 'merchant-token-local');
     localStorage.setItem(
       'welfareMallMerchantUser',
-      JSON.stringify({ username: 'merchant-local', displayName: '本地商户操作员', subjectType: 'merchant', subjectId: 'merchant-local-review' })
+      JSON.stringify({
+        sub: 'user-merchant-local',
+        username: 'merchant-local',
+        displayName: '本地商户操作员',
+        subjectType: 'merchant',
+        subjectId: 'merchant-local-review'
+      })
     );
     let fulfillmentLoads = 0;
     let draftLoads = 0;
@@ -170,6 +176,7 @@ describe('Merchant Vue workbench', () => {
           accessToken: 'merchant-token-001',
           expiresIn: 3600,
           user: {
+            sub: 'user-merchant-local',
             username: 'merchant-local',
             displayName: '本地商户操作员',
             subjectType: 'merchant',
@@ -217,6 +224,50 @@ describe('Merchant Vue workbench', () => {
     expect(localStorage.getItem('welfareMallMerchantUser')).toBeNull();
     expect(wrapper.text()).toContain('商户登录');
     expect(wrapper.text()).not.toContain('履约订单');
+  });
+
+  it('uses the authenticated merchant subject for merchant-scoped workbench actions', async () => {
+    localStorage.setItem('welfareMallMerchantAccessToken', 'merchant-token-999');
+    localStorage.setItem(
+      'welfareMallMerchantUser',
+      JSON.stringify({
+        sub: 'user-merchant-auth-999',
+        username: 'merchant-auth',
+        displayName: '授权商户操作员',
+        subjectType: 'merchant',
+        subjectId: 'merchant-auth-999'
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/orders/merchant/fulfillment?merchantId=merchant-auth-999&status=paid'
+    );
+    expect(requestUrls()).toContain(
+      'http://localhost:3000/api/settlements/merchant-statements?merchantId=merchant-auth-999&status=generated'
+    );
+
+    await clickButton(wrapper, '提交审核');
+    await flushPromises();
+
+    const submitCall = findRequest('/products/product-001/review-submissions');
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'user-merchant-auth-999' });
+
+    await clickButton(wrapper, '确认完成');
+    await flushPromises();
+
+    const completeCall = findRequest('/orders/merchant/fulfillment/ORDER-20260603-001/complete');
+    expect(JSON.parse(String(completeCall?.[1]?.body))).toEqual({ merchantId: 'merchant-auth-999' });
+
+    await clickButton(wrapper, '保存草稿');
+    await flushPromises();
+
+    const saveCall = findRequest('/products/drafts/save');
+    const saveBody = JSON.parse(String(saveCall?.[1]?.body));
+    expect(saveBody.actorUserId).toBe('user-merchant-auth-999');
+    expect(saveBody.payload.merchantId).toBe('merchant-auth-999');
   });
 
   it('renders Vue Element Plus merchant sections and loads core read models', async () => {
@@ -385,7 +436,7 @@ describe('Merchant Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-local' });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'user-merchant-local' });
     expect(wrapper.text()).toContain('东北五常大米福利装 已提交审核');
     expect(wrapper.text()).toContain('暂无商品草稿');
   });
@@ -421,7 +472,7 @@ describe('Merchant Vue workbench', () => {
       headers: { 'Content-Type': 'application/json' }
     });
     const requestBody = JSON.parse(String(saveCall?.[1]?.body));
-    expect(requestBody.actorUserId).toBe('merchant-user-local');
+    expect(requestBody.actorUserId).toBe('user-merchant-local');
     expect(requestBody.productId).toBeNull();
     expect(requestBody.payload).toMatchObject({
       code: 'P-RICE-001',
@@ -508,7 +559,7 @@ describe('Merchant Vue workbench', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'merchant-user-local' });
+    expect(JSON.parse(String(submitCall?.[1]?.body))).toEqual({ actorUserId: 'user-merchant-local' });
   });
 
   it('saves edited master data fields from the visible Vue draft form', async () => {

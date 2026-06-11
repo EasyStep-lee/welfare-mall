@@ -3,6 +3,7 @@ export type MerchantFulfillmentStatusFilter = 'paid' | 'completed';
 export type MerchantSettlementStatementStatusFilter = 'generated' | 'paid_offline' | 'all';
 
 export type AuthenticatedUser = {
+  sub?: string;
   username: string;
   displayName: string;
   subjectType: string;

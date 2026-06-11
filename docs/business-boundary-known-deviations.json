@@ -64,8 +64,8 @@
     },
     {
       "file": "apps/merchant/src/App.ts",
-      "reason": "Merchant Vue still uses fixed local merchant and actor IDs before Merchant login.",
-      "nextAction": "Read merchantId, franchiseId, and actor user from JWT identity."
+      "reason": "Merchant Vue still displays pickupStoreName compatibility data for legacy pickup fulfillment records.",
+      "nextAction": "Display merchant address snapshots for pickup fulfillment and remove pickupStoreName from the active Merchant UI."
     },
     {
       "file": "apps/merchant/src/App.test.ts",
