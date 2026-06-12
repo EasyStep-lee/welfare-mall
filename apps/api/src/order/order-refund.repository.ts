@@ -42,6 +42,27 @@ export type CreateOrderRefundRecordInput = {
   reason: string;
 };
 
+export type RefundProviderPaymentContext = {
+  paymentNo: string;
+  orderNo: string;
+  channel: string;
+  status: string;
+  totalAmount: number;
+  cashPayableAmount: number;
+  providerPaymentNo: string | null;
+  components: Array<{
+    sequenceNo: number;
+    componentType: string;
+    channel: string;
+    amount: number;
+  }>;
+};
+
+export type MarkRefundProviderInitiatedInput = {
+  refundNo: string;
+  providerRefundNo: string;
+};
+
 export type ProcessOrderRefundCallbackInput = {
   providerEventId: string;
   refundNo: string;
@@ -170,6 +191,38 @@ export class OrderRefundRepository {
     }
 
     return refund;
+  }
+
+  async findRefundProviderContext(paymentNo: string): Promise<RefundProviderPaymentContext | null> {
+    return this.prisma.orderPayment.findUnique({
+      where: { paymentNo },
+      select: {
+        paymentNo: true,
+        orderNo: true,
+        channel: true,
+        status: true,
+        totalAmount: true,
+        cashPayableAmount: true,
+        providerPaymentNo: true,
+        components: {
+          orderBy: { sequenceNo: 'asc' },
+          select: {
+            sequenceNo: true,
+            componentType: true,
+            channel: true,
+            amount: true
+          }
+        }
+      }
+    });
+  }
+
+  async markRefundProviderInitiated(input: MarkRefundProviderInitiatedInput): Promise<OrderRefundRecord> {
+    return this.prisma.orderRefund.update({
+      where: { refundNo: input.refundNo },
+      data: { providerRefundNo: input.providerRefundNo },
+      select: refundSelect()
+    });
   }
 
   async processCallback(input: ProcessOrderRefundCallbackInput): Promise<ProcessOrderRefundCallbackResult | null> {

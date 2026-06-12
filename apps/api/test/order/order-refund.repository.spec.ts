@@ -168,7 +168,36 @@ function createPrismaMock() {
   const prisma = {
     orderRefund: {
       findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue(refundRecord)
+      create: jest.fn().mockResolvedValue(refundRecord),
+      update: jest.fn().mockResolvedValue({
+        ...refundRecord,
+        providerRefundNo: 'wx-refund-001'
+      })
+    },
+    orderPayment: {
+      findUnique: jest.fn().mockResolvedValue({
+        paymentNo: 'PAY-20260603-001',
+        orderNo: 'ORDER-20260603-001',
+        channel: 'wechat',
+        status: 'paid',
+        totalAmount: 5000,
+        cashPayableAmount: 4000,
+        providerPaymentNo: 'wx-pay-001',
+        components: [
+          {
+            sequenceNo: 1,
+            componentType: 'welfare_card',
+            channel: 'welfare_card',
+            amount: 1000
+          },
+          {
+            sequenceNo: 2,
+            componentType: 'online_cash',
+            channel: 'wechat',
+            amount: 4000
+          }
+        ]
+      })
     },
     orderState: {
       findUnique: jest.fn().mockResolvedValue({
@@ -607,5 +636,74 @@ describe('OrderRefundRepository', () => {
         refund: expect.objectContaining({ status: 'failed', providerRefundNo: 'wx-refund-001' })
       })
     );
+  });
+
+  it('reads refund provider context from the original paid payment and components', async () => {
+    const { prisma } = createPrismaMock();
+    const repository = new OrderRefundRepository(prisma as never);
+
+    const result = await repository.findRefundProviderContext('PAY-20260603-001');
+
+    expect(prisma.orderPayment.findUnique).toHaveBeenCalledWith({
+      where: { paymentNo: 'PAY-20260603-001' },
+      select: {
+        paymentNo: true,
+        orderNo: true,
+        channel: true,
+        status: true,
+        totalAmount: true,
+        cashPayableAmount: true,
+        providerPaymentNo: true,
+        components: {
+          orderBy: { sequenceNo: 'asc' },
+          select: {
+            sequenceNo: true,
+            componentType: true,
+            channel: true,
+            amount: true
+          }
+        }
+      }
+    });
+    expect(result).toEqual({
+      paymentNo: 'PAY-20260603-001',
+      orderNo: 'ORDER-20260603-001',
+      channel: 'wechat',
+      status: 'paid',
+      totalAmount: 5000,
+      cashPayableAmount: 4000,
+      providerPaymentNo: 'wx-pay-001',
+      components: [
+        {
+          sequenceNo: 1,
+          componentType: 'welfare_card',
+          channel: 'welfare_card',
+          amount: 1000
+        },
+        {
+          sequenceNo: 2,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          amount: 4000
+        }
+      ]
+    });
+  });
+
+  it('marks a processing refund with provider refund number after provider accepts it', async () => {
+    const { prisma } = createPrismaMock();
+    const repository = new OrderRefundRepository(prisma as never);
+
+    const result = await repository.markRefundProviderInitiated({
+      refundNo: 'REF-20260603-001',
+      providerRefundNo: 'wx-refund-001'
+    });
+
+    expect(prisma.orderRefund.update).toHaveBeenCalledWith({
+      where: { refundNo: 'REF-20260603-001' },
+      data: { providerRefundNo: 'wx-refund-001' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual(expect.objectContaining({ providerRefundNo: 'wx-refund-001' }));
   });
 });

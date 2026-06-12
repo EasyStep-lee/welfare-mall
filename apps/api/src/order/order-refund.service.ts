@@ -1,5 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { OrderRefundRecord, OrderRefundRepository, ProcessOrderRefundCallbackResult } from './order-refund.repository';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  OrderRefundRecord,
+  OrderRefundRepository,
+  ProcessOrderRefundCallbackResult,
+  RefundProviderPaymentContext
+} from './order-refund.repository';
+import {
+  NoopRefundChannelProvider,
+  REFUND_CHANNEL_PROVIDER,
+} from './order-refund-provider';
+import type { RefundChannelProvider, RefundOnlineChannel } from './order-refund-provider';
 import {
   OrderRefundChannel,
   OrderRefundChannels,
@@ -37,7 +47,10 @@ export type ProcessOrderRefundCallbackServiceInput = {
 export class OrderRefundService {
   constructor(
     private readonly orderRefundRepository: OrderRefundRepository,
-    private readonly settlementRepository: SettlementRepository
+    private readonly settlementRepository: SettlementRepository,
+    @Optional()
+    @Inject(REFUND_CHANNEL_PROVIDER)
+    private readonly refundChannelProvider: RefundChannelProvider = new NoopRefundChannelProvider()
   ) {}
 
   async createRefund(input: CreateOrderRefundInput): Promise<CreateOrderRefundResult> {
@@ -57,15 +70,55 @@ export class OrderRefundService {
       };
     }
 
+    const providerContext = await this.requireRefundProviderContext(normalizedInput.paymentNo);
     const refund = await this.orderRefundRepository.createRefund({
       refundNo: createRefundNo(),
       ...normalizedInput
     });
+    const refundWithProvider = await this.initiateOnlineRefundProvider(refund, providerContext);
 
     return {
       idempotentReplay: false,
-      refund
+      refund: refundWithProvider
     };
+  }
+
+  private async requireRefundProviderContext(paymentNo: string): Promise<RefundProviderPaymentContext> {
+    const providerContext = await this.orderRefundRepository.findRefundProviderContext(paymentNo);
+    if (!providerContext) {
+      throw new NotFoundException(`Payment ${paymentNo} not found.`);
+    }
+    return providerContext;
+  }
+
+  private async initiateOnlineRefundProvider(
+    refund: OrderRefundRecord,
+    providerContext: RefundProviderPaymentContext
+  ): Promise<OrderRefundRecord> {
+    const onlineRefund = calculateOnlineRefund(refund, providerContext);
+    if (onlineRefund.amount <= 0) {
+      return refund;
+    }
+
+    const providerResult = await this.refundChannelProvider.createRefund({
+      refundNo: refund.refundNo,
+      paymentNo: refund.paymentNo,
+      providerPaymentNo: providerContext.providerPaymentNo,
+      channel: onlineRefund.channel,
+      onlineRefundAmount: onlineRefund.amount,
+      originalOnlineAmount: onlineRefund.originalOnlineAmount,
+      reason: refund.reason,
+      requestedAt: new Date()
+    });
+
+    if (providerResult.skipped || !providerResult.providerRefundNo) {
+      return refund;
+    }
+
+    return this.orderRefundRepository.markRefundProviderInitiated({
+      refundNo: refund.refundNo,
+      providerRefundNo: providerResult.providerRefundNo
+    });
   }
 
   async processCallback(input: ProcessOrderRefundCallbackServiceInput): Promise<ProcessOrderRefundCallbackResult> {
@@ -98,6 +151,63 @@ export class OrderRefundService {
     }
 
     return result;
+  }
+}
+
+function calculateOnlineRefund(
+  refund: OrderRefundRecord,
+  providerContext: RefundProviderPaymentContext
+): { amount: number; originalOnlineAmount: number; channel: RefundOnlineChannel } {
+  let remainingAmount = refund.refundAmount;
+  let onlineRefundAmount = 0;
+  let onlineChannel: RefundOnlineChannel | null = null;
+  const originalOnlineAmount = providerContext.components.reduce((total, component) => {
+    return component.componentType === 'online_cash' ? total + component.amount : total;
+  }, 0);
+
+  for (const component of providerContext.components) {
+    if (remainingAmount <= 0) {
+      break;
+    }
+
+    const componentRefundAmount = Math.min(component.amount, remainingAmount);
+    remainingAmount -= componentRefundAmount;
+
+    if (component.componentType !== 'online_cash' || componentRefundAmount <= 0) {
+      continue;
+    }
+
+    assertOnlineRefundChannel(component.channel);
+    if (component.channel !== refund.channel) {
+      throw new ConflictException('refund channel must match the original online payment channel.');
+    }
+
+    onlineChannel = component.channel;
+    onlineRefundAmount += componentRefundAmount;
+  }
+
+  if (onlineRefundAmount <= 0) {
+    return {
+      amount: 0,
+      originalOnlineAmount,
+      channel: refund.channel as RefundOnlineChannel
+    };
+  }
+
+  if (!onlineChannel) {
+    throw new ConflictException('online refund channel is missing.');
+  }
+
+  return {
+    amount: onlineRefundAmount,
+    originalOnlineAmount,
+    channel: onlineChannel
+  };
+}
+
+function assertOnlineRefundChannel(channel: string): asserts channel is RefundOnlineChannel {
+  if (channel !== 'wechat' && channel !== 'alipay') {
+    throw new ConflictException('online refund channel must be wechat or alipay.');
   }
 }
 
