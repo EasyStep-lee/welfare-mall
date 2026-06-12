@@ -103,6 +103,7 @@ export class OrderPaymentService {
 
     if (!result.duplicate && result.payment.status === OrderPaymentStatuses.Paid) {
       await this.settlementRepository.generateMerchantBillItemsForPaidOrder(result.payment.orderNo);
+      await this.settlementRepository.generateFranchiseSalesLedgerForPaidOrder(result.payment.orderNo);
     }
 
     return result;

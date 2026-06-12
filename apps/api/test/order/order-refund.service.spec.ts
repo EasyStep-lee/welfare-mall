@@ -38,7 +38,8 @@ function createRepositoryMock() {
 
 function createSettlementRepositoryMock() {
   return {
-    applyRefundOffsetForSucceededRefund: jest.fn().mockResolvedValue({ items: [] })
+    applyRefundOffsetForSucceededRefund: jest.fn().mockResolvedValue({ items: [] }),
+    generateFranchiseSalesLedgerForSucceededRefund: jest.fn().mockResolvedValue({ entries: [] })
   };
 }
 
@@ -162,6 +163,12 @@ describe('OrderRefundService', () => {
       orderNo: 'ORDER-20260603-001',
       refundAmount: 5000
     });
+    expect(settlementRepository.generateFranchiseSalesLedgerForSucceededRefund).toHaveBeenCalledWith({
+      orderNo: 'ORDER-20260603-001',
+      paymentNo: 'PAY-20260603-001',
+      refundNo: 'REF-20260603-001',
+      refundAmount: 5000
+    });
   });
 
   it('does not apply settlement refund offset for duplicate callbacks', async () => {
@@ -187,6 +194,7 @@ describe('OrderRefundService', () => {
     });
 
     expect(settlementRepository.applyRefundOffsetForSucceededRefund).not.toHaveBeenCalled();
+    expect(settlementRepository.generateFranchiseSalesLedgerForSucceededRefund).not.toHaveBeenCalled();
   });
 
   it('does not apply settlement refund offset for failed callbacks', async () => {
@@ -212,6 +220,7 @@ describe('OrderRefundService', () => {
     });
 
     expect(settlementRepository.applyRefundOffsetForSucceededRefund).not.toHaveBeenCalled();
+    expect(settlementRepository.generateFranchiseSalesLedgerForSucceededRefund).not.toHaveBeenCalled();
   });
 
   it('returns not found when callback references a missing refund', async () => {

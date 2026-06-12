@@ -49,6 +49,7 @@ model Franchise {
   productPools ProductPool[]
   welfareCardAccounts WelfareCardAccount[]
   welfareCardLedgerEntries WelfareCardLedgerEntry[]
+  salesLedgerEntries FranchiseSalesLedgerEntry[]
 
   @@index([regionId])
   @@index([status])
@@ -623,6 +624,34 @@ model MerchantSettlementStatement {
   @@index([status])
   @@index([generatedAt])
   @@map("merchant_settlement_statement")
+}
+
+model FranchiseSalesLedgerEntry {
+  id                String    @id @default(cuid())
+  entryNo           String    @unique
+  franchiseId       String
+  orderNo           String
+  paymentNo         String?
+  refundNo          String?
+  buyerUserId       String
+  source            String
+  status            String
+  totalAmount       Int
+  welfareCardAmount Int
+  onlineCashAmount  Int
+  amount            Int
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  franchise         Franchise @relation(fields: [franchiseId], references: [id])
+
+  @@index([franchiseId])
+  @@index([orderNo])
+  @@index([paymentNo])
+  @@index([refundNo])
+  @@index([buyerUserId])
+  @@index([source])
+  @@index([status])
+  @@map("franchise_sales_ledger_entry")
 }
 
 model OrderPayment {

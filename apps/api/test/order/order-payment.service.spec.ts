@@ -48,7 +48,8 @@ function createRepositoryMock() {
 
 function createSettlementRepositoryMock() {
   return {
-    generateMerchantBillItemsForPaidOrder: jest.fn().mockResolvedValue({ items: [] })
+    generateMerchantBillItemsForPaidOrder: jest.fn().mockResolvedValue({ items: [] }),
+    generateFranchiseSalesLedgerForPaidOrder: jest.fn().mockResolvedValue({ entries: [] })
   };
 }
 
@@ -233,6 +234,7 @@ describe('OrderPaymentService', () => {
     });
     expect(result).toEqual(expect.objectContaining({ duplicate: false }));
     expect(settlementRepository.generateMerchantBillItemsForPaidOrder).toHaveBeenCalledWith('ORDER-20260603-001');
+    expect(settlementRepository.generateFranchiseSalesLedgerForPaidOrder).toHaveBeenCalledWith('ORDER-20260603-001');
   });
 
   it('does not generate settlement bill items for duplicate callbacks', async () => {
@@ -258,6 +260,7 @@ describe('OrderPaymentService', () => {
     });
 
     expect(settlementRepository.generateMerchantBillItemsForPaidOrder).not.toHaveBeenCalled();
+    expect(settlementRepository.generateFranchiseSalesLedgerForPaidOrder).not.toHaveBeenCalled();
   });
 
   it('does not generate settlement bill items for failed callbacks', async () => {
@@ -283,6 +286,7 @@ describe('OrderPaymentService', () => {
     });
 
     expect(settlementRepository.generateMerchantBillItemsForPaidOrder).not.toHaveBeenCalled();
+    expect(settlementRepository.generateFranchiseSalesLedgerForPaidOrder).not.toHaveBeenCalled();
   });
 
   it('returns not found when callback references a missing payment', async () => {
