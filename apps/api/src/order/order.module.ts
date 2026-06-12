@@ -18,6 +18,7 @@ import { OrderPaymentService } from './order-payment.service';
 import { OrderReadRepository } from './order-read.repository';
 import { OrderReadService } from './order-read.service';
 import { OrderRefundRepository } from './order-refund.repository';
+import { createRefundChannelProviderFromEnv, REFUND_CHANNEL_PROVIDER } from './order-refund-provider';
 import { OrderRefundService } from './order-refund.service';
 import { OrderStateRepository } from './order-state.repository';
 
@@ -40,6 +41,10 @@ import { OrderStateRepository } from './order-state.repository';
     OrderPaymentService,
     OrderReadRepository,
     OrderReadService,
+    {
+      provide: REFUND_CHANNEL_PROVIDER,
+      useFactory: () => createRefundChannelProviderFromEnv()
+    },
     OrderRefundRepository,
     OrderRefundService,
     OrderStateRepository
