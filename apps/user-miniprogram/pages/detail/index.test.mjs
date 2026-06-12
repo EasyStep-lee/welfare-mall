@@ -8,6 +8,7 @@ const detailWxml = readFileSync(fileURLToPath(new URL('./index.wxml', import.met
 
 const detailResponse = {
   itemId: 'pool-item-001',
+  franchiseId: 'franchise-local-review',
   displayName: 'Local Rice',
   displaySkuCode: 'SKU-RICE-5KG',
   displayPriceAmount: 6990,
@@ -20,15 +21,29 @@ const detailResponse = {
   }
 };
 
+const bindResponse = {
+  idempotentReplay: false,
+  account: {
+    id: 'account-001',
+    accountNo: 'WCA-FRANCHISE-001-BUYER-001',
+    franchiseId: 'franchise-local-review',
+    buyerUserId: 'local-user-001',
+    status: 'active',
+    balanceAmount: 8800,
+    issuedAmount: 10000
+  }
+};
+
 const previewResponse = {
   totalAmount: 13980,
   welfareCardPayableAmount: 5000,
   cashPayableAmount: 8980
 };
 
-function mountPage() {
+function mountPage(options = {}) {
   let pageDefinition;
   const requests = [];
+  const detail = options.detailResponse || detailResponse;
 
   global.Page = vi.fn((definition) => {
     pageDefinition = definition;
@@ -39,7 +54,7 @@ function mountPage() {
       requests.push(request);
 
       if (request.url.endsWith('/product-pools/items/pool-item-001')) {
-        request.success({ statusCode: 200, data: detailResponse });
+        request.success({ statusCode: 200, data: detail });
         return;
       }
 
@@ -62,6 +77,11 @@ function mountPage() {
             }
           }
         });
+        return;
+      }
+
+      if (request.url.endsWith('/franchises/franchise-local-review/welfare-cards/bind')) {
+        request.success({ statusCode: 201, data: bindResponse });
       }
     })
   };
@@ -136,7 +156,51 @@ describe('user mini-program product detail checkout flow', () => {
 
   it('labels the amount preview as welfare-card debit plus online remainder', () => {
     expect(detailWxml).toContain('福利卡抵扣');
+    expect(detailWxml).toContain('福利卡卡号');
+    expect(detailWxml).toContain('福利卡绑定码');
     expect(detailWxml).toContain('线上补差');
     expect(detailWxml).not.toContain('现金支付');
+  });
+
+  it('binds a welfare card against the current sales franchise', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadDetail('pool-item-001');
+    page.onBindCardNoInput({ detail: { value: 'WFC-LOCAL-001' } });
+    page.onBindCodeInput({ detail: { value: 'BIND-LOCAL-001' } });
+    await page.submitBindWelfareCard();
+
+    const bindRequest = requests.find((request) =>
+      request.url.endsWith('/franchises/franchise-local-review/welfare-cards/bind')
+    );
+    expect(bindRequest).toMatchObject({
+      method: 'POST',
+      data: {
+        cardNo: 'WFC-LOCAL-001',
+        bindCode: 'BIND-LOCAL-001'
+      }
+    });
+    expect(bindRequest.data.requestId).toMatch(/^mini-bind-WFC-LOCAL-001-\d+$/);
+    expect(page.data.bindCardMessage).toBe('福利卡绑定成功，余额 ¥88.00');
+  });
+
+  it('uses the sales franchise carried from catalog navigation when detail lacks franchiseId', async () => {
+    const detailWithoutFranchise = { ...detailResponse };
+    delete detailWithoutFranchise.franchiseId;
+    const { page } = mountPage({ detailResponse: detailWithoutFranchise });
+
+    await page.onLoad({ itemId: 'pool-item-001', franchiseId: 'franchise-from-catalog' });
+
+    expect(page.data.salesFranchiseId).toBe('franchise-from-catalog');
+  });
+
+  it('blocks welfare-card binding until card number and bind code are entered', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadDetail('pool-item-001');
+    await page.submitBindWelfareCard();
+
+    expect(requests).toHaveLength(1);
+    expect(page.data.bindCardError).toBe('请填写福利卡卡号和绑定码');
   });
 });

@@ -64,6 +64,13 @@
   gap: 18rpx;
 }
 
+.welfare-account-box,
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
 .channel-row {
   display: flex;
   gap: 12rpx;

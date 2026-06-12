@@ -16,6 +16,10 @@ Page({
     payment: null,
     paymentDisplay: null,
     paymentError: '',
+    welfareCardAccounts: [],
+    welfareCardAccountsLoading: false,
+    welfareCardAccountsError: '',
+    selectedWelfareCardAccountId: '',
     requestingRefund: false,
     refund: null,
     refundDisplay: null,
@@ -53,6 +57,10 @@ Page({
         payment: null,
         paymentDisplay: null,
         paymentError: '',
+        welfareCardAccounts: [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: '',
+        selectedWelfareCardAccountId: '',
         selectedPaymentChannel: 'wechat',
         requestingRefund: false,
         refund: null,
@@ -64,12 +72,17 @@ Page({
         cancelError: '',
         refreshingOrder: false
       });
+      await this.loadWelfareCardAccounts(order);
     } catch (error) {
       this.setData({
         order: null,
         orderDisplay: null,
         loading: false,
         error: error instanceof Error ? error.message : '订单详情加载失败',
+        welfareCardAccounts: [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: '',
+        selectedWelfareCardAccountId: '',
         canRequestRefund: false,
         canCancelOrder: false,
         cancellingOrder: false,
@@ -95,6 +108,12 @@ Page({
       return;
     }
 
+    const welfareCardAccountId = String(this.data.selectedWelfareCardAccountId || '').trim();
+    if (requiresWelfareCardAccount(this.data.order) && !welfareCardAccountId) {
+      this.setData({ paymentError: '请先选择福利卡账户' });
+      return;
+    }
+
     this.setData({ creatingPayment: true, paymentError: '' });
 
     try {
@@ -103,7 +122,8 @@ Page({
         data: buildPaymentPayload({
           requestId: createPaymentRequestId(this.data.order.orderNo),
           order: this.data.order,
-          channel: this.data.selectedPaymentChannel
+          channel: this.data.selectedPaymentChannel,
+          welfareCardAccountId
         })
       });
       const payment = response.payment;
@@ -129,6 +149,62 @@ Page({
       paymentDisplay: null,
       paymentError: ''
     });
+  },
+
+  selectWelfareCardAccount(event) {
+    const accountId = String(event?.currentTarget?.dataset?.accountId ?? '').trim();
+    this.setData({
+      selectedWelfareCardAccountId: accountId,
+      payment: null,
+      paymentDisplay: null,
+      paymentError: ''
+    });
+  },
+
+  async loadWelfareCardAccounts(order) {
+    if (!requiresWelfareCardAccount(order)) {
+      this.setData({
+        welfareCardAccounts: [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: '',
+        selectedWelfareCardAccountId: ''
+      });
+      return;
+    }
+
+    const franchiseId = String(order?.salesFranchiseId ?? '').trim();
+    if (!franchiseId) {
+      this.setData({
+        welfareCardAccounts: [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: '当前订单缺少销售加盟商，不能选择福利卡账户',
+        selectedWelfareCardAccountId: ''
+      });
+      return;
+    }
+
+    this.setData({
+      welfareCardAccountsLoading: true,
+      welfareCardAccountsError: '',
+      selectedWelfareCardAccountId: ''
+    });
+
+    try {
+      const response = await requestJson(
+        `/franchises/${encodeURIComponent(franchiseId)}/welfare-card-accounts/me`
+      );
+      this.setData({
+        welfareCardAccounts: response.accounts || [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: ''
+      });
+    } catch (error) {
+      this.setData({
+        welfareCardAccounts: [],
+        welfareCardAccountsLoading: false,
+        welfareCardAccountsError: error instanceof Error ? error.message : '福利卡账户加载失败'
+      });
+    }
   },
 
   async cancelOrder() {
@@ -213,4 +289,8 @@ Page({
 
 function canCancelOrder(order) {
   return order?.status === 'pending_payment';
+}
+
+function requiresWelfareCardAccount(order) {
+  return Number(order?.welfareCardPayableAmount || 0) > 0;
 }

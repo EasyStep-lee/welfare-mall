@@ -73,6 +73,10 @@
   gap: 18rpx;
 }
 
+.bind-card {
+  gap: 18rpx;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -129,4 +133,10 @@
 
 .error {
   color: #9c2d20;
+}
+
+.success {
+  color: #1f7a5c;
+  font-size: 26rpx;
+  font-weight: 600;
 }

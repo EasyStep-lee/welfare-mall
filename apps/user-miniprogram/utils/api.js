@@ -27,6 +27,14 @@ function orderPaymentUrl(baseUrl) {
   return apiUrl('/orders/payments', baseUrl);
 }
 
+function welfareCardAccountsUrl(franchiseId, baseUrl) {
+  return apiUrl(`/franchises/${encodeURIComponent(franchiseId)}/welfare-card-accounts/me`, baseUrl);
+}
+
+function welfareCardBindUrl(franchiseId, baseUrl) {
+  return apiUrl(`/franchises/${encodeURIComponent(franchiseId)}/welfare-cards/bind`, baseUrl);
+}
+
 function orderRefundUrl(baseUrl) {
   return apiUrl('/orders/refunds', baseUrl);
 }
@@ -85,5 +93,7 @@ module.exports = {
   orderRefundUrl,
   productPoolCatalogUrl,
   productPoolItemDetailUrl,
-  requestJson
+  requestJson,
+  welfareCardAccountsUrl,
+  welfareCardBindUrl
 };

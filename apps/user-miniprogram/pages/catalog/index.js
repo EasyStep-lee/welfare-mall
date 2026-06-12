@@ -22,6 +22,7 @@ Page({
       const items = pools.flatMap((pool) =>
         (pool.items || []).map((item) => ({
           ...item,
+          franchiseId: pool.franchiseId || '',
           poolName: pool.name,
           priceText: formatMoney(item.displayPriceAmount)
         }))
@@ -39,7 +40,11 @@ Page({
   },
 
   openDetail(event) {
-    const { itemId } = event.currentTarget.dataset;
-    wx.navigateTo({ url: `/pages/detail/index?itemId=${encodeURIComponent(itemId)}` });
+    const { itemId, franchiseId } = event.currentTarget.dataset;
+    const query = [`itemId=${encodeURIComponent(itemId)}`];
+    if (franchiseId) {
+      query.push(`franchiseId=${encodeURIComponent(franchiseId)}`);
+    }
+    wx.navigateTo({ url: `/pages/detail/index?${query.join('&')}` });
   }
 });

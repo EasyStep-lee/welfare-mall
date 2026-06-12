@@ -15,6 +15,7 @@
       wx:key="id"
       class="product-card"
       data-item-id="{{item.id}}"
+      data-franchise-id="{{item.franchiseId}}"
       bindtap="openDetail"
     >
       <image class="product-image" src="{{item.displayImageUrl}}" mode="aspectFill" />
