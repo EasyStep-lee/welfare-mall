@@ -96,11 +96,11 @@ GREEN 证据：
 - [x] 运行业务边界 guard。
 - [x] 运行完整 `pnpm run verify`。
 - [x] 如改动影响运行态，重建 Docker API/Portal 并验证源码、served bundle、浏览器实际行为三层一致。
-- [ ] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 提交 feature 分支。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
 
 验证证据：
 - `pnpm --filter @welfare-mall/api test -- --runInBand test/franchise/welfare-card.repository.spec.ts test/franchise/welfare-card.service.spec.ts test/franchise/welfare-card.e2e-spec.ts` 通过，3 个 suite、24 个测试通过。
@@ -116,3 +116,18 @@ GREEN 证据：
 - served Portal bundle `/assets/index-Ct29ONx1.js` 已包含 `选择福利卡账户`、`福利卡卡号`、`welfare-card-accounts/me`、`welfareCardAccountId`、`welfare-cards/bind`。
 - 浏览器验证通过：在 `http://localhost:5175/` 使用用户端绑定实体卡 `WFC-portal-browser-bind-20260612014046-0001`，创建福利卡抵扣 1000 分、微信补差 5990 分的订单 `ORDER-20260612054211402-GDDGNG`；未选择账户时显示“请先选择福利卡账户”，选择账户后支付单创建成功，浏览器 console error 为空。
 - DB 验证通过：支付单 `PAY-20260612054246761-3TMKTP` 写入 2 条 `order_payment_component`，其中 `welfare_card` 组件绑定账户 `cmq9gnt320009lx1te1v9j1zi`、金额 1000 分，`online_cash` 组件渠道 `wechat`、金额 5990 分，加盟商为 `franchise-local-review`、用户为 `user-001`。
+
+完成记录：
+- feature 分支：`codex/portal-welfare-card-account-selection`
+- feature 提交：`6a768ce feat: add portal welfare card account selection`
+- feature PR：`#293 feat: add portal welfare card account selection`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature 合并提交：`752f1f6 feat: add portal welfare card account selection (#293)`
+- docs-only 分支：`codex/docs-portal-welfare-card-account-selection-complete`
+
+剩余工作：
+- 用户小程序仍需接入同一福利卡账户列表、绑卡入口和组合支付账户选择合同。
+- 多张福利卡叠加支付仍需独立切片。
+- 原路退款仍需按 `OrderPaymentComponent` 做逐组件退款状态机。
+- 卡号/绑定码后续需要切到安全生成、脱敏展示和必要的加密存储策略。
+- 正式组织、部门、岗位、角色、加盟商账号、商户账号和用户账号体系仍需继续替换本地过渡身份。
