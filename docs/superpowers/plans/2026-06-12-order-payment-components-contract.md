@@ -121,8 +121,17 @@ RED 证据：
 
 ### 任务 4：完成
 
-- [ ] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 提交 feature 分支。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+
+完成记录：
+- feature 分支：`codex/order-payment-components-contract`
+- feature commit：`3100a78 feat: add order payment components contract`
+- feature PR：`#287 feat: add order payment components contract`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature PR 已 squash merge 到 `main`，合并提交：`0e57aeca88d373c034837003cd1fe8bdb26d4ffc`。
+- docs-only 分支：`codex/docs-order-payment-components-contract-complete`
+- 本切片完成后剩余工作：Portal/小程序福利卡账户选择 UI、多张福利卡/实体卡批次绑卡体系、原路退款组件拆分、加盟商销售账/收款归属账。
