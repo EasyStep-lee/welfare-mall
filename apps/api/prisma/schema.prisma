@@ -47,6 +47,8 @@ model Franchise {
   merchants Merchant[]
   products  Product[]
   productPools ProductPool[]
+  welfareCardBatches WelfareCardBatch[]
+  welfareCards WelfareCard[]
   welfareCardAccounts WelfareCardAccount[]
   welfareCardLedgerEntries WelfareCardLedgerEntry[]
   salesLedgerEntries FranchiseSalesLedgerEntry[]
@@ -67,6 +69,7 @@ model WelfareCardAccount {
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   franchise     Franchise                @relation(fields: [franchiseId], references: [id])
+  boundCards     WelfareCard[]
   ledgerEntries WelfareCardLedgerEntry[]
   paymentComponents OrderPaymentComponent[]
 
@@ -75,6 +78,53 @@ model WelfareCardAccount {
   @@index([buyerUserId])
   @@index([status])
   @@map("welfare_card_account")
+}
+
+model WelfareCardBatch {
+  id                String        @id @default(cuid())
+  batchNo           String        @unique
+  requestId         String        @unique
+  issuerFranchiseId String
+  batchName         String
+  faceValueAmount   Int
+  totalCards        Int
+  totalAmount       Int
+  status            String
+  createdBy         String
+  remark            String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  issuerFranchise   Franchise     @relation(fields: [issuerFranchiseId], references: [id])
+  cards             WelfareCard[]
+
+  @@index([issuerFranchiseId])
+  @@index([status])
+  @@map("welfare_card_batch")
+}
+
+model WelfareCard {
+  id                String              @id @default(cuid())
+  cardNo            String              @unique
+  bindCode          String
+  batchId           String
+  issuerFranchiseId String
+  faceValueAmount   Int
+  status            String
+  boundBuyerUserId  String?
+  boundAccountId    String?
+  boundAt           DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  batch             WelfareCardBatch    @relation(fields: [batchId], references: [id])
+  issuerFranchise   Franchise           @relation(fields: [issuerFranchiseId], references: [id])
+  boundAccount      WelfareCardAccount? @relation(fields: [boundAccountId], references: [id])
+
+  @@index([batchId])
+  @@index([issuerFranchiseId])
+  @@index([status])
+  @@index([boundBuyerUserId])
+  @@index([boundAccountId])
+  @@map("welfare_card")
 }
 
 model WelfareCardLedgerEntry {

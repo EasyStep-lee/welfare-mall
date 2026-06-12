@@ -1,5 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { WelfareCardIssueResult, WelfareCardRepository } from './welfare-card.repository';
+import {
+  WelfareCardBatchCreateResult,
+  WelfareCardBindResult,
+  WelfareCardIssueResult,
+  WelfareCardRepository
+} from './welfare-card.repository';
 
 export type IssueWelfareCardInput = {
   franchiseId: string;
@@ -9,9 +14,46 @@ export type IssueWelfareCardInput = {
   remark?: string;
 };
 
+export type CreateWelfareCardBatchInput = {
+  franchiseId: string;
+  requestId: string;
+  batchName: string;
+  faceValueAmount: number;
+  totalCards: number;
+  createdBy: string;
+  remark?: string;
+};
+
+export type BindWelfareCardInput = {
+  franchiseId: string;
+  buyerUserId: string;
+  requestId: string;
+  cardNo: string;
+  bindCode: string;
+};
+
 @Injectable()
 export class WelfareCardService {
   constructor(private readonly welfareCardRepository: WelfareCardRepository) {}
+
+  async createWelfareCardBatch(input: CreateWelfareCardBatchInput): Promise<WelfareCardBatchCreateResult> {
+    const franchiseId = normalizeRequiredText(input?.franchiseId, 'franchiseId');
+    const requestId = normalizeRequiredText(input?.requestId, 'requestId');
+    const batchName = normalizeRequiredText(input?.batchName, 'batchName');
+    const faceValueAmount = normalizePositiveInteger(input?.faceValueAmount, 'faceValueAmount');
+    const totalCards = normalizePositiveInteger(input?.totalCards, 'totalCards');
+    const createdBy = normalizeRequiredText(input?.createdBy, 'createdBy');
+
+    return this.welfareCardRepository.createWelfareCardBatch({
+      franchiseId,
+      requestId,
+      batchName,
+      faceValueAmount,
+      totalCards,
+      createdBy,
+      remark: normalizeOptionalText(input?.remark)
+    });
+  }
 
   async issueWelfareCard(input: IssueWelfareCardInput): Promise<WelfareCardIssueResult> {
     const franchiseId = normalizeRequiredText(input?.franchiseId, 'franchiseId');
@@ -25,6 +67,22 @@ export class WelfareCardService {
       requestId,
       amount,
       remark: normalizeOptionalText(input?.remark)
+    });
+  }
+
+  async bindWelfareCard(input: BindWelfareCardInput): Promise<WelfareCardBindResult> {
+    const franchiseId = normalizeRequiredText(input?.franchiseId, 'franchiseId');
+    const buyerUserId = normalizeRequiredText(input?.buyerUserId, 'buyerUserId');
+    const requestId = normalizeRequiredText(input?.requestId, 'requestId');
+    const cardNo = normalizeRequiredText(input?.cardNo, 'cardNo');
+    const bindCode = normalizeRequiredText(input?.bindCode, 'bindCode');
+
+    return this.welfareCardRepository.bindWelfareCard({
+      franchiseId,
+      buyerUserId,
+      requestId,
+      cardNo,
+      bindCode
     });
   }
 }
