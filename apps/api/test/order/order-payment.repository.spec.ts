@@ -69,6 +69,9 @@ function createPrismaMock() {
         paidAt: new Date('2026-06-03T00:05:00.000Z')
       })
     },
+    orderPaymentComponent: {
+      createMany: jest.fn().mockResolvedValue({ count: 2 })
+    },
     welfareCardAccount: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'wca-001',
@@ -203,6 +206,9 @@ describe('OrderPaymentRepository', () => {
       orderPayment: {
         create: jest.fn().mockResolvedValue(cashOnlyPaymentRecord)
       },
+      orderPaymentComponent: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 })
+      },
       orderState: {
         upsert: jest.fn().mockResolvedValue({
           id: 'order-state-001',
@@ -241,6 +247,24 @@ describe('OrderPaymentRepository', () => {
         cashPayableAmount: 13980
       },
       select: expect.any(Object)
+    });
+    expect(paymentTx.orderPaymentComponent.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          paymentId: 'payment-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 1,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          welfareCardAccountId: null,
+          franchiseId: null,
+          buyerUserId: null,
+          amount: 13980,
+          status: 'pending'
+        }
+      ],
+      skipDuplicates: true
     });
     expect(paymentTx.orderState.upsert).toHaveBeenCalledWith({
       where: { orderNo: 'ORDER-20260603-001' },
@@ -286,7 +310,8 @@ describe('OrderPaymentRepository', () => {
       channel: 'wechat',
       totalAmount: 13980,
       welfareCardPayableAmount: 5000,
-      cashPayableAmount: 8980
+      cashPayableAmount: 8980,
+      welfareCardAccountId: 'wca-001'
     });
 
     expect(tx.orderHeader.findUnique).toHaveBeenCalledWith({
@@ -302,10 +327,7 @@ describe('OrderPaymentRepository', () => {
     });
     expect(tx.welfareCardAccount.findUnique).toHaveBeenCalledWith({
       where: {
-        franchiseId_buyerUserId: {
-          franchiseId: 'franchise-local-review',
-          buyerUserId: 'buyer-local'
-        }
+        id: 'wca-001'
       },
       select: expect.any(Object)
     });
@@ -313,6 +335,37 @@ describe('OrderPaymentRepository', () => {
       where: { id: 'wca-001' },
       data: { balanceAmount: { decrement: 5000 } },
       select: expect.any(Object)
+    });
+    expect(tx.orderPaymentComponent.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          paymentId: 'payment-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 1,
+          componentType: 'welfare_card',
+          channel: 'welfare_card',
+          welfareCardAccountId: 'wca-001',
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'buyer-local',
+          amount: 5000,
+          status: 'pending'
+        },
+        {
+          paymentId: 'payment-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 2,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          welfareCardAccountId: null,
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'buyer-local',
+          amount: 8980,
+          status: 'pending'
+        }
+      ],
+      skipDuplicates: true
     });
     expect(tx.welfareCardLedgerEntry.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -363,13 +416,15 @@ describe('OrderPaymentRepository', () => {
         orderNo: 'ORDER-20260603-001',
         channel: 'wechat',
         totalAmount: 13980,
-        welfareCardPayableAmount: 5000,
-        cashPayableAmount: 8980
+      welfareCardPayableAmount: 5000,
+      cashPayableAmount: 8980,
+      welfareCardAccountId: 'wca-001'
       })
     ).rejects.toBeInstanceOf(InsufficientWelfareCardBalanceError);
 
     expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
     expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
+    expect(tx.orderPaymentComponent.createMany).not.toHaveBeenCalled();
     expect(tx.orderPayment.create).not.toHaveBeenCalled();
     expect(tx.orderState.upsert).not.toHaveBeenCalled();
   });

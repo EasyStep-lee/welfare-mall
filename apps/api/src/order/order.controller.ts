@@ -402,7 +402,9 @@ export class OrderController {
       channel: input.channel,
       totalAmount: input.totalAmount,
       welfareCardPayableAmount: input.welfareCardPayableAmount,
-      cashPayableAmount: input.cashPayableAmount
+      cashPayableAmount: input.cashPayableAmount,
+      welfareCardAccountId:
+        typeof input.welfareCardAccountId === 'string' ? input.welfareCardAccountId.trim() : null
     });
   }
 
@@ -635,6 +637,14 @@ function assertCreateOrderPaymentRequest(input: CreateOrderPaymentRequest | unde
 
   if (!Number.isInteger(cashPayableAmount) || (cashPayableAmount ?? -1) < 0) {
     messages.push('cashPayableAmount must be a non-negative integer.');
+  }
+
+  if (
+    input?.welfareCardAccountId !== undefined &&
+    input.welfareCardAccountId !== null &&
+    (typeof input.welfareCardAccountId !== 'string' || input.welfareCardAccountId.trim().length === 0)
+  ) {
+    messages.push('welfareCardAccountId must be a non-empty string when provided.');
   }
 
   if (

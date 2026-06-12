@@ -16,6 +16,7 @@ export type CreateOrderPaymentInput = {
   totalAmount: number;
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
+  welfareCardAccountId?: string | null;
 };
 
 export type CreateOrderPaymentResult = {
@@ -115,7 +116,8 @@ function normalizeCreatePaymentInput(input: CreateOrderPaymentInput): CreateOrde
     channel: input.channel,
     totalAmount: input.totalAmount,
     welfareCardPayableAmount: input.welfareCardPayableAmount,
-    cashPayableAmount: input.cashPayableAmount
+    cashPayableAmount: input.cashPayableAmount,
+    welfareCardAccountId: normalizeOptionalText(input.welfareCardAccountId)
   };
 }
 
@@ -144,6 +146,14 @@ function assertCreatePaymentInput(input: CreateOrderPaymentInput): void {
 
   if (!Number.isInteger(input?.cashPayableAmount) || input.cashPayableAmount < 0) {
     messages.push('cashPayableAmount must be a non-negative integer.');
+  }
+
+  if (
+    input?.welfareCardAccountId !== undefined &&
+    input.welfareCardAccountId !== null &&
+    (typeof input.welfareCardAccountId !== 'string' || input.welfareCardAccountId.trim().length === 0)
+  ) {
+    messages.push('welfareCardAccountId must be a non-empty string when provided.');
   }
 
   if (
@@ -196,6 +206,15 @@ function isSamePaymentRequest(payment: OrderPaymentRecord, input: CreateOrderPay
     payment.welfareCardPayableAmount === input.welfareCardPayableAmount &&
     payment.cashPayableAmount === input.cashPayableAmount
   );
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+  return normalizedValue.length > 0 ? normalizedValue : null;
 }
 
 function createPaymentNo(): string {

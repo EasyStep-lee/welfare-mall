@@ -77,7 +77,8 @@ describe('OrderPaymentService', () => {
       channel: 'wechat',
       totalAmount: 13980,
       welfareCardPayableAmount: 5000,
-      cashPayableAmount: 8980
+      cashPayableAmount: 8980,
+      welfareCardAccountId: ' wca-001 '
     });
 
     expect(repository.createPayment).toHaveBeenCalledWith(
@@ -87,7 +88,8 @@ describe('OrderPaymentService', () => {
         channel: 'wechat',
         totalAmount: 13980,
         welfareCardPayableAmount: 5000,
-        cashPayableAmount: 8980
+        cashPayableAmount: 8980,
+        welfareCardAccountId: 'wca-001'
       })
     );
     expect(result).toEqual({ idempotentReplay: false, payment: paymentRecord });
