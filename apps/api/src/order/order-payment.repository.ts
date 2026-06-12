@@ -46,6 +46,7 @@ export type CreateOrderPaymentRecordInput = {
   totalAmount: number;
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
+  welfareCardAccountId?: string | null;
 };
 
 export type ProcessOrderPaymentCallbackInput = {
@@ -87,6 +88,9 @@ type OrderPaymentCreateTransaction = {
   };
   orderPayment: {
     create(args: unknown): Promise<OrderPaymentRecord>;
+  };
+  orderPaymentComponent: {
+    createMany(args: unknown): Promise<unknown>;
   };
   welfareCardAccount: {
     findUnique(args: unknown): Promise<WelfareCardAccountForPayment | null>;
@@ -163,6 +167,13 @@ type WelfareCardAccountForPayment = {
   updatedAt: Date;
 };
 
+type WelfareCardPaymentDebitResult = {
+  accountId: string;
+  franchiseId: string;
+  buyerUserId: string;
+  amount: number;
+} | null;
+
 @Injectable()
 export class OrderPaymentRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -185,9 +196,8 @@ export class OrderPaymentRepository {
     return this.prisma.$transaction(async (prismaTx) => {
       const tx = prismaTx as unknown as OrderPaymentCreateTransaction;
 
-      if (input.welfareCardPayableAmount > 0) {
-        await debitWelfareCardForPayment(tx, input);
-      }
+      const welfareCardDebit =
+        input.welfareCardPayableAmount > 0 ? await debitWelfareCardForPayment(tx, input) : null;
 
       const payment = await tx.orderPayment.create({
         data: {
@@ -203,6 +213,7 @@ export class OrderPaymentRepository {
         select: paymentSelect()
       });
 
+      await createPaymentComponents(tx, input, payment, welfareCardDebit);
       await ensurePendingPaymentOrderState(tx, input.orderNo);
 
       return payment;
@@ -264,7 +275,7 @@ export class OrderPaymentRepository {
 async function debitWelfareCardForPayment(
   tx: OrderPaymentCreateTransaction,
   input: CreateOrderPaymentRecordInput
-): Promise<void> {
+): Promise<WelfareCardPaymentDebitResult> {
   const order = (await tx.orderHeader.findUnique({
     where: { orderNo: input.orderNo },
     select: {
@@ -284,18 +295,23 @@ async function debitWelfareCardForPayment(
   });
   const franchiseId = resolveSingleSalesFranchiseId(order, products);
   const buyerUserId = order?.buyerUserId ?? '';
+  const welfareCardAccountId = normalizeOptionalId(input.welfareCardAccountId);
   const account = await tx.welfareCardAccount.findUnique({
-    where: {
-      franchiseId_buyerUserId: {
-        franchiseId,
-        buyerUserId
-      }
-    },
+    where: welfareCardAccountId
+      ? { id: welfareCardAccountId }
+      : {
+          franchiseId_buyerUserId: {
+            franchiseId,
+            buyerUserId
+          }
+        },
     select: welfareCardAccountForPaymentSelect()
   });
 
   if (
     !account ||
+    account.franchiseId !== franchiseId ||
+    account.buyerUserId !== buyerUserId ||
     account.status !== WelfareCardAccountStatuses.Active ||
     account.balanceAmount < input.welfareCardPayableAmount
   ) {
@@ -327,6 +343,75 @@ async function debitWelfareCardForPayment(
       remark: null
     },
     select: { id: true }
+  });
+
+  return {
+    accountId: account.id,
+    franchiseId,
+    buyerUserId,
+    amount: input.welfareCardPayableAmount
+  };
+}
+
+async function createPaymentComponents(
+  tx: OrderPaymentCreateTransaction,
+  input: CreateOrderPaymentRecordInput,
+  payment: OrderPaymentRecord,
+  welfareCardDebit: WelfareCardPaymentDebitResult
+): Promise<void> {
+  const components: Array<{
+    paymentId: string;
+    paymentNo: string;
+    orderNo: string;
+    sequenceNo: number;
+    componentType: string;
+    channel: string;
+    welfareCardAccountId: string | null;
+    franchiseId: string | null;
+    buyerUserId: string | null;
+    amount: number;
+    status: string;
+  }> = [];
+
+  if (welfareCardDebit) {
+    components.push({
+      paymentId: payment.id,
+      paymentNo: input.paymentNo,
+      orderNo: input.orderNo,
+      sequenceNo: components.length + 1,
+      componentType: 'welfare_card',
+      channel: 'welfare_card',
+      welfareCardAccountId: welfareCardDebit.accountId,
+      franchiseId: welfareCardDebit.franchiseId,
+      buyerUserId: welfareCardDebit.buyerUserId,
+      amount: welfareCardDebit.amount,
+      status: OrderPaymentStatuses.Pending
+    });
+  }
+
+  if (input.cashPayableAmount > 0) {
+    components.push({
+      paymentId: payment.id,
+      paymentNo: input.paymentNo,
+      orderNo: input.orderNo,
+      sequenceNo: components.length + 1,
+      componentType: 'online_cash',
+      channel: input.channel,
+      welfareCardAccountId: null,
+      franchiseId: welfareCardDebit?.franchiseId ?? null,
+      buyerUserId: welfareCardDebit?.buyerUserId ?? null,
+      amount: input.cashPayableAmount,
+      status: OrderPaymentStatuses.Pending
+    });
+  }
+
+  if (components.length === 0) {
+    return;
+  }
+
+  await tx.orderPaymentComponent.createMany({
+    data: components,
+    skipDuplicates: true
   });
 }
 
@@ -363,6 +448,15 @@ function resolveSingleSalesFranchiseId(
 
 function isNonEmptyString(value: string | undefined): value is string {
   return typeof value === 'string' && value.length > 0;
+}
+
+function normalizeOptionalId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+  return normalizedValue.length > 0 ? normalizedValue : null;
 }
 
 async function updatePaymentFromCallback(
