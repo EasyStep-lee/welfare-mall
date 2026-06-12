@@ -13,8 +13,8 @@ const PaymentChannelText = {
 
 function buildPaymentPayload(input) {
   const order = input.order || {};
-
-  return {
+  const welfareCardAccountId = normalizeText(input.welfareCardAccountId);
+  const payload = {
     requestId: normalizeText(input.requestId),
     orderNo: normalizeText(order.orderNo),
     channel: normalizeOnlinePaymentChannel(input.channel),
@@ -22,6 +22,8 @@ function buildPaymentPayload(input) {
     welfareCardPayableAmount: normalizeInteger(order.welfareCardPayableAmount),
     cashPayableAmount: normalizeInteger(order.cashPayableAmount)
   };
+
+  return welfareCardAccountId ? { ...payload, welfareCardAccountId } : payload;
 }
 
 function createPaymentRequestId(orderNo, now = Date.now) {

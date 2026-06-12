@@ -27,14 +27,20 @@ Page({
     previewingAmount: false,
     creatingOrder: false,
     createdOrder: null,
-    checkoutError: ''
+    checkoutError: '',
+    salesFranchiseId: '',
+    bindCardNo: '',
+    bindCode: '',
+    bindingCard: false,
+    bindCardMessage: '',
+    bindCardError: ''
   },
 
   onLoad(options) {
-    this.loadDetail(options.itemId);
+    return this.loadDetail(options.itemId, options.franchiseId);
   },
 
-  async loadDetail(itemId) {
+  async loadDetail(itemId, fallbackFranchiseId = '') {
     if (!itemId) {
       this.setData({ loading: false, error: '缺少商品参数' });
       return;
@@ -47,6 +53,7 @@ Page({
       this.setData({
         detail,
         itemId: detail.itemId || decodeURIComponent(itemId),
+        salesFranchiseId: resolveSalesFranchiseId(detail, fallbackFranchiseId),
         priceText: formatMoney(detail.displayPriceAmount),
         originText: joinOrigin(detail.product?.origin),
         loading: false
@@ -84,6 +91,14 @@ Page({
 
   onReceiverAddressInput(event) {
     this.setData({ receiverAddress: String(event?.detail?.value ?? ''), checkoutError: '' });
+  },
+
+  onBindCardNoInput(event) {
+    this.setData({ bindCardNo: String(event?.detail?.value ?? ''), bindCardError: '', bindCardMessage: '' });
+  },
+
+  onBindCodeInput(event) {
+    this.setData({ bindCode: String(event?.detail?.value ?? ''), bindCardError: '', bindCardMessage: '' });
   },
 
   async refreshAmountPreview() {
@@ -152,6 +167,48 @@ Page({
         checkoutError: error instanceof Error ? error.message : '订单创建失败'
       });
     }
+  },
+
+  async submitBindWelfareCard() {
+    const franchiseId = String(this.data.salesFranchiseId || '').trim();
+    const cardNo = String(this.data.bindCardNo || '').trim();
+    const bindCode = String(this.data.bindCode || '').trim();
+
+    if (!franchiseId) {
+      this.setData({ bindCardError: '当前商品缺少销售加盟商，不能绑定福利卡' });
+      return;
+    }
+
+    if (!cardNo || !bindCode) {
+      this.setData({ bindCardError: '请填写福利卡卡号和绑定码' });
+      return;
+    }
+
+    this.setData({ bindingCard: true, bindCardError: '', bindCardMessage: '' });
+
+    try {
+      const result = await requestJson(`/franchises/${encodeURIComponent(franchiseId)}/welfare-cards/bind`, {
+        method: 'POST',
+        data: {
+          requestId: createBindCardRequestId(cardNo),
+          cardNo,
+          bindCode
+        }
+      });
+
+      this.setData({
+        bindCardNo: '',
+        bindCode: '',
+        bindingCard: false,
+        bindCardMessage: `福利卡绑定成功，余额 ${formatMoney(result.account?.balanceAmount)}`,
+        bindCardError: ''
+      });
+    } catch (error) {
+      this.setData({
+        bindingCard: false,
+        bindCardError: error instanceof Error ? error.message : '福利卡绑定失败'
+      });
+    }
   }
 });
 
@@ -173,4 +230,19 @@ function toNonNegativeInteger(value, fallback) {
   }
 
   return parsed;
+}
+
+function createBindCardRequestId(cardNo, now = Date.now) {
+  const safeCardNo = String(cardNo || '').trim().replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `mini-bind-${safeCardNo}-${now()}`;
+}
+
+function resolveSalesFranchiseId(detail, fallbackFranchiseId = '') {
+  return String(
+    detail?.franchiseId ||
+      detail?.productPool?.franchiseId ||
+      detail?.product?.franchiseId ||
+      fallbackFranchiseId ||
+      ''
+  ).trim();
 }

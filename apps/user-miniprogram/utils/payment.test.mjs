@@ -17,7 +17,8 @@ describe('user mini-program payment helpers', () => {
       buildPaymentPayload({
         requestId: 'payment-request-001',
         order,
-        channel: 'wechat'
+        channel: 'wechat',
+        welfareCardAccountId: 'account-001'
       })
     ).toEqual({
       requestId: 'payment-request-001',
@@ -25,7 +26,30 @@ describe('user mini-program payment helpers', () => {
       channel: 'wechat',
       totalAmount: 13980,
       welfareCardPayableAmount: 5000,
-      cashPayableAmount: 8980
+      cashPayableAmount: 8980,
+      welfareCardAccountId: 'account-001'
+    });
+  });
+
+  it('omits blank welfare-card account IDs from pure online payment payloads', () => {
+    expect(
+      buildPaymentPayload({
+        requestId: 'payment-request-online-only',
+        order: {
+          ...order,
+          welfareCardPayableAmount: 0,
+          cashPayableAmount: 13980
+        },
+        channel: 'wechat',
+        welfareCardAccountId: '   '
+      })
+    ).toEqual({
+      requestId: 'payment-request-online-only',
+      orderNo: 'ORDER-20260603-001',
+      channel: 'wechat',
+      totalAmount: 13980,
+      welfareCardPayableAmount: 0,
+      cashPayableAmount: 13980
     });
   });
 

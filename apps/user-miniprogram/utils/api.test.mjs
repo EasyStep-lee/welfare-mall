@@ -11,6 +11,8 @@ const {
   orderListUrl,
   orderRefundUrl,
   orderPaymentUrl,
+  welfareCardAccountsUrl,
+  welfareCardBindUrl,
   productPoolCatalogUrl,
   productPoolItemDetailUrl,
   requestJson
@@ -44,6 +46,15 @@ describe('user mini-program API helpers', () => {
     expect(orderListUrl('local-user-001')).toBe('http://localhost:3000/api/orders?buyerUserId=local-user-001');
     expect(orderDetailUrl('ORDER 001', 'local user 001', 'https://api.example.com/api/')).toBe(
       'https://api.example.com/api/orders/ORDER%20001?buyerUserId=local%20user%20001'
+    );
+  });
+
+  it('builds buyer welfare-card account and binding URLs by sales franchise', () => {
+    expect(welfareCardAccountsUrl('franchise local 001')).toBe(
+      'http://localhost:3000/api/franchises/franchise%20local%20001/welfare-card-accounts/me'
+    );
+    expect(welfareCardBindUrl('franchise local 001', 'https://api.example.com/api/')).toBe(
+      'https://api.example.com/api/franchises/franchise%20local%20001/welfare-cards/bind'
     );
   });
 

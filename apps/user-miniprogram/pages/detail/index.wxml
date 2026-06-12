@@ -82,5 +82,22 @@
       </view>
       <text wx:if="{{checkoutError}}" class="error">{{checkoutError}}</text>
     </view>
+
+    <view class="section bind-card">
+      <text class="section-title">绑定福利卡</text>
+      <label class="field">
+        <text>福利卡卡号</text>
+        <input value="{{bindCardNo}}" bindinput="onBindCardNoInput" />
+      </label>
+      <label class="field">
+        <text>福利卡绑定码</text>
+        <input value="{{bindCode}}" bindinput="onBindCodeInput" />
+      </label>
+      <button class="secondary-button" loading="{{bindingCard}}" disabled="{{bindingCard}}" bindtap="submitBindWelfareCard">
+        绑定福利卡
+      </button>
+      <text wx:if="{{bindCardMessage}}" class="success">{{bindCardMessage}}</text>
+      <text wx:if="{{bindCardError}}" class="error">{{bindCardError}}</text>
+    </view>
   </view>
 </view>

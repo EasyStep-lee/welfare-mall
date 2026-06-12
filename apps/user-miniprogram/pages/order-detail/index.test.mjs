@@ -12,6 +12,7 @@ const order = {
   totalAmount: 13980,
   welfareCardPayableAmount: 5000,
   cashPayableAmount: 8980,
+  salesFranchiseId: 'franchise-local-review',
   latestPayment: {
     paymentNo: 'PAY-20260603-001',
     status: 'pending',
@@ -82,6 +83,18 @@ const refund = {
   refundAmount: 13980
 };
 
+const welfareCardAccounts = [
+  {
+    id: 'account-001',
+    accountNo: 'WCA-FRANCHISE-001-BUYER-001',
+    franchiseId: 'franchise-local-review',
+    buyerUserId: 'local-user-001',
+    status: 'active',
+    balanceAmount: 8800,
+    issuedAmount: 10000
+  }
+];
+
 const orderWithRefund = {
   ...order,
   status: 'refund_processing',
@@ -119,6 +132,11 @@ function mountPage(options = {}) {
         return;
       }
 
+      if (request.url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+        request.success({ statusCode: 200, data: { accounts: options.welfareCardAccounts || welfareCardAccounts } });
+        return;
+      }
+
       request.success({ statusCode: 200, data: { order: orderResponses.shift() || orderResponses[0] || order } });
     })
   };
@@ -135,6 +153,10 @@ function mountPage(options = {}) {
   };
 
   return { page, requests };
+}
+
+function findRequest(requests, suffix) {
+  return requests.find((request) => request.url.endsWith(suffix));
 }
 
 describe('user mini-program order detail page', () => {
@@ -177,9 +199,11 @@ describe('user mini-program order detail page', () => {
     const { page, requests } = mountPage();
 
     await page.loadOrderDetail('ORDER-20260603-001');
+    page.selectWelfareCardAccount({ currentTarget: { dataset: { accountId: 'account-001' } } });
     await page.submitPayment();
 
-    expect(requests[1]).toMatchObject({
+    const paymentRequest = findRequest(requests, '/orders/payments');
+    expect(paymentRequest).toMatchObject({
       method: 'POST',
       url: 'http://localhost:3000/api/orders/payments',
       data: {
@@ -187,15 +211,60 @@ describe('user mini-program order detail page', () => {
         channel: 'wechat',
         totalAmount: 13980,
         welfareCardPayableAmount: 5000,
-        cashPayableAmount: 8980
+        cashPayableAmount: 8980,
+        welfareCardAccountId: 'account-001'
       }
     });
-    expect(requests[1].data.requestId).toMatch(/^mini-payment-ORDER-20260603-001-\d+$/);
+    expect(paymentRequest.data.requestId).toMatch(/^mini-payment-ORDER-20260603-001-\d+$/);
     expect(page.data.payment).toEqual(payment);
     expect(page.data.paymentDisplay).toEqual({
       paymentNo: 'PAY-20260603-001',
       statusText: '待支付',
       channelText: '微信支付'
+    });
+  });
+
+  it('loads welfare-card accounts by order sales franchise', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+
+    const accountsRequest = findRequest(requests, '/franchises/franchise-local-review/welfare-card-accounts/me');
+    expect(accountsRequest).toMatchObject({
+      method: 'GET',
+      url: 'http://localhost:3000/api/franchises/franchise-local-review/welfare-card-accounts/me'
+    });
+    expect(page.data.welfareCardAccounts).toEqual(welfareCardAccounts);
+    expect(page.data.selectedWelfareCardAccountId).toBe('');
+  });
+
+  it('blocks welfare-card payment until a card account is selected', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    await page.submitPayment();
+
+    expect(requests).toHaveLength(2);
+    expect(page.data.paymentError).toBe('请先选择福利卡账户');
+  });
+
+  it('creates a split payment with the selected welfare-card account', async () => {
+    const { page, requests } = mountPage();
+
+    await page.loadOrderDetail('ORDER-20260603-001');
+    page.selectWelfareCardAccount({ currentTarget: { dataset: { accountId: 'account-001' } } });
+    await page.submitPayment();
+
+    expect(requests[2]).toMatchObject({
+      method: 'POST',
+      url: 'http://localhost:3000/api/orders/payments',
+      data: {
+        orderNo: 'ORDER-20260603-001',
+        channel: 'wechat',
+        welfareCardPayableAmount: 5000,
+        cashPayableAmount: 8980,
+        welfareCardAccountId: 'account-001'
+      }
     });
   });
 
@@ -209,9 +278,11 @@ describe('user mini-program order detail page', () => {
 
     await page.loadOrderDetail('ORDER-20260603-001');
     page.selectPaymentChannel({ currentTarget: { dataset: { channel: 'alipay' } } });
+    page.selectWelfareCardAccount({ currentTarget: { dataset: { accountId: 'account-001' } } });
     await page.submitPayment();
 
-    expect(requests[1]).toMatchObject({
+    const paymentRequest = findRequest(requests, '/orders/payments');
+    expect(paymentRequest).toMatchObject({
       method: 'POST',
       url: 'http://localhost:3000/api/orders/payments',
       data: {
@@ -219,7 +290,8 @@ describe('user mini-program order detail page', () => {
         channel: 'alipay',
         totalAmount: 13980,
         welfareCardPayableAmount: 5000,
-        cashPayableAmount: 8980
+        cashPayableAmount: 8980,
+        welfareCardAccountId: 'account-001'
       }
     });
     expect(page.data.paymentDisplay).toMatchObject({
@@ -233,7 +305,10 @@ describe('user mini-program order detail page', () => {
     await page.loadOrderDetail('ORDER-20260603-001');
     await page.refreshOrderDetail();
 
-    expect(requests[1]).toMatchObject({
+    const refreshRequest = requests.filter((request) =>
+      request.url.endsWith('/orders/ORDER-20260603-001?buyerUserId=local-user-001')
+    )[1];
+    expect(refreshRequest).toMatchObject({
       method: 'GET',
       url: 'http://localhost:3000/api/orders/ORDER-20260603-001?buyerUserId=local-user-001'
     });
@@ -256,7 +331,8 @@ describe('user mini-program order detail page', () => {
     await page.loadOrderDetail('ORDER-20260603-001');
     await page.cancelOrder();
 
-    expect(requests[1]).toMatchObject({
+    const cancelRequest = findRequest(requests, '/orders/ORDER-20260603-001/cancel');
+    expect(cancelRequest).toMatchObject({
       method: 'POST',
       url: 'http://localhost:3000/api/orders/ORDER-20260603-001/cancel',
       data: {
@@ -280,7 +356,7 @@ describe('user mini-program order detail page', () => {
     await page.loadOrderDetail('ORDER-20260603-001');
     await page.cancelOrder();
 
-    expect(requests).toHaveLength(1);
+    expect(findRequest(requests, '/orders/ORDER-20260603-001/cancel')).toBeUndefined();
     expect(page.data.order).toEqual(paidOrder);
     expect(page.data.cancelError).toBe('当前订单不可取消');
   });
@@ -291,7 +367,8 @@ describe('user mini-program order detail page', () => {
     await page.loadOrderDetail('ORDER-20260603-001');
     await page.cancelOrder();
 
-    expect(requests[1]).toMatchObject({
+    const cancelRequest = findRequest(requests, '/orders/ORDER-20260603-001/cancel');
+    expect(cancelRequest).toMatchObject({
       method: 'POST',
       url: 'http://localhost:3000/api/orders/ORDER-20260603-001/cancel'
     });
@@ -308,7 +385,8 @@ describe('user mini-program order detail page', () => {
     await page.loadOrderDetail('ORDER-20260603-001');
     await page.submitRefund();
 
-    expect(requests[1]).toMatchObject({
+    const refundRequest = findRequest(requests, '/orders/refunds');
+    expect(refundRequest).toMatchObject({
       method: 'POST',
       url: 'http://localhost:3000/api/orders/refunds',
       data: {
@@ -319,7 +397,7 @@ describe('user mini-program order detail page', () => {
         reason: 'after_sale'
       }
     });
-    expect(requests[1].data.requestId).toMatch(/^mini-refund-ORDER-20260603-001-\d+$/);
+    expect(refundRequest.data.requestId).toMatch(/^mini-refund-ORDER-20260603-001-\d+$/);
     expect(page.data.refund).toEqual(refund);
     expect(page.data.refundDisplay).toEqual({
       refundNo: 'REF-20260603-001',
@@ -359,6 +437,7 @@ describe('user mini-program order detail page', () => {
 
   it('labels order payment split as welfare-card debit plus online remainder', () => {
     expect(orderDetailWxml).toContain('福利卡抵扣');
+    expect(orderDetailWxml).toContain('选择福利卡账户');
     expect(orderDetailWxml).toContain('线上补差');
     expect(orderDetailWxml).toContain('选择支付宝支付渠道');
     expect(orderDetailWxml).not.toContain('现金支付');
