@@ -28,8 +28,8 @@
 - [x] 运行 focused API/Franchise 测试，确认 RED -> GREEN。
 - [x] 运行 `pnpm run verify:frontend-stack`、`pnpm run verify:business-boundary`、Franchise typecheck/test 和全量 `pnpm run verify`。
 - [x] 启动/刷新 Docker 运行态，验证 3000/5173/5174/5175/5176，确认 Franchise 源码、served bundle、真实 HTTP/API/DB 运行态一致；本轮未获得可调用的 in-app Browser 工具，因此不声称已完成点击验收。
-- [ ] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
-- [ ] 合并后使用 docs-only 分支把本计划标记完成，文档保持中文。
+- [x] 提交、推送、开 PR，等待 checks，通过后合并回 `main`。
+- [x] 合并后使用 docs-only 分支把本计划标记完成，文档保持中文。
 
 ## 验收标准
 
@@ -58,3 +58,12 @@
 - Franchise served bundle `http://localhost:5176/assets/index-C-KAZWCs.js` 已包含 `加盟商登录`、`福利卡发放`、`http://localhost:3000/api`、`welfare-cards/issue`、`FRANCHISE-WELFARE-ISSUE`。
 - HTTP/API/DB 运行态验证：`franchise-local` 登录返回 `subjectType=franchise`、`subjectId=franchise-local-review`；使用该 JWT 发卡成功，账户 `WCA-franchise-local-review-franchise-panel-user-20260611213244183` 和流水 `WCL-FRANCHISE-WELFARE-ISSUE-franchise-panel-user-20260611213244183-23456` 入库，余额与累计发行金额均为 `23456`。
 - 浏览器边界：本轮工具发现未返回可调用的 in-app Browser 控制工具，因此没有声称完成点击级浏览器验收。
+
+## 完成记录
+
+- 功能分支：`codex/franchise-welfare-card-workbench`
+- 功能 PR：[#285](https://github.com/EasyStep-lee/welfare-mall/pull/285) `feat: add franchise welfare card workbench`
+- GitHub 仓库调整为公开后，重新运行 PR checks，`docs-check` 和 `project-foundation-check` 均通过。
+- PR #285 已 squash 合并回 `main`，合并提交：`50ed44bcc849a01f017a039eafcc96f2ebe5b091`。
+- docs-only 分支：`codex/docs-franchise-welfare-card-workbench-complete`
+- 剩余后续：加盟商销售账、商户结算确认工作台、福利卡批次/实体卡/绑卡、正式组合支付组件合同仍按后续切片继续。
