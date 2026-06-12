@@ -89,6 +89,12 @@ export class OrderRefundService {
         orderNo: result.refund.orderNo,
         refundAmount: result.refund.refundAmount
       });
+      await this.settlementRepository.generateFranchiseSalesLedgerForSucceededRefund({
+        orderNo: result.refund.orderNo,
+        paymentNo: result.refund.paymentNo,
+        refundNo: result.refund.refundNo,
+        refundAmount: result.refund.refundAmount
+      });
     }
 
     return result;

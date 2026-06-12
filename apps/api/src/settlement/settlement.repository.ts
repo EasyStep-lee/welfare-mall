@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  FranchiseSalesLedgerSources,
+  FranchiseSalesLedgerStatuses,
   MerchantSettlementBillSources,
   MerchantSettlementBillStatuses,
   MerchantSettlementStatementStatuses
@@ -45,6 +47,24 @@ export type MerchantSettlementStatementRecord = {
   items: MerchantSettlementBillItemRecord[];
 };
 
+export type FranchiseSalesLedgerEntryRecord = {
+  id: string;
+  entryNo: string;
+  franchiseId: string;
+  orderNo: string;
+  paymentNo: string | null;
+  refundNo: string | null;
+  buyerUserId: string;
+  source: string;
+  status: string;
+  totalAmount: number;
+  welfareCardAmount: number;
+  onlineCashAmount: number;
+  amount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type MerchantSettlementBillItemListInput = {
   merchantId?: string;
   status?: string;
@@ -52,6 +72,13 @@ export type MerchantSettlementBillItemListInput = {
 
 export type ApplyRefundOffsetInput = {
   orderNo: string;
+  refundAmount: number;
+};
+
+export type GenerateFranchiseRefundSalesLedgerInput = {
+  orderNo: string;
+  paymentNo: string;
+  refundNo: string;
   refundAmount: number;
 };
 
@@ -77,6 +104,10 @@ export type MerchantSettlementBillItemListResult = {
   items: MerchantSettlementBillItemRecord[];
 };
 
+export type FranchiseSalesLedgerEntryListResult = {
+  entries: FranchiseSalesLedgerEntryRecord[];
+};
+
 export type MerchantSettlementStatementGenerateResult = {
   statement: MerchantSettlementStatementRecord | null;
 };
@@ -98,6 +129,27 @@ type PaidOrderForSettlement = {
     skuId: string | null;
     lineTotalAmount: number;
   }>;
+};
+
+type PaidOrderForFranchiseSalesLedger = {
+  orderNo: string;
+  buyerUserId: string;
+  salesFranchiseId: string | null;
+  status: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+};
+
+type PaidPaymentForFranchiseSalesLedger = {
+  paymentNo: string;
+  orderNo: string;
+  status: string;
+  channel: string;
+  totalAmount: number;
+  welfareCardPayableAmount: number;
+  cashPayableAmount: number;
+  paidAt: Date | null;
 };
 
 @Injectable()
@@ -131,6 +183,61 @@ export class SettlementRepository {
     });
 
     return { items };
+  }
+
+  async generateFranchiseSalesLedgerForPaidOrder(orderNo: string): Promise<FranchiseSalesLedgerEntryListResult> {
+    const order = (await this.prisma.orderHeader.findUnique({
+      where: { orderNo },
+      select: paidOrderForFranchiseSalesLedgerSelect()
+    })) as PaidOrderForFranchiseSalesLedger | null;
+
+    if (!order || order.status !== 'paid' || !order.salesFranchiseId) {
+      return { entries: [] };
+    }
+
+    const payment = (await this.prisma.orderPayment.findFirst({
+      where: {
+        orderNo,
+        status: 'paid'
+      },
+      orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+      select: paidPaymentForFranchiseSalesLedgerSelect()
+    })) as PaidPaymentForFranchiseSalesLedger | null;
+
+    if (!payment) {
+      return { entries: [] };
+    }
+
+    await this.prisma.franchiseSalesLedgerEntry.createMany({
+      data: [
+        {
+          entryNo: createFranchiseSalesPaidEntryNo(order.orderNo),
+          franchiseId: order.salesFranchiseId,
+          orderNo: order.orderNo,
+          paymentNo: payment.paymentNo,
+          refundNo: null,
+          buyerUserId: order.buyerUserId,
+          source: FranchiseSalesLedgerSources.OrderPaid,
+          status: FranchiseSalesLedgerStatuses.Posted,
+          totalAmount: payment.totalAmount,
+          welfareCardAmount: payment.welfareCardPayableAmount,
+          onlineCashAmount: payment.cashPayableAmount,
+          amount: payment.totalAmount
+        }
+      ],
+      skipDuplicates: true
+    });
+
+    const entries = await this.prisma.franchiseSalesLedgerEntry.findMany({
+      where: {
+        orderNo,
+        source: FranchiseSalesLedgerSources.OrderPaid
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: franchiseSalesLedgerEntrySelect()
+    });
+
+    return { entries };
   }
 
   async listMerchantBillItems(input: MerchantSettlementBillItemListInput = {}): Promise<MerchantSettlementBillItemListResult> {
@@ -184,6 +291,71 @@ export class SettlementRepository {
     }
 
     return { items: updatedItems };
+  }
+
+  async generateFranchiseSalesLedgerForSucceededRefund(
+    input: GenerateFranchiseRefundSalesLedgerInput
+  ): Promise<FranchiseSalesLedgerEntryListResult> {
+    const order = await this.prisma.orderHeader.findUnique({
+      where: { orderNo: input.orderNo },
+      select: {
+        orderNo: true,
+        buyerUserId: true,
+        salesFranchiseId: true
+      }
+    });
+
+    if (!order?.buyerUserId || !order.salesFranchiseId) {
+      return { entries: [] };
+    }
+
+    const payment = await this.prisma.orderPayment.findUnique({
+      where: { paymentNo: input.paymentNo },
+      select: {
+        paymentNo: true,
+        orderNo: true,
+        welfareCardPayableAmount: true,
+        cashPayableAmount: true
+      }
+    });
+
+    if (!payment) {
+      return { entries: [] };
+    }
+
+    const welfareCardAmount = Math.min(payment.welfareCardPayableAmount, input.refundAmount);
+    const onlineCashAmount = Math.max(0, input.refundAmount - welfareCardAmount);
+
+    await this.prisma.franchiseSalesLedgerEntry.createMany({
+      data: [
+        {
+          entryNo: createFranchiseSalesRefundEntryNo(input.refundNo),
+          franchiseId: order.salesFranchiseId,
+          orderNo: input.orderNo,
+          paymentNo: input.paymentNo,
+          refundNo: input.refundNo,
+          buyerUserId: order.buyerUserId,
+          source: FranchiseSalesLedgerSources.RefundSucceeded,
+          status: FranchiseSalesLedgerStatuses.Posted,
+          totalAmount: input.refundAmount,
+          welfareCardAmount,
+          onlineCashAmount,
+          amount: -input.refundAmount
+        }
+      ],
+      skipDuplicates: true
+    });
+
+    const entries = await this.prisma.franchiseSalesLedgerEntry.findMany({
+      where: {
+        refundNo: input.refundNo,
+        source: FranchiseSalesLedgerSources.RefundSucceeded
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: franchiseSalesLedgerEntrySelect()
+    });
+
+    return { entries };
   }
 
   async generateMerchantSettlementStatement(
@@ -364,6 +536,31 @@ function paidOrderForSettlementSelect() {
   } as const;
 }
 
+function paidOrderForFranchiseSalesLedgerSelect() {
+  return {
+    orderNo: true,
+    buyerUserId: true,
+    salesFranchiseId: true,
+    status: true,
+    totalAmount: true,
+    welfareCardPayableAmount: true,
+    cashPayableAmount: true
+  } as const;
+}
+
+function paidPaymentForFranchiseSalesLedgerSelect() {
+  return {
+    paymentNo: true,
+    orderNo: true,
+    status: true,
+    channel: true,
+    totalAmount: true,
+    welfareCardPayableAmount: true,
+    cashPayableAmount: true,
+    paidAt: true
+  } as const;
+}
+
 function merchantSettlementBillItemSelect() {
   return {
     id: true,
@@ -409,6 +606,26 @@ function merchantSettlementStatementSelect(): Prisma.MerchantSettlementStatement
   };
 }
 
+function franchiseSalesLedgerEntrySelect() {
+  return {
+    id: true,
+    entryNo: true,
+    franchiseId: true,
+    orderNo: true,
+    paymentNo: true,
+    refundNo: true,
+    buyerUserId: true,
+    source: true,
+    status: true,
+    totalAmount: true,
+    welfareCardAmount: true,
+    onlineCashAmount: true,
+    amount: true,
+    createdAt: true,
+    updatedAt: true
+  } as const;
+}
+
 function merchantBillItemWhere(input: MerchantSettlementBillItemListInput) {
   const where: Record<string, string> = {};
 
@@ -439,6 +656,14 @@ function merchantSettlementStatementWhere(input: MerchantSettlementStatementList
 
 function createBillItemNo(orderNo: string, orderLineId: string): string {
   return `MSBI-${normalizeCodePart(orderNo)}-${normalizeCodePart(orderLineId)}`;
+}
+
+function createFranchiseSalesPaidEntryNo(orderNo: string): string {
+  return `FSL-${normalizeCodePart(orderNo)}-PAID`;
+}
+
+function createFranchiseSalesRefundEntryNo(refundNo: string): string {
+  return `FSL-${normalizeCodePart(refundNo)}-REFUND`;
 }
 
 function normalizeCodePart(value: string): string {

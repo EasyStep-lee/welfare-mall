@@ -2,7 +2,12 @@ import { SettlementRepository } from '../../src/settlement/settlement.repository
 
 const paidOrder = {
   orderNo: 'ORDER-20260605-001',
+  buyerUserId: 'buyer-local',
+  salesFranchiseId: 'franchise-local-review',
   status: 'paid',
+  totalAmount: 18980,
+  welfareCardPayableAmount: 5000,
+  cashPayableAmount: 13980,
   lines: [
     {
       id: 'order-line-001',
@@ -55,6 +60,37 @@ const billItems = [
     statementId: null,
     createdAt: new Date('2026-06-05T00:00:00.000Z'),
     updatedAt: new Date('2026-06-05T00:00:00.000Z')
+  }
+];
+
+const paidPayment = {
+  paymentNo: 'PAY-20260605-001',
+  orderNo: 'ORDER-20260605-001',
+  status: 'paid',
+  channel: 'wechat',
+  totalAmount: 18980,
+  welfareCardPayableAmount: 5000,
+  cashPayableAmount: 13980,
+  paidAt: new Date('2026-06-05T00:05:00.000Z')
+};
+
+const franchiseLedgerEntries = [
+  {
+    id: 'franchise-ledger-001',
+    entryNo: 'FSL-ORDER-20260605-001-PAID',
+    franchiseId: 'franchise-local-review',
+    orderNo: 'ORDER-20260605-001',
+    paymentNo: 'PAY-20260605-001',
+    refundNo: null,
+    buyerUserId: 'buyer-local',
+    source: 'order_paid',
+    status: 'posted',
+    totalAmount: 18980,
+    welfareCardAmount: 5000,
+    onlineCashAmount: 13980,
+    amount: 18980,
+    createdAt: new Date('2026-06-05T00:05:00.000Z'),
+    updatedAt: new Date('2026-06-05T00:05:00.000Z')
   }
 ];
 
@@ -124,6 +160,14 @@ function createPrismaMock() {
       findFirst: jest.fn().mockResolvedValue(statementRecord),
       update: jest.fn().mockResolvedValue(paidStatementRecord),
       findMany: jest.fn().mockResolvedValue([statementRecord])
+    },
+    orderPayment: {
+      findFirst: jest.fn().mockResolvedValue(paidPayment),
+      findUnique: jest.fn().mockResolvedValue(paidPayment)
+    },
+    franchiseSalesLedgerEntry: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findMany: jest.fn().mockResolvedValue(franchiseLedgerEntries)
     }
   };
   return {
@@ -193,6 +237,113 @@ describe('SettlementRepository', () => {
     expect(prisma.product.findMany).not.toHaveBeenCalled();
     expect(prisma.merchantSettlementBillItem.createMany).not.toHaveBeenCalled();
     expect(result.items).toEqual([]);
+  });
+
+  it('generates a franchise sales ledger entry from one paid order snapshot', async () => {
+    const prisma = createPrismaMock();
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.generateFranchiseSalesLedgerForPaidOrder('ORDER-20260605-001');
+
+    expect(prisma.orderHeader.findUnique).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260605-001' },
+      select: expect.objectContaining({
+        buyerUserId: true,
+        salesFranchiseId: true,
+        totalAmount: true,
+        welfareCardPayableAmount: true,
+        cashPayableAmount: true
+      })
+    });
+    expect(prisma.orderPayment.findFirst).toHaveBeenCalledWith({
+      where: {
+        orderNo: 'ORDER-20260605-001',
+        status: 'paid'
+      },
+      orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+      select: expect.any(Object)
+    });
+    expect(prisma.franchiseSalesLedgerEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          entryNo: 'FSL-ORDER-20260605-001-PAID',
+          franchiseId: 'franchise-local-review',
+          orderNo: 'ORDER-20260605-001',
+          paymentNo: 'PAY-20260605-001',
+          refundNo: null,
+          buyerUserId: 'buyer-local',
+          source: 'order_paid',
+          status: 'posted',
+          totalAmount: 18980,
+          welfareCardAmount: 5000,
+          onlineCashAmount: 13980,
+          amount: 18980
+        }
+      ],
+      skipDuplicates: true
+    });
+    expect(result.entries).toEqual(franchiseLedgerEntries);
+  });
+
+  it('generates a negative franchise sales ledger entry for a succeeded refund', async () => {
+    const prisma = createPrismaMock();
+    const refundLedgerEntries = [
+      {
+        ...franchiseLedgerEntries[0],
+        id: 'franchise-ledger-refund-001',
+        entryNo: 'FSL-REF-20260605-001-REFUND',
+        refundNo: 'REF-20260605-001',
+        source: 'refund_succeeded',
+        totalAmount: 7000,
+        welfareCardAmount: 5000,
+        onlineCashAmount: 2000,
+        amount: -7000
+      }
+    ];
+    prisma.franchiseSalesLedgerEntry.findMany.mockResolvedValue(refundLedgerEntries);
+    const repository = new SettlementRepository(prisma as never);
+
+    const result = await repository.generateFranchiseSalesLedgerForSucceededRefund({
+      orderNo: 'ORDER-20260605-001',
+      paymentNo: 'PAY-20260605-001',
+      refundNo: 'REF-20260605-001',
+      refundAmount: 7000
+    });
+
+    expect(prisma.orderHeader.findUnique).toHaveBeenCalledWith({
+      where: { orderNo: 'ORDER-20260605-001' },
+      select: expect.objectContaining({
+        buyerUserId: true,
+        salesFranchiseId: true
+      })
+    });
+    expect(prisma.orderPayment.findUnique).toHaveBeenCalledWith({
+      where: { paymentNo: 'PAY-20260605-001' },
+      select: expect.objectContaining({
+        welfareCardPayableAmount: true,
+        cashPayableAmount: true
+      })
+    });
+    expect(prisma.franchiseSalesLedgerEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          entryNo: 'FSL-REF-20260605-001-REFUND',
+          franchiseId: 'franchise-local-review',
+          orderNo: 'ORDER-20260605-001',
+          paymentNo: 'PAY-20260605-001',
+          refundNo: 'REF-20260605-001',
+          buyerUserId: 'buyer-local',
+          source: 'refund_succeeded',
+          status: 'posted',
+          totalAmount: 7000,
+          welfareCardAmount: 5000,
+          onlineCashAmount: 2000,
+          amount: -7000
+        }
+      ],
+      skipDuplicates: true
+    });
+    expect(result.entries).toEqual(refundLedgerEntries);
   });
 
   it('lists merchant bill items by merchant and status', async () => {
