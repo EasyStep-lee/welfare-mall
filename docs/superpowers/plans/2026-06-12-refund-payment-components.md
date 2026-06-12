@@ -84,8 +84,17 @@ RED 证据：
 
 ## 任务 4：完成
 
-- [ ] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 提交 feature 分支。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+
+完成记录：
+- feature 分支：`codex/refund-payment-components`
+- feature commit：`a713e0b feat: add refund payment components`
+- feature PR：`#297 feat: add refund payment components`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature PR 已 squash merge 到 `main`，合并提交：`a04f90f feat: add refund payment components (#297)`。
+- docs-only 分支：`codex/docs-refund-payment-components-complete`
+- 本切片完成后剩余工作：真实微信/支付宝退款适配器、多张福利卡退款分摊、Portal/小程序退款组件展示、正式身份体系替换、清理 `pickupStoreName` 历史兼容字段。
