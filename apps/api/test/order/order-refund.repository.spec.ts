@@ -80,6 +80,39 @@ function createPrismaMock() {
         welfareCardPayableAmount: 1000
       })
     },
+    orderPaymentComponent: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'payment-component-welfare-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 1,
+          componentType: 'welfare_card',
+          channel: 'welfare_card',
+          welfareCardAccountId: 'welfare-card-account-001',
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001',
+          amount: 1000,
+          status: 'pending'
+        },
+        {
+          id: 'payment-component-online-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 2,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          welfareCardAccountId: null,
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001',
+          amount: 4000,
+          status: 'pending'
+        }
+      ])
+    },
+    orderRefundComponent: {
+      createMany: jest.fn().mockResolvedValue({ count: 2 })
+    },
     welfareCardAccount: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'welfare-card-account-001',
@@ -287,29 +320,61 @@ describe('OrderRefundRepository', () => {
         reservedQuantity: { decrement: 2 }
       }
     });
-    expect(tx.orderPayment.findUnique).toHaveBeenCalledWith({
+    expect(tx.orderPaymentComponent.findMany).toHaveBeenCalledWith({
       where: { paymentNo: 'PAY-20260603-001' },
+      orderBy: { sequenceNo: 'asc' },
       select: {
+        id: true,
         paymentNo: true,
         orderNo: true,
-        welfareCardPayableAmount: true
+        sequenceNo: true,
+        componentType: true,
+        channel: true,
+        welfareCardAccountId: true,
+        franchiseId: true,
+        buyerUserId: true,
+        amount: true,
+        status: true
       }
     });
-    expect(tx.orderHeader.findUnique).toHaveBeenCalledWith({
-      where: { orderNo: 'ORDER-20260603-001' },
-      select: {
-        orderNo: true,
-        buyerUserId: true,
-        salesFranchiseId: true
-      }
+    expect(tx.orderRefundComponent.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          refundId: 'refund-001',
+          refundNo: 'REF-20260603-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 1,
+          componentType: 'welfare_card',
+          channel: 'welfare_card',
+          paymentComponentId: 'payment-component-welfare-001',
+          welfareCardAccountId: 'welfare-card-account-001',
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001',
+          amount: 1000,
+          status: 'succeeded',
+          providerRefundNo: null
+        },
+        {
+          refundId: 'refund-001',
+          refundNo: 'REF-20260603-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 2,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          paymentComponentId: 'payment-component-online-001',
+          welfareCardAccountId: null,
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001',
+          amount: 4000,
+          status: 'succeeded',
+          providerRefundNo: 'wx-refund-001'
+        }
+      ]
     });
     expect(tx.welfareCardAccount.findUnique).toHaveBeenCalledWith({
-      where: {
-        franchiseId_buyerUserId: {
-          franchiseId: 'franchise-local-review',
-          buyerUserId: 'user-local-001'
-        }
-      },
+      where: { id: 'welfare-card-account-001' },
       select: expect.any(Object)
     });
     expect(tx.welfareCardAccount.update).toHaveBeenCalledWith({
@@ -373,6 +438,8 @@ describe('OrderRefundRepository', () => {
     expect(tx.inventoryReservation.updateMany).not.toHaveBeenCalled();
     expect(tx.inventoryStock.updateMany).not.toHaveBeenCalled();
     expect(tx.orderPayment.findUnique).not.toHaveBeenCalled();
+    expect(tx.orderPaymentComponent.findMany).not.toHaveBeenCalled();
+    expect(tx.orderRefundComponent.createMany).not.toHaveBeenCalled();
     expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
     expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
     expect(result).toEqual(
@@ -385,11 +452,21 @@ describe('OrderRefundRepository', () => {
 
   it('does not credit welfare card when the original payment has no welfare card amount', async () => {
     const { prisma, tx } = createPrismaMock();
-    tx.orderPayment.findUnique.mockResolvedValue({
-      paymentNo: 'PAY-20260603-001',
-      orderNo: 'ORDER-20260603-001',
-      welfareCardPayableAmount: 0
-    });
+    tx.orderPaymentComponent.findMany.mockResolvedValue([
+      {
+        id: 'payment-component-online-001',
+        paymentNo: 'PAY-20260603-001',
+        orderNo: 'ORDER-20260603-001',
+        sequenceNo: 1,
+        componentType: 'online_cash',
+        channel: 'wechat',
+        welfareCardAccountId: null,
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-local-001',
+        amount: 5000,
+        status: 'pending'
+      }
+    ]);
     const repository = new OrderRefundRepository(prisma as never);
 
     await repository.processCallback({
@@ -401,13 +478,42 @@ describe('OrderRefundRepository', () => {
       payload: { event: 'refund.succeeded' }
     });
 
-    expect(tx.orderPayment.findUnique).toHaveBeenCalledWith({
+    expect(tx.orderPaymentComponent.findMany).toHaveBeenCalledWith({
       where: { paymentNo: 'PAY-20260603-001' },
+      orderBy: { sequenceNo: 'asc' },
       select: {
+        id: true,
         paymentNo: true,
         orderNo: true,
-        welfareCardPayableAmount: true
+        sequenceNo: true,
+        componentType: true,
+        channel: true,
+        welfareCardAccountId: true,
+        franchiseId: true,
+        buyerUserId: true,
+        amount: true,
+        status: true
       }
+    });
+    expect(tx.orderRefundComponent.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          refundId: 'refund-001',
+          refundNo: 'REF-20260603-001',
+          paymentNo: 'PAY-20260603-001',
+          orderNo: 'ORDER-20260603-001',
+          sequenceNo: 1,
+          componentType: 'online_cash',
+          channel: 'wechat',
+          paymentComponentId: 'payment-component-online-001',
+          welfareCardAccountId: null,
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-local-001',
+          amount: 5000,
+          status: 'succeeded',
+          providerRefundNo: 'wx-refund-001'
+        }
+      ]
     });
     expect(tx.orderHeader.findUnique).not.toHaveBeenCalled();
     expect(tx.welfareCardAccount.findUnique).not.toHaveBeenCalled();
@@ -435,6 +541,8 @@ describe('OrderRefundRepository', () => {
     });
 
     expect(tx.orderPayment.findUnique).not.toHaveBeenCalled();
+    expect(tx.orderPaymentComponent.findMany).not.toHaveBeenCalled();
+    expect(tx.orderRefundComponent.createMany).not.toHaveBeenCalled();
     expect(tx.welfareCardAccount.update).not.toHaveBeenCalled();
     expect(tx.welfareCardLedgerEntry.create).not.toHaveBeenCalled();
     expect(result).toEqual(
