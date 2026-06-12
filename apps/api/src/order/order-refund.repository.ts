@@ -64,10 +64,18 @@ export class WelfareCardRefundCreditError extends Error {
   }
 }
 
-type OrderPaymentForRefundCredit = {
+type OrderPaymentComponentForRefund = {
+  id: string;
   paymentNo: string;
   orderNo: string;
-  welfareCardPayableAmount: number;
+  sequenceNo: number;
+  componentType: string;
+  channel: string;
+  welfareCardAccountId: string | null;
+  franchiseId: string | null;
+  buyerUserId: string | null;
+  amount: number;
+  status: string;
 };
 
 type OrderForRefundCredit = {
@@ -101,8 +109,11 @@ type OrderRefundTransaction = {
     findUnique(args: unknown): Promise<OrderForRefundCredit | null>;
     update(args: unknown): Promise<unknown>;
   };
-  orderPayment: {
-    findUnique(args: unknown): Promise<OrderPaymentForRefundCredit | null>;
+  orderPaymentComponent: {
+    findMany(args: unknown): Promise<OrderPaymentComponentForRefund[]>;
+  };
+  orderRefundComponent: {
+    createMany(args: unknown): Promise<unknown>;
   };
   welfareCardAccount: {
     findUnique(args: unknown): Promise<WelfareCardAccountForRefundCredit | null>;
@@ -231,7 +242,7 @@ async function updateRefundFromCallback(
       });
     }
     await releaseInventoryReservations(tx, refund.orderNo, input.succeededAt);
-    await creditWelfareCardForSucceededRefund(tx, refund);
+    await createComponentsAndCreditWelfareCardForSucceededRefund(tx, refund, input.providerRefundNo);
 
     return tx.orderRefund.update({
       where: { id: refund.id },
@@ -269,61 +280,101 @@ async function updateRefundFromCallback(
   return refund;
 }
 
-async function creditWelfareCardForSucceededRefund(
+async function createComponentsAndCreditWelfareCardForSucceededRefund(
   tx: OrderRefundTransaction,
-  refund: OrderRefundRecord
+  refund: OrderRefundRecord,
+  providerRefundNo: string
 ): Promise<void> {
-  const payment = await tx.orderPayment.findUnique({
+  const paymentComponents = await tx.orderPaymentComponent.findMany({
     where: { paymentNo: refund.paymentNo },
+    orderBy: { sequenceNo: 'asc' },
     select: {
+      id: true,
       paymentNo: true,
       orderNo: true,
-      welfareCardPayableAmount: true
-    }
-  });
-
-  if (!payment) {
-    throw new WelfareCardRefundCreditError(`Payment ${refund.paymentNo} not found for refund ${refund.refundNo}.`);
-  }
-
-  const welfareCardRefundAmount = Math.min(payment.welfareCardPayableAmount, refund.refundAmount);
-  if (welfareCardRefundAmount <= 0) {
-    return;
-  }
-
-  const order = await tx.orderHeader.findUnique({
-    where: { orderNo: refund.orderNo },
-    select: {
-      orderNo: true,
+      sequenceNo: true,
+      componentType: true,
+      channel: true,
+      welfareCardAccountId: true,
+      franchiseId: true,
       buyerUserId: true,
-      salesFranchiseId: true
+      amount: true,
+      status: true
     }
   });
 
-  if (!order?.buyerUserId || !order.salesFranchiseId) {
+  if (paymentComponents.length === 0) {
+    throw new WelfareCardRefundCreditError(`Payment components for ${refund.paymentNo} not found for refund ${refund.refundNo}.`);
+  }
+
+  const refundComponents = allocateRefundComponents(refund, paymentComponents, providerRefundNo);
+  if (refundComponents.length === 0) {
+    throw new WelfareCardRefundCreditError(`Refund ${refund.refundNo} has no refundable payment components.`);
+  }
+
+  await tx.orderRefundComponent.createMany({
+    data: refundComponents.map(({ paymentComponent, amount, sequenceNo }) => ({
+      refundId: refund.id,
+      refundNo: refund.refundNo,
+      paymentNo: refund.paymentNo,
+      orderNo: refund.orderNo,
+      sequenceNo,
+      componentType: paymentComponent.componentType,
+      channel: paymentComponent.channel,
+      paymentComponentId: paymentComponent.id,
+      welfareCardAccountId: paymentComponent.welfareCardAccountId,
+      franchiseId: paymentComponent.franchiseId,
+      buyerUserId: paymentComponent.buyerUserId,
+      amount,
+      status: OrderRefundStatuses.Succeeded,
+      providerRefundNo: paymentComponent.componentType === 'online_cash' ? providerRefundNo : null
+    }))
+  });
+
+  for (const refundComponent of refundComponents) {
+    if (refundComponent.paymentComponent.componentType !== 'welfare_card') {
+      continue;
+    }
+
+    await creditWelfareCardRefundComponent(tx, refund, refundComponent.paymentComponent, refundComponent.amount);
+  }
+}
+
+async function creditWelfareCardRefundComponent(
+  tx: OrderRefundTransaction,
+  refund: OrderRefundRecord,
+  paymentComponent: OrderPaymentComponentForRefund,
+  welfareCardRefundAmount: number
+): Promise<void> {
+  if (!paymentComponent.welfareCardAccountId) {
     throw new WelfareCardRefundCreditError(
-      `Order ${refund.orderNo} is missing buyer or sales franchise for welfare card refund.`
+      `Payment component ${paymentComponent.id} is missing welfare card account for refund ${refund.refundNo}.`
+    );
+  }
+
+  if (!paymentComponent.franchiseId || !paymentComponent.buyerUserId) {
+    throw new WelfareCardRefundCreditError(
+      `Payment component ${paymentComponent.id} is missing franchise or buyer for welfare card refund.`
     );
   }
 
   const account = await tx.welfareCardAccount.findUnique({
-    where: {
-      franchiseId_buyerUserId: {
-        franchiseId: order.salesFranchiseId,
-        buyerUserId: order.buyerUserId
-      }
-    },
+    where: { id: paymentComponent.welfareCardAccountId },
     select: welfareCardAccountForRefundCreditSelect()
   });
 
   if (!account) {
     throw new WelfareCardRefundCreditError(
-      `Welfare card account not found for franchise ${order.salesFranchiseId} and buyer ${order.buyerUserId}.`
+      `Welfare card account ${paymentComponent.welfareCardAccountId} not found for refund ${refund.refundNo}.`
     );
   }
 
   if (account.status !== WelfareCardAccountStatuses.Active) {
     throw new WelfareCardRefundCreditError(`Welfare card account ${account.accountNo} is not active.`);
+  }
+
+  if (account.franchiseId !== paymentComponent.franchiseId || account.buyerUserId !== paymentComponent.buyerUserId) {
+    throw new WelfareCardRefundCreditError(`Welfare card account ${account.accountNo} does not match the payment component subject.`);
   }
 
   const creditedAccount = await tx.welfareCardAccount.update({
@@ -339,8 +390,8 @@ async function creditWelfareCardForSucceededRefund(
       ledgerNo: createWelfareCardRefundLedgerNo(refund.requestId),
       requestId: createWelfareCardRefundRequestId(refund.requestId),
       accountId: account.id,
-      franchiseId: order.salesFranchiseId,
-      buyerUserId: order.buyerUserId,
+      franchiseId: paymentComponent.franchiseId,
+      buyerUserId: paymentComponent.buyerUserId,
       type: WelfareCardLedgerEntryTypes.Refund,
       amount: welfareCardRefundAmount,
       balanceAfter: creditedAccount.balanceAmount,
@@ -349,6 +400,63 @@ async function creditWelfareCardForSucceededRefund(
     },
     select: { id: true }
   });
+}
+
+function allocateRefundComponents(
+  refund: OrderRefundRecord,
+  paymentComponents: OrderPaymentComponentForRefund[],
+  providerRefundNo: string
+): Array<{ paymentComponent: OrderPaymentComponentForRefund; amount: number; sequenceNo: number }> {
+  let remainingAmount = refund.refundAmount;
+  const refundComponents: Array<{ paymentComponent: OrderPaymentComponentForRefund; amount: number; sequenceNo: number }> = [];
+
+  for (const paymentComponent of paymentComponents) {
+    if (remainingAmount <= 0) {
+      break;
+    }
+
+    const amount = Math.min(paymentComponent.amount, remainingAmount);
+    if (amount <= 0) {
+      continue;
+    }
+
+    assertRefundablePaymentComponent(paymentComponent, providerRefundNo, refund.refundNo);
+    refundComponents.push({
+      paymentComponent,
+      amount,
+      sequenceNo: refundComponents.length + 1
+    });
+    remainingAmount -= amount;
+  }
+
+  return refundComponents;
+}
+
+function assertRefundablePaymentComponent(
+  paymentComponent: OrderPaymentComponentForRefund,
+  providerRefundNo: string,
+  refundNo: string
+): void {
+  if (paymentComponent.componentType === 'welfare_card') {
+    if (paymentComponent.channel !== 'welfare_card') {
+      throw new WelfareCardRefundCreditError(`Refund ${refundNo} has invalid welfare card payment component channel.`);
+    }
+    return;
+  }
+
+  if (paymentComponent.componentType === 'online_cash') {
+    if (paymentComponent.channel !== 'wechat' && paymentComponent.channel !== 'alipay') {
+      throw new WelfareCardRefundCreditError(`Refund ${refundNo} has invalid online refund channel ${paymentComponent.channel}.`);
+    }
+    if (!providerRefundNo) {
+      throw new WelfareCardRefundCreditError(`Refund ${refundNo} is missing provider refund number for online cash component.`);
+    }
+    return;
+  }
+
+  throw new WelfareCardRefundCreditError(
+    `Refund ${refundNo} has unsupported payment component type ${paymentComponent.componentType}.`
+  );
 }
 
 async function releaseInventoryReservations(tx: OrderRefundTransaction, orderNo: string, releasedAt: Date | null): Promise<void> {

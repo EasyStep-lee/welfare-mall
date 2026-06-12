@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-09",
+  "updatedAt": "2026-06-12",
   "purpose": "Current known deviations from the enforced business boundary. New occurrences must fail verify:business-boundary unless this list is intentionally updated with a reason and nextAction.",
   "deviations": [
     {
@@ -46,6 +46,11 @@
       "file": "apps/api/src/order/order-payment.repository.ts",
       "reason": "Payment persistence still stores one channel for the payment rather than explicit welfare-card plus online-cash components.",
       "nextAction": "Introduce combination payment components tied to welfare-card ledger and wechat/alipay cash channel."
+    },
+    {
+      "file": "apps/api/src/order/order-refund.repository.ts",
+      "reason": "Refund persistence uses the existing online_cash payment component enum to represent the WeChat/Alipay online remainder, not an offline cash user payment path.",
+      "nextAction": "After payment/refund component naming stabilizes, either whitelist the online_cash enum in the guard or rename it away from cash wording."
     },
     {
       "file": "apps/api/src/order/order-read.repository.ts",

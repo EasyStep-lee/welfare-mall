@@ -743,6 +743,7 @@ model OrderPaymentComponent {
   updatedAt            DateTime            @updatedAt
   payment              OrderPayment        @relation(fields: [paymentId], references: [id])
   welfareCardAccount   WelfareCardAccount? @relation(fields: [welfareCardAccountId], references: [id])
+  refundComponents     OrderRefundComponent[]
 
   @@unique([paymentNo, sequenceNo])
   @@index([paymentId])
@@ -789,11 +790,48 @@ model OrderRefund {
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   callbacks        OrderRefundCallback[]
+  components       OrderRefundComponent[]
 
   @@index([paymentNo])
   @@index([orderNo])
   @@index([status])
   @@map("order_refund")
+}
+
+model OrderRefundComponent {
+  id                   String                 @id @default(cuid())
+  refundId             String
+  refundNo             String
+  paymentNo            String
+  orderNo              String
+  sequenceNo           Int
+  componentType        String
+  channel              String
+  paymentComponentId   String
+  welfareCardAccountId String?
+  franchiseId          String?
+  buyerUserId          String?
+  amount               Int
+  status               String
+  providerRefundNo     String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  refund               OrderRefund            @relation(fields: [refundId], references: [id])
+  paymentComponent     OrderPaymentComponent  @relation(fields: [paymentComponentId], references: [id])
+
+  @@unique([refundNo, sequenceNo])
+  @@index([refundId])
+  @@index([refundNo])
+  @@index([paymentNo])
+  @@index([orderNo])
+  @@index([componentType])
+  @@index([channel])
+  @@index([paymentComponentId])
+  @@index([welfareCardAccountId])
+  @@index([franchiseId])
+  @@index([buyerUserId])
+  @@index([status])
+  @@map("order_refund_component")
 }
 
 model OrderRefundCallback {
