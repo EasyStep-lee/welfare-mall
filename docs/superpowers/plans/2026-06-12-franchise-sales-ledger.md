@@ -134,8 +134,23 @@ RED 证据：
 
 ### 任务 4：完成
 
-- [ ] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 提交 feature 分支。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+
+完成记录：
+- feature 分支：`codex/franchise-sales-ledger`
+- feature 提交：`33ec63c feat: add franchise sales ledger`
+- feature PR：`#289 feat: add franchise sales ledger`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature 合并提交：`1e337eb feat: add franchise sales ledger (#289)`
+- docs-only 分支：`codex/docs-franchise-sales-ledger-complete`
+
+剩余工作：
+- 加盟商销售账前端工作台仍需继续补齐，当前切片只完成后端流水事实和回调写账。
+- 加盟商收款对账单、应收确认、提现或打款确认仍需单独切片实现。
+- 福利卡完整“批次、实体卡、绑卡账户”体系仍需继续从当前账户余额模型扩展。
+- 退款仍需继续升级为按支付组件逐项状态机和回调幂等确认。
+- 正式组织、部门、岗位、角色、加盟商账号、商户账号和用户账号体系仍需继续替换本地过渡身份。
