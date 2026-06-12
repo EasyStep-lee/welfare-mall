@@ -81,6 +81,19 @@ function createRepositoryMock() {
         amount: 5000,
         balanceAfter: 5000
       }
+    }),
+    listBuyerWelfareCardAccounts: jest.fn().mockResolvedValue({
+      accounts: [
+        {
+          id: 'wca-001',
+          accountNo: 'WCA-franchise-local-review-user-001',
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-001',
+          status: 'active',
+          balanceAmount: 5000,
+          issuedAmount: 5000
+        }
+      ]
     })
   };
 }
@@ -261,5 +274,40 @@ describe('WelfareCardService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(repository.bindWelfareCard).not.toHaveBeenCalled();
+  });
+
+  it('normalizes and delegates a buyer welfare-card account list request', async () => {
+    const repository = createRepositoryMock();
+    const service = new WelfareCardService(repository as never);
+
+    await service.listBuyerWelfareCardAccounts({
+      franchiseId: ' franchise-local-review ',
+      buyerUserId: ' user-001 '
+    });
+
+    expect(repository.listBuyerWelfareCardAccounts).toHaveBeenCalledWith({
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'user-001'
+    });
+  });
+
+  it('rejects blank account list identifiers before reading buyer accounts', async () => {
+    const repository = createRepositoryMock();
+    const service = new WelfareCardService(repository as never);
+
+    await expect(
+      service.listBuyerWelfareCardAccounts({
+        franchiseId: ' ',
+        buyerUserId: 'user-001'
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.listBuyerWelfareCardAccounts({
+        franchiseId: 'franchise-local-review',
+        buyerUserId: ' '
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(repository.listBuyerWelfareCardAccounts).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,8 @@ function createWelfareCardServiceMock() {
   return {
     issueWelfareCard: jest.fn(),
     createWelfareCardBatch: jest.fn(),
-    bindWelfareCard: jest.fn()
+    bindWelfareCard: jest.fn(),
+    listBuyerWelfareCardAccounts: jest.fn()
   };
 }
 
@@ -267,6 +268,52 @@ describe('Franchise welfare-card issue API contract', () => {
       .expect(403);
 
     expect(welfareCardService.bindWelfareCard).not.toHaveBeenCalled();
+  });
+
+  it('lists welfare-card accounts for the authenticated buyer under one sales franchise', async () => {
+    const token = await loginAndGetToken(app, 'buyer-local');
+    welfareCardService.listBuyerWelfareCardAccounts.mockResolvedValue({
+      accounts: [
+        {
+          id: 'wca-001',
+          accountNo: 'WCA-franchise-local-review-user-001',
+          franchiseId: 'franchise-local-review',
+          buyerUserId: 'user-001',
+          status: 'active',
+          balanceAmount: 5000,
+          issuedAmount: 5000
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/franchises/franchise-local-review/welfare-card-accounts/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(welfareCardService.listBuyerWelfareCardAccounts).toHaveBeenCalledWith({
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'user-001'
+    });
+    expect(response.body.accounts).toEqual([
+      expect.objectContaining({
+        id: 'wca-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-001',
+        balanceAmount: 5000
+      })
+    ]);
+  });
+
+  it('rejects non-buyer users on the buyer welfare-card account list endpoint', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+
+    await request(app.getHttpServer())
+      .get('/api/franchises/franchise-local-review/welfare-card-accounts/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+
+    expect(welfareCardService.listBuyerWelfareCardAccounts).not.toHaveBeenCalled();
   });
 });
 

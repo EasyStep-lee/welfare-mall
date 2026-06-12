@@ -34,6 +34,11 @@ export type BindWelfareCardInput = {
   bindCode: string;
 };
 
+export type ListBuyerWelfareCardAccountsInput = {
+  franchiseId: string;
+  buyerUserId: string;
+};
+
 export type WelfareCardAccountRecord = {
   id: string;
   accountNo: string;
@@ -111,9 +116,27 @@ export type WelfareCardBindResult = {
   ledgerEntry: WelfareCardLedgerEntryRecord;
 };
 
+export type BuyerWelfareCardAccountsResult = {
+  accounts: WelfareCardAccountRecord[];
+};
+
 @Injectable()
 export class WelfareCardRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async listBuyerWelfareCardAccounts(input: ListBuyerWelfareCardAccountsInput): Promise<BuyerWelfareCardAccountsResult> {
+    const accounts = await this.prisma.welfareCardAccount.findMany({
+      where: {
+        franchiseId: input.franchiseId,
+        buyerUserId: input.buyerUserId,
+        status: WelfareCardAccountStatuses.Active
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: welfareCardAccountSelect()
+    });
+
+    return { accounts };
+  }
 
   async createWelfareCardBatch(input: CreateWelfareCardBatchInput): Promise<WelfareCardBatchCreateResult> {
     return this.prisma.$transaction(async (tx) => {

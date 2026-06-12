@@ -117,6 +117,37 @@ export class FranchiseController {
     return this.welfareCardService.issueWelfareCard(issueRequest);
   }
 
+  @Get(':franchiseId/welfare-card-accounts/me')
+  @ApiOkResponse({
+    description: 'List welfare-card accounts for the authenticated buyer under one sales franchise',
+    schema: {
+      example: {
+        accounts: [
+          {
+            accountNo: 'WCA-franchise-local-review-user-001',
+            franchiseId: 'franchise-local-review',
+            buyerUserId: 'user-001',
+            status: 'active',
+            balanceAmount: 5000,
+            issuedAmount: 5000
+          }
+        ]
+      }
+    }
+  })
+  @UseGuards(AuthGuard)
+  async listMyWelfareCardAccounts(
+    @Param('franchiseId') franchiseId: string,
+    @Req() request: RequestWithUser
+  ) {
+    assertBuyerCanUseWelfareCardAccount(request.user);
+
+    return this.welfareCardService.listBuyerWelfareCardAccounts({
+      franchiseId: normalizeRequiredText(franchiseId, 'franchiseId'),
+      buyerUserId: request.user.subjectId
+    });
+  }
+
   @Post(':franchiseId/welfare-cards/bind')
   @ApiCreatedResponse({
     description: 'Bind an entity welfare card into the authenticated buyer welfare-card account',
@@ -150,7 +181,7 @@ export class FranchiseController {
     @Body() body: BindWelfareCardRequestBody,
     @Req() request: RequestWithUser
   ) {
-    assertBuyerCanBindWelfareCard(request.user);
+    assertBuyerCanUseWelfareCardAccount(request.user);
 
     return this.welfareCardService.bindWelfareCard({
       franchiseId,
@@ -184,7 +215,7 @@ function assertCanIssueWelfareCard(user: AccessTokenPayload, franchiseId: string
   throw new ForbiddenException('Only the sales franchise or platform operator can issue welfare-card balance.');
 }
 
-function assertBuyerCanBindWelfareCard(user: AccessTokenPayload) {
+function assertBuyerCanUseWelfareCardAccount(user: AccessTokenPayload) {
   if (user.subjectType === 'buyer') {
     return;
   }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+  bindPortalWelfareCard,
   cancelPortalOrder,
   confirmPortalPayment,
   confirmPortalRefund,
@@ -11,6 +12,7 @@ import {
   fetchProductPoolItemDetail,
   fetchPortalOrderDetail,
   fetchPortalOrders,
+  fetchPortalWelfareCardAccounts,
   loginPortal,
   type AuthenticatedUser,
   type PortalCheckoutOrder,
@@ -18,6 +20,7 @@ import {
   type PortalOrderRecord,
   type PortalPayment,
   type PortalRefund,
+  type PortalWelfareCardAccount,
   type ProductPoolCatalog,
   type ProductPoolCatalogItem,
   type ProductPoolItemDetail
@@ -55,6 +58,14 @@ const paymentLoading = ref(false);
 const paymentError = ref<string | null>(null);
 const createdPayment = ref<PortalPayment | null>(null);
 const selectedPaymentChannel = ref<PortalOnlinePaymentChannel>('wechat');
+const welfareCardAccountsLoading = ref(false);
+const welfareCardAccountsError = ref<string | null>(null);
+const welfareCardAccounts = ref<PortalWelfareCardAccount[]>([]);
+const selectedWelfareCardAccountId = ref('');
+const bindCardForm = ref({ cardNo: '', bindCode: '' });
+const bindCardLoading = ref(false);
+const bindCardError = ref<string | null>(null);
+const bindCardMessage = ref<string | null>(null);
 const paymentConfirmLoading = ref(false);
 const paymentConfirmError = ref<string | null>(null);
 const confirmedPaymentMessage = ref<string | null>(null);
@@ -87,6 +98,14 @@ const checkoutWelfareCardPreviewAmount = computed(() => parseCheckoutWelfareCard
 const checkoutOnlineRemainderAmount = computed(() =>
   Math.max((selectedDetail.value?.displayPriceAmount ?? 0) - checkoutWelfareCardPreviewAmount.value, 0)
 );
+const selectedDetailFranchiseId = computed(() => {
+  const productPoolId = selectedDetail.value?.productPoolId;
+  if (!productPoolId) {
+    return null;
+  }
+
+  return productPools.value.find((pool) => pool.id === productPoolId)?.franchiseId ?? null;
+});
 
 onMounted(() => {
   if (authUser.value) {
@@ -193,6 +212,38 @@ async function loadLocalOrders() {
   }
 }
 
+async function loadWelfareCardAccounts(franchiseId: string | null | undefined) {
+  welfareCardAccounts.value = [];
+  selectedWelfareCardAccountId.value = '';
+  welfareCardAccountsError.value = null;
+
+  const normalizedFranchiseId = franchiseId?.trim();
+  if (!normalizedFranchiseId) {
+    return;
+  }
+
+  welfareCardAccountsLoading.value = true;
+  try {
+    const response = await fetchPortalWelfareCardAccounts(normalizedFranchiseId);
+    welfareCardAccounts.value = response.accounts ?? [];
+  } catch (loadError) {
+    welfareCardAccountsError.value = loadError instanceof Error ? loadError.message : '福利卡账户加载失败';
+  } finally {
+    welfareCardAccountsLoading.value = false;
+  }
+}
+
+async function loadWelfareCardAccountsForPayment(order: PortalOrderRecord) {
+  if (order.welfareCardPayableAmount <= 0) {
+    welfareCardAccounts.value = [];
+    selectedWelfareCardAccountId.value = '';
+    welfareCardAccountsError.value = null;
+    return;
+  }
+
+  await loadWelfareCardAccounts(order.salesFranchiseId);
+}
+
 function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message.endsWith(': 401');
 }
@@ -231,6 +282,7 @@ async function openOrderDetailByOrderNo(orderNo: string) {
       buyerUserId: resolveAuthenticatedBuyerUserId()
     });
     selectedOrder.value = response.order;
+    await loadWelfareCardAccountsForPayment(response.order);
   } catch (loadError) {
     orderDetailError.value = loadError instanceof Error ? loadError.message : '订单详情加载失败';
   } finally {
@@ -250,6 +302,7 @@ function closeOrderDetail() {
 function closeProductDetail() {
   detailError.value = null;
   resetCheckout();
+  resetBindCard();
   selectedDetail.value = null;
 }
 
@@ -287,6 +340,10 @@ function paymentChannelText(channel: string) {
   };
 
   return labels[channel] ?? channel;
+}
+
+function welfareCardAccountLabel(account: PortalWelfareCardAccount) {
+  return `${account.accountNo} · 余额 ${formatMoney(account.balanceAmount)}`;
 }
 
 function paymentSummaryText(payment: PortalPayment) {
@@ -445,6 +502,17 @@ function resetPaymentCreation() {
   selectedPaymentChannel.value = 'wechat';
   paymentError.value = null;
   createdPayment.value = null;
+  selectedWelfareCardAccountId.value = '';
+  welfareCardAccounts.value = [];
+  welfareCardAccountsError.value = null;
+  welfareCardAccountsLoading.value = false;
+}
+
+function resetBindCard() {
+  bindCardForm.value = { cardNo: '', bindCode: '' };
+  bindCardError.value = null;
+  bindCardMessage.value = null;
+  bindCardLoading.value = false;
 }
 
 function onlinePaymentChannelFrom(channel: string): PortalOnlinePaymentChannel {
@@ -503,9 +571,55 @@ async function submitLocalOrder() {
   }
 }
 
+function createBindCardRequestId(cardNo: string) {
+  const safeCardNo = cardNo.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `portal-bind-${safeCardNo}-${Date.now()}`;
+}
+
+async function submitBindWelfareCard() {
+  const franchiseId = selectedDetailFranchiseId.value?.trim();
+  const cardNo = bindCardForm.value.cardNo.trim();
+  const bindCode = bindCardForm.value.bindCode.trim();
+
+  if (!franchiseId) {
+    bindCardError.value = '当前商品缺少销售加盟商，不能绑定福利卡';
+    return;
+  }
+  if (!cardNo || !bindCode) {
+    bindCardError.value = '请填写福利卡卡号和绑定码';
+    return;
+  }
+
+  bindCardLoading.value = true;
+  bindCardError.value = null;
+  bindCardMessage.value = null;
+
+  try {
+    const result = await bindPortalWelfareCard({
+      franchiseId,
+      requestId: createBindCardRequestId(cardNo),
+      cardNo,
+      bindCode
+    });
+    bindCardForm.value = { cardNo: '', bindCode: '' };
+    bindCardMessage.value = `福利卡绑定成功，余额 ${formatMoney(result.account.balanceAmount)}`;
+    await loadWelfareCardAccounts(franchiseId);
+  } catch (bindError) {
+    bindCardError.value = bindError instanceof Error ? bindError.message : '福利卡绑定失败';
+  } finally {
+    bindCardLoading.value = false;
+  }
+}
+
 async function submitLocalPayment() {
   if (!selectedOrder.value) {
     paymentError.value = '请先选择订单';
+    return;
+  }
+
+  const welfareCardAccountId = selectedOrder.value.welfareCardPayableAmount > 0 ? selectedWelfareCardAccountId.value.trim() : '';
+  if (selectedOrder.value.welfareCardPayableAmount > 0 && !welfareCardAccountId) {
+    paymentError.value = '请先选择福利卡账户';
     return;
   }
 
@@ -520,7 +634,8 @@ async function submitLocalPayment() {
       channel: selectedPaymentChannel.value,
       totalAmount: selectedOrder.value.totalAmount,
       welfareCardPayableAmount: selectedOrder.value.welfareCardPayableAmount,
-      cashPayableAmount: selectedOrder.value.cashPayableAmount
+      cashPayableAmount: selectedOrder.value.cashPayableAmount,
+      welfareCardAccountId: welfareCardAccountId || undefined
     });
     createdPayment.value = result.payment;
     selectedOrder.value = {
@@ -936,6 +1051,28 @@ async function confirmLatestRefund() {
             <p>福利卡抵扣 {{ formatMoney(selectedOrder.welfareCardPayableAmount) }}</p>
             <p>线上补差 {{ formatMoney(selectedOrder.cashPayableAmount) }}</p>
           </div>
+          <label v-if="selectedOrder.welfareCardPayableAmount > 0" class="checkout-amount-field">
+            <span>选择福利卡账户</span>
+            <select v-model="selectedWelfareCardAccountId" aria-label="选择福利卡账户">
+              <option value="">请选择福利卡账户</option>
+              <option v-for="account in welfareCardAccounts" :key="account.id" :value="account.id">
+                {{ welfareCardAccountLabel(account) }}
+              </option>
+            </select>
+          </label>
+          <p v-if="welfareCardAccountsLoading" class="checkout-message">福利卡账户加载中</p>
+          <p v-if="welfareCardAccountsError" class="checkout-message error">{{ welfareCardAccountsError }}</p>
+          <p
+            v-if="
+              selectedOrder.welfareCardPayableAmount > 0 &&
+              !welfareCardAccountsLoading &&
+              !welfareCardAccountsError &&
+              welfareCardAccounts.length === 0
+            "
+            class="checkout-message"
+          >
+            暂无可用福利卡账户
+          </p>
           <div class="payment-channel-control" aria-label="选择线上支付渠道">
             <button
               type="button"
@@ -1123,6 +1260,37 @@ async function confirmLatestRefund() {
               <span>福利卡抵扣 {{ formatMoney(checkoutWelfareCardPreviewAmount) }}</span>
               <span>线上补差 {{ formatMoney(checkoutOnlineRemainderAmount) }}</span>
             </div>
+            <section class="welfare-card-bind-block">
+              <div>
+                <h3>绑定福利卡</h3>
+                <p>实体福利卡绑定到当前用户在销售加盟商下的账户</p>
+              </div>
+              <label class="checkout-amount-field">
+                <span>福利卡卡号</span>
+                <input v-model="bindCardForm.cardNo" aria-label="福利卡卡号" type="text" />
+              </label>
+              <label class="checkout-amount-field">
+                <span>福利卡绑定码</span>
+                <input v-model="bindCardForm.bindCode" aria-label="福利卡绑定码" type="text" />
+              </label>
+              <button
+                type="button"
+                class="secondary-button"
+                aria-label="绑定福利卡"
+                :disabled="bindCardLoading"
+                @click="submitBindWelfareCard"
+              >
+                {{ bindCardLoading ? '绑定中' : '绑定福利卡' }}
+              </button>
+              <p v-if="bindCardError" class="checkout-message error">{{ bindCardError }}</p>
+              <p v-if="bindCardMessage" class="checkout-message success">{{ bindCardMessage }}</p>
+              <div v-if="welfareCardAccounts.length > 0" class="checkout-result">
+                <span>当前福利卡账户</span>
+                <p v-for="account in welfareCardAccounts" :key="account.id">
+                  {{ welfareCardAccountLabel(account) }}
+                </p>
+              </div>
+            </section>
             <button
               type="button"
               class="checkout-button"
