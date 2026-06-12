@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const requiredFiles = [
   'apps/api/Dockerfile',
   'apps/admin/Dockerfile',
+  'apps/franchise/Dockerfile',
   'apps/merchant/Dockerfile',
   'apps/portal/Dockerfile',
   'tools/start-docker-runtime.ps1',
@@ -16,19 +17,23 @@ const requiredFiles = [
 const requiredComposeSnippets = [
   'api:',
   'admin:',
+  'franchise:',
   'merchant:',
   'portal:',
   'image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-api:${WELFARE_MALL_IMAGE_TAG:-local}',
   'image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-admin:${WELFARE_MALL_IMAGE_TAG:-local}',
+  'image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-franchise:${WELFARE_MALL_IMAGE_TAG:-local}',
   'image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-merchant:${WELFARE_MALL_IMAGE_TAG:-local}',
   'image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-portal:${WELFARE_MALL_IMAGE_TAG:-local}',
   '"3000:3000"',
   '"5173:5173"',
   '"5174:5174"',
   '"5175:5175"',
+  '"5176:5176"',
   'DATABASE_URL=mysql://welfare_mall:welfare_mall_password@mysql:3306/welfare_mall_v2',
-  'API_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175',
+  'API_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176',
   'VITE_ADMIN_API_BASE_URL=http://localhost:3000/api',
+  'VITE_FRANCHISE_API_BASE_URL=http://localhost:3000/api',
   'VITE_MERCHANT_API_BASE_URL=http://localhost:3000/api',
   'VITE_API_BASE_URL=http://localhost:3000/api'
 ];
@@ -44,6 +49,12 @@ const liveTargets = [
   {
     name: 'Merchant shell',
     url: 'http://localhost:5174/',
+    expectedBody: '<html',
+    expectedAssetBody: 'http://localhost:3000/api'
+  },
+  {
+    name: 'Franchise shell',
+    url: 'http://localhost:5176/',
     expectedBody: '<html',
     expectedAssetBody: 'http://localhost:3000/api'
   },

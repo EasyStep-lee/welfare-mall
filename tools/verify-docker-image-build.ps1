@@ -4,10 +4,11 @@ $ErrorActionPreference = 'Stop'
 # when bake is enabled. Keep the preflight aligned with the runtime launcher.
 $env:COMPOSE_BAKE = 'false'
 
-$requiredServices = @('api', 'admin', 'merchant', 'portal')
+$requiredServices = @('api', 'admin', 'franchise', 'merchant', 'portal')
 $imageNames = @{
   api = 'welfare-mall-v2-api'
   admin = 'welfare-mall-v2-admin'
+  franchise = 'welfare-mall-v2-franchise'
   merchant = 'welfare-mall-v2-merchant'
   portal = 'welfare-mall-v2-portal'
 }

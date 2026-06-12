@@ -2,9 +2,10 @@
   "migrationStatus": "enforced",
   "targetStack": {
     "admin": ["Vue 3", "TypeScript", "Vite", "Pinia", "Element Plus"],
+    "franchise": ["Vue 3", "TypeScript", "Vite", "Pinia", "Element Plus"],
     "merchant": ["Vue 3", "TypeScript", "Vite", "Pinia", "Element Plus"],
     "portal": ["Vue 3", "TypeScript", "Vite"]
   },
   "allowedReactWorkspacePackages": [],
-  "reason": "Admin and Merchant are enforced on Vue 3 + TypeScript + Vite + Pinia + Element Plus. No React workspace or React dependency is allowed."
+  "reason": "Admin, Franchise, and Merchant are enforced on Vue 3 + TypeScript + Vite + Pinia + Element Plus. No React workspace or React dependency is allowed."
 }

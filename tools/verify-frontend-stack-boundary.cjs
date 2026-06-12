@@ -7,6 +7,7 @@ const migrationStatusPath = path.join(rootDir, 'docs/frontend-stack-migration-st
 const reactDependencies = new Set(['react', 'react-dom', '@vitejs/plugin-react', 'lucide-react', '@testing-library/react']);
 const requiredVueDependencies = {
   '@welfare-mall/admin': ['vue', 'element-plus', 'pinia', '@vitejs/plugin-vue'],
+  '@welfare-mall/franchise': ['vue', 'element-plus', 'pinia', '@vitejs/plugin-vue'],
   '@welfare-mall/merchant': ['vue', 'element-plus', 'pinia', '@vitejs/plugin-vue'],
   '@welfare-mall/portal': ['vue', '@vitejs/plugin-vue']
 };

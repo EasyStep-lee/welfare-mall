@@ -12,6 +12,11 @@ const pageTargets = [
     expectedAssetSnippets: ['商户运营工作台', '商品草稿', '履约订单', 'http://localhost:3000/api']
   },
   {
+    name: 'Franchise',
+    url: 'http://localhost:5176/',
+    expectedAssetSnippets: ['加盟商登录', '福利卡发放', 'http://localhost:3000/api']
+  },
+  {
     name: 'Portal',
     url: 'http://localhost:5175/',
     expectedAssetSnippets: ['企业福利商品目录', '可选商品', 'http://localhost:3000/api']

@@ -40,7 +40,7 @@ services:
       - PORT=3000
       - DATABASE_URL=mysql://welfare_mall:welfare_mall_password@mysql:3306/welfare_mall_v2
       - REDIS_URL=redis://redis:6379
-      - API_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175
+      - API_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176
     ports:
       - "3000:3000"
     command: ["sh", "-c", "pnpm --filter @welfare-mall/api exec prisma db push --skip-generate && node apps/api/dist/src/main.js"]
@@ -93,6 +93,27 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:5174', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  franchise:
+    image: ${WELFARE_MALL_IMAGE_REGISTRY_PREFIX:-}welfare-mall-v2-franchise:${WELFARE_MALL_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: apps/franchise/Dockerfile
+      args:
+        - VITE_FRANCHISE_API_BASE_URL=http://localhost:3000/api
+    container_name: welfare-mall-v2-franchise
+    environment:
+      - VITE_FRANCHISE_API_BASE_URL=http://localhost:3000/api
+    ports:
+      - "5176:5176"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:5176', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 10

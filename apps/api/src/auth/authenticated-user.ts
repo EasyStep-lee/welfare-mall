@@ -1,6 +1,6 @@
 import { PermissionCode } from '../iam/permissions';
 
-export type AuthSubjectType = 'platform' | 'merchant' | 'buyer';
+export type AuthSubjectType = 'platform' | 'franchise' | 'merchant' | 'buyer';
 
 export type AuthenticatedUser = {
   sub: string;

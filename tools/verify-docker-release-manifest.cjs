@@ -33,6 +33,10 @@ function main() {
     `unexpected admin image ref: ${registryManifest.images.admin}`
   );
   assert(
+    registryManifest.images.franchise === 'registry.example.com/welfare-mall/welfare-mall-v2-franchise:manual-test',
+    `unexpected franchise image ref: ${registryManifest.images.franchise}`
+  );
+  assert(
     registryManifest.images.merchant === 'registry.example.com/welfare-mall/welfare-mall-v2-merchant:manual-test',
     `unexpected merchant image ref: ${registryManifest.images.merchant}`
   );
