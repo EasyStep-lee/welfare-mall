@@ -33,6 +33,7 @@ describe('Franchise welfare-card issue API contract', () => {
   });
 
   it('issues a welfare card balance for a buyer under the sales franchise', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
     welfareCardService.issueWelfareCard.mockResolvedValue({
       idempotentReplay: false,
       account: {
@@ -59,6 +60,7 @@ describe('Franchise welfare-card issue API contract', () => {
 
     const response = await request(app.getHttpServer())
       .post('/api/franchises/franchise-local-review/welfare-cards/issue')
+      .set('Authorization', `Bearer ${token}`)
       .send({
         requestId: 'issue-local-001',
         buyerUserId: 'buyer-local',
@@ -79,8 +81,11 @@ describe('Franchise welfare-card issue API contract', () => {
   });
 
   it('rejects invalid issue request fields before calling the service', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+
     await request(app.getHttpServer())
       .post('/api/franchises/franchise-local-review/welfare-cards/issue')
+      .set('Authorization', `Bearer ${token}`)
       .send({
         requestId: 'issue-local-001',
         buyerUserId: 'buyer-local',
@@ -90,4 +95,42 @@ describe('Franchise welfare-card issue API contract', () => {
 
     expect(welfareCardService.issueWelfareCard).not.toHaveBeenCalled();
   });
+
+  it('requires a Bearer token before issuing welfare-card balance', async () => {
+    await request(app.getHttpServer())
+      .post('/api/franchises/franchise-local-review/welfare-cards/issue')
+      .send({
+        requestId: 'issue-local-001',
+        buyerUserId: 'buyer-local',
+        amount: 20000
+      })
+      .expect(401);
+
+    expect(welfareCardService.issueWelfareCard).not.toHaveBeenCalled();
+  });
+
+  it('prevents a franchise user from issuing welfare cards for another franchise', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+
+    await request(app.getHttpServer())
+      .post('/api/franchises/franchise-other/welfare-cards/issue')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'issue-local-001',
+        buyerUserId: 'buyer-local',
+        amount: 20000
+      })
+      .expect(403);
+
+    expect(welfareCardService.issueWelfareCard).not.toHaveBeenCalled();
+  });
 });
+
+async function loginAndGetToken(app: INestApplication, username: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username, password: 'local-dev-password' })
+    .expect(201);
+
+  return response.body.accessToken as string;
+}

@@ -33,6 +33,14 @@ const localUsers: AuthenticatedUser[] = [
     ]
   },
   {
+    sub: 'user-franchise-local',
+    username: 'franchise-local',
+    displayName: '本地加盟商操作员',
+    subjectType: 'franchise',
+    subjectId: 'franchise-local-review',
+    permissions: [PermissionCodes.FranchiseRead, PermissionCodes.FranchiseWrite, PermissionCodes.SettlementRead]
+  },
+  {
     sub: 'user-buyer-local',
     username: 'buyer-local',
     displayName: '本地用户',

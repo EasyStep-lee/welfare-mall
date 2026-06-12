@@ -28,6 +28,7 @@ const riskyPatterns = [
 const scanRoots = [
   'apps/api/src',
   'apps/admin/src',
+  'apps/franchise/src',
   'apps/merchant/src',
   'apps/portal/src',
   'apps/user-miniprogram'

@@ -1,7 +1,14 @@
-import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { AccessTokenPayload } from '../auth/authenticated-user';
+import { AuthGuard } from '../auth/auth.guard';
 import { FranchiseStatusCatalog } from './franchise-status';
 import { WelfareCardService } from './welfare-card.service';
+
+type RequestWithUser = Request & {
+  user: AccessTokenPayload;
+};
 
 @ApiTags('franchises')
 @Controller('franchises')
@@ -48,7 +55,13 @@ export class FranchiseController {
       }
     }
   })
-  async issueWelfareCard(@Param('franchiseId') franchiseId: string, @Body() body: IssueWelfareCardRequestBody) {
+  @UseGuards(AuthGuard)
+  async issueWelfareCard(
+    @Param('franchiseId') franchiseId: string,
+    @Body() body: IssueWelfareCardRequestBody,
+    @Req() request: RequestWithUser
+  ) {
+    assertCanIssueWelfareCard(request.user, franchiseId);
     const issueRequest = {
       franchiseId,
       requestId: normalizeRequiredText(body?.requestId, 'requestId'),
@@ -59,6 +72,17 @@ export class FranchiseController {
 
     return this.welfareCardService.issueWelfareCard(issueRequest);
   }
+}
+
+function assertCanIssueWelfareCard(user: AccessTokenPayload, franchiseId: string) {
+  if (user.subjectType === 'platform') {
+    return;
+  }
+  if (user.subjectType === 'franchise' && user.subjectId === franchiseId) {
+    return;
+  }
+
+  throw new ForbiddenException('Only the sales franchise or platform operator can issue welfare-card balance.');
 }
 
 type IssueWelfareCardRequestBody = {

@@ -1,0 +1,1 @@
+// Vue test setup placeholder.
