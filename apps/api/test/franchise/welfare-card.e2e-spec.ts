@@ -6,7 +6,9 @@ import { WelfareCardService } from '../../src/franchise/welfare-card.service';
 
 function createWelfareCardServiceMock() {
   return {
-    issueWelfareCard: jest.fn()
+    issueWelfareCard: jest.fn(),
+    createWelfareCardBatch: jest.fn(),
+    bindWelfareCard: jest.fn()
   };
 }
 
@@ -123,6 +125,148 @@ describe('Franchise welfare-card issue API contract', () => {
       .expect(403);
 
     expect(welfareCardService.issueWelfareCard).not.toHaveBeenCalled();
+  });
+
+  it('creates an entity welfare-card batch for the authenticated franchise', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+    welfareCardService.createWelfareCardBatch.mockResolvedValue({
+      idempotentReplay: false,
+      batch: {
+        id: 'wcb-001',
+        batchNo: 'WCB-batch-request-001',
+        requestId: 'batch-request-001',
+        issuerFranchiseId: 'franchise-local-review',
+        batchName: '端午福利卡批次',
+        faceValueAmount: 5000,
+        totalCards: 2,
+        totalAmount: 10000,
+        status: 'active',
+        createdBy: 'user-franchise-local'
+      },
+      cards: [
+        {
+          id: 'wfc-001',
+          cardNo: 'WFC-batch-request-001-0001',
+          bindCode: 'BIND-batch-request-001-0001',
+          issuerFranchiseId: 'franchise-local-review',
+          faceValueAmount: 5000,
+          status: 'unbound'
+        }
+      ]
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/franchises/franchise-local-review/welfare-card-batches')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'batch-request-001',
+        batchName: '端午福利卡批次',
+        faceValueAmount: 5000,
+        totalCards: 2,
+        remark: '实体卡批次'
+      })
+      .expect(201);
+
+    expect(welfareCardService.createWelfareCardBatch).toHaveBeenCalledWith({
+      franchiseId: 'franchise-local-review',
+      requestId: 'batch-request-001',
+      batchName: '端午福利卡批次',
+      faceValueAmount: 5000,
+      totalCards: 2,
+      createdBy: 'user-franchise-local',
+      remark: '实体卡批次'
+    });
+    expect(response.body.batch.issuerFranchiseId).toBe('franchise-local-review');
+    expect(response.body.cards[0].status).toBe('unbound');
+  });
+
+  it('prevents a franchise user from creating welfare-card batches for another franchise', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+
+    await request(app.getHttpServer())
+      .post('/api/franchises/franchise-other/welfare-card-batches')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'batch-request-001',
+        batchName: '端午福利卡批次',
+        faceValueAmount: 5000,
+        totalCards: 2
+      })
+      .expect(403);
+
+    expect(welfareCardService.createWelfareCardBatch).not.toHaveBeenCalled();
+  });
+
+  it('binds an entity welfare card into the authenticated buyer account and ignores body buyer IDs', async () => {
+    const token = await loginAndGetToken(app, 'buyer-local');
+    welfareCardService.bindWelfareCard.mockResolvedValue({
+      idempotentReplay: false,
+      card: {
+        id: 'wfc-001',
+        cardNo: 'WFC-batch-request-001-0001',
+        issuerFranchiseId: 'franchise-local-review',
+        status: 'bound',
+        boundBuyerUserId: 'user-001',
+        boundAccountId: 'wca-001'
+      },
+      account: {
+        id: 'wca-001',
+        accountNo: 'WCA-franchise-local-review-user-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-001',
+        status: 'active',
+        balanceAmount: 5000,
+        issuedAmount: 5000
+      },
+      ledgerEntry: {
+        id: 'wcl-bind-001',
+        ledgerNo: 'WCL-bind-request-001',
+        requestId: 'bind-request-001',
+        accountId: 'wca-001',
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'user-001',
+        type: 'bind',
+        amount: 5000,
+        balanceAfter: 5000
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/franchises/franchise-local-review/welfare-cards/bind')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'bind-request-001',
+        cardNo: 'WFC-batch-request-001-0001',
+        bindCode: 'BIND-batch-request-001-0001',
+        buyerUserId: 'attacker-user'
+      })
+      .expect(201);
+
+    expect(welfareCardService.bindWelfareCard).toHaveBeenCalledWith({
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'user-001',
+      requestId: 'bind-request-001',
+      cardNo: 'WFC-batch-request-001-0001',
+      bindCode: 'BIND-batch-request-001-0001'
+    });
+    expect(response.body.account.buyerUserId).toBe('user-001');
+    expect(response.body.ledgerEntry.type).toBe('bind');
+  });
+
+  it('rejects non-buyer users on the user welfare-card binding endpoint', async () => {
+    const token = await loginAndGetToken(app, 'franchise-local');
+
+    await request(app.getHttpServer())
+      .post('/api/franchises/franchise-local-review/welfare-cards/bind')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        requestId: 'bind-request-001',
+        cardNo: 'WFC-batch-request-001-0001',
+        bindCode: 'BIND-batch-request-001-0001'
+      })
+      .expect(403);
+
+    expect(welfareCardService.bindWelfareCard).not.toHaveBeenCalled();
   });
 });
 
