@@ -126,6 +126,15 @@ Expected: PASS。
 - Docker：`docker compose up -d --build api`、`pnpm run docker:runtime:smoke`、`pnpm run docker:order-flow-smoke` 通过。
 - 本地退款 HTTP 验证：订单 `ORDER-20260612130036432-IQQMWV`、支付 `PAY-20260612130036489-SRVL4W`、退款 `REF-20260612130036705-QQZG7R` 创建成功；local provider 模式下 `providerRefundNo=null`。
 
-- [ ] **Step 4: 提交、推送、PR、checks、合并**
+- [x] **Step 4: 提交、推送、PR、checks、合并**
 
 提交 feature 分支，推送 `codex/refund-provider-adapters`，创建 PR，等待 `docs-check` 和 `project-foundation-check`，通过后 squash merge 回 `main`。
+
+完成记录：
+- feature 分支：`codex/refund-provider-adapters`
+- feature commit：`5578a5f feat: add refund provider adapters`
+- feature PR：`#299 feat: add refund provider adapters`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature PR 已 squash merge 到 `main`，合并提交：`4642659 feat: add refund provider adapters (#299)`。
+- docs-only 分支：`codex/docs-refund-provider-adapters-complete`
+- 本切片完成后剩余工作：微信/支付宝退款回调验签与解密、真实渠道错误码映射、目标环境支付退款密钥模板、Portal/小程序退款组件展示、纯福利卡退款自动完成策略。
