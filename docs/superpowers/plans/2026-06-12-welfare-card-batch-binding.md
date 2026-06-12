@@ -158,10 +158,10 @@ RED 证据：
 - [x] 运行 Docker runtime/API 真实写入验证。
 - [x] 运行 `git diff --check`。
 - [x] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
 
 验证证据：
 - 基线 focused tests 初始通过：`pnpm --filter @welfare-mall/api test -- --runInBand test/franchise/welfare-card.repository.spec.ts test/franchise/welfare-card.service.spec.ts test/franchise/welfare-card.e2e-spec.ts`，3 个 suite、9 个测试通过。
@@ -177,3 +177,18 @@ RED 证据：
 - `pnpm run docker:runtime:smoke` 通过。
 - 真实 HTTP/DB 验证通过：加盟商 JWT 创建批次 `WCB-batch-live-20260612044947`，生成 2 张面值 1234 分实体卡；buyer JWT 绑定卡 `WFC-batch-live-20260612044947-0001`，即使请求体带 `buyerUserId=attacker-user`，DB 中仍绑定到 JWT 用户 `user-001`；账户 `WCA-franchise-local-review-user-001` 增加余额，流水 `WCL-bind-live-20260612044947` 类型为 `bind`、金额 1234 分。
 - `pnpm run docker:order-flow-smoke` 通过，订单 `ORDER-20260612045039334-R3J4SR` 完成 smoke。
+
+完成记录：
+- feature 分支：`codex/welfare-card-batch-binding`
+- feature 提交：`96f56d7 feat: add welfare card batch binding`
+- feature PR：`#291 feat: add welfare card batch binding`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature 合并提交：`97cfe5a feat: add welfare card batch binding (#291)`
+- docs-only 分支：`codex/docs-welfare-card-batch-binding-complete`
+
+剩余工作：
+- Portal/用户小程序仍需补正式绑卡 UI，并从用户账户列表选择福利卡账户进入组合支付。
+- Franchise 工作台仍需补批次列表、实体卡明细、发卡导出和批次状态管理。
+- 卡号/绑定码后续需要切到安全生成、脱敏展示和必要的加密存储策略。
+- 多张福利卡叠加支付和按支付组件逐项退款状态机仍需继续单独切片。
+- 正式组织、部门、岗位、角色、加盟商账号、商户账号和用户账号体系仍需继续替换本地过渡身份。
