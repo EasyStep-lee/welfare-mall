@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
+  BuyerWelfareCardAccountsResult,
   WelfareCardBatchCreateResult,
   WelfareCardBindResult,
   WelfareCardIssueResult,
@@ -30,6 +31,11 @@ export type BindWelfareCardInput = {
   requestId: string;
   cardNo: string;
   bindCode: string;
+};
+
+export type ListBuyerWelfareCardAccountsInput = {
+  franchiseId: string;
+  buyerUserId: string;
 };
 
 @Injectable()
@@ -67,6 +73,18 @@ export class WelfareCardService {
       requestId,
       amount,
       remark: normalizeOptionalText(input?.remark)
+    });
+  }
+
+  async listBuyerWelfareCardAccounts(
+    input: ListBuyerWelfareCardAccountsInput
+  ): Promise<BuyerWelfareCardAccountsResult> {
+    const franchiseId = normalizeRequiredText(input?.franchiseId, 'franchiseId');
+    const buyerUserId = normalizeRequiredText(input?.buyerUserId, 'buyerUserId');
+
+    return this.welfareCardRepository.listBuyerWelfareCardAccounts({
+      franchiseId,
+      buyerUserId
     });
   }
 

@@ -680,7 +680,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: 240px;
+  max-width: min(100%, 360px);
+  width: 100%;
 }
 
 .checkout-amount-field span {
@@ -689,7 +690,8 @@ h1 {
   font-weight: 700;
 }
 
-.checkout-amount-field input {
+.checkout-amount-field input,
+.checkout-amount-field select {
   border: 1px solid #c9d8d4;
   border-radius: 8px;
   color: #17353a;
@@ -697,6 +699,19 @@ h1 {
   min-height: 38px;
   padding: 0 10px;
   width: 100%;
+}
+
+.checkout-amount-field select {
+  background: #ffffff;
+}
+
+.welfare-card-bind-block {
+  background: #ffffff;
+  border: 1px solid #cfe1d9;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
 }
 
 .checkout-split-preview {

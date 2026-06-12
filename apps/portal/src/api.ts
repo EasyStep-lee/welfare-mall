@@ -238,6 +238,7 @@ export type PortalPaymentInput = {
   totalAmount: number;
   welfareCardPayableAmount: number;
   cashPayableAmount: number;
+  welfareCardAccountId?: string | null;
 };
 
 export type PortalOnlinePaymentChannel = 'wechat' | 'alipay';
@@ -341,6 +342,46 @@ export type PortalOrderCheckoutResponse = {
   order: PortalCheckoutOrder;
 };
 
+export type PortalWelfareCardAccount = {
+  id: string;
+  accountNo: string;
+  franchiseId: string;
+  buyerUserId: string;
+  status: string;
+  balanceAmount: number;
+  issuedAmount: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PortalWelfareCardAccountsResponse = {
+  accounts: PortalWelfareCardAccount[];
+};
+
+export type PortalBindWelfareCardInput = {
+  franchiseId: string;
+  requestId: string;
+  cardNo: string;
+  bindCode: string;
+};
+
+export type PortalBindWelfareCardResponse = {
+  idempotentReplay: boolean;
+  card: {
+    cardNo: string;
+    issuerFranchiseId: string;
+    status: string;
+    boundBuyerUserId?: string | null;
+  };
+  account: PortalWelfareCardAccount;
+  ledgerEntry: {
+    requestId: string;
+    type: string;
+    amount: number;
+    balanceAfter: number;
+  };
+};
+
 export async function loginPortal(input: { username: string; password: string }): Promise<LoginResponse> {
   const response = await fetch(`${apiBaseUrl()}/auth/login`, {
     method: 'POST',
@@ -422,6 +463,39 @@ export async function fetchPortalOrderDetail(input: {
   return response.json() as Promise<PortalOrderDetailResponse>;
 }
 
+export async function fetchPortalWelfareCardAccounts(franchiseId: string): Promise<PortalWelfareCardAccountsResponse> {
+  const response = await apiFetch(
+    `${apiBaseUrl()}/franchises/${encodeURIComponent(franchiseId)}/welfare-card-accounts/me`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load welfare card accounts: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalWelfareCardAccountsResponse>;
+}
+
+export async function bindPortalWelfareCard(input: PortalBindWelfareCardInput): Promise<PortalBindWelfareCardResponse> {
+  const response = await apiFetch(
+    `${apiBaseUrl()}/franchises/${encodeURIComponent(input.franchiseId)}/welfare-cards/bind`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestId: input.requestId,
+        cardNo: input.cardNo,
+        bindCode: input.bindCode
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to bind welfare card: ${response.status}`);
+  }
+
+  return response.json() as Promise<PortalBindWelfareCardResponse>;
+}
+
 export async function cancelPortalOrder(input: PortalOrderCancelInput): Promise<PortalOrderDetailResponse> {
   const response = await apiFetch(`${apiBaseUrl()}/orders/${encodeURIComponent(input.orderNo)}/cancel`, {
     method: 'POST',
@@ -443,7 +517,15 @@ export async function createPortalPayment(input: PortalPaymentInput): Promise<Po
   const response = await apiFetch(`${apiBaseUrl()}/orders/payments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input)
+    body: JSON.stringify({
+      requestId: input.requestId,
+      orderNo: input.orderNo,
+      channel: input.channel,
+      totalAmount: input.totalAmount,
+      welfareCardPayableAmount: input.welfareCardPayableAmount,
+      cashPayableAmount: input.cashPayableAmount,
+      ...(input.welfareCardAccountId ? { welfareCardAccountId: input.welfareCardAccountId } : {})
+    })
   });
 
   if (!response.ok) {

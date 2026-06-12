@@ -135,6 +135,24 @@ const mixedPaymentOrderDetailResponse = {
   order: mixedPaymentOrder
 };
 
+const welfareCardAccountsResponse = {
+  accounts: [
+    {
+      id: 'wca-001',
+      accountNo: 'WCA-franchise-local-review-user-001',
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'user-001',
+      status: 'active',
+      balanceAmount: 5000,
+      issuedAmount: 5000
+    }
+  ]
+};
+
+const emptyWelfareCardAccountsResponse = {
+  accounts: []
+};
+
 const cancelledOrderResponse = {
   order: {
     ...orderListResponse.orders[0],
@@ -321,6 +339,23 @@ const refundCallbackResponse = {
   callback: {
     providerEventId: 'LOCAL-PORTAL-REFUND-ORDER-20260607-PORTAL',
     status: 'succeeded'
+  }
+};
+
+const bindWelfareCardResponse = {
+  idempotentReplay: false,
+  card: {
+    cardNo: 'WFC-batch-request-001-0001',
+    issuerFranchiseId: 'franchise-local-review',
+    status: 'bound',
+    boundBuyerUserId: 'user-001'
+  },
+  account: welfareCardAccountsResponse.accounts[0],
+  ledgerEntry: {
+    requestId: 'portal-bind-WFC-batch-request-001-0001',
+    type: 'bind',
+    amount: 5000,
+    balanceAfter: 5000
   }
 };
 
@@ -1036,6 +1071,13 @@ describe('Portal product pool catalog', () => {
           };
         }
 
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => welfareCardAccountsResponse
+          };
+        }
+
         if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
           return {
             ok: true,
@@ -1067,6 +1109,7 @@ describe('Portal product pool catalog', () => {
     expect(wrapper.text()).toContain('线上补差 ¥59.90');
     expect(wrapper.text()).not.toContain('现金');
 
+    await wrapper.get('select[aria-label="选择福利卡账户"]').setValue('wca-001');
     await wrapper.get('button[aria-label="选择支付宝支付渠道"]').trigger('click');
     await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').trigger('click');
     await flushPromises();
@@ -1078,10 +1121,203 @@ describe('Portal product pool catalog', () => {
       channel: 'alipay',
       totalAmount: 6990,
       welfareCardPayableAmount: 1000,
-      cashPayableAmount: 5990
+      cashPayableAmount: 5990,
+      welfareCardAccountId: 'wca-001'
     });
     expect(wrapper.text()).toContain('支付单创建成功');
     expect(wrapper.text()).toContain('支付宝 · 待支付');
+  });
+
+  it('requires selecting a buyer welfare-card account before creating a mixed payment', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => emptyWelfareCardAccountsResponse
+          };
+        }
+
+        if (url.endsWith('/orders/payments')) {
+          return {
+            ok: true,
+            json: async () => alipayPaymentResponse
+          };
+        }
+
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => welfareCardAccountsResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('请先选择福利卡账户');
+    expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith('/orders/payments'))).toBe(false);
+  });
+
+  it('sends the selected welfare-card account ID when creating a mixed payment', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => welfareCardAccountsResponse
+          };
+        }
+
+        if (url.endsWith('/orders/payments')) {
+          return {
+            ok: true,
+            json: async () => alipayPaymentResponse
+          };
+        }
+
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => welfareCardAccountsResponse
+          };
+        }
+
+        if (url.endsWith('/orders/ORDER-20260607-PORTAL?buyerUserId=user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderDetailResponse
+          };
+        }
+
+        if (url.endsWith('/orders?buyerUserId=user-001')) {
+          return {
+            ok: true,
+            json: async () => mixedPaymentOrderListResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看订单 ORDER-20260607-PORTAL 详情"]').trigger('click');
+    await flushPromises();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/franchises/franchise-local-review/welfare-card-accounts/me',
+      { headers: { Authorization: 'Bearer buyer-token-local' } }
+    );
+    expect(wrapper.text()).toContain('选择福利卡账户');
+    expect(wrapper.text()).toContain('WCA-franchise-local-review-user-001');
+    expect(wrapper.text()).toContain('余额 ¥50.00');
+
+    await wrapper.get('select[aria-label="选择福利卡账户"]').setValue('wca-001');
+    await wrapper.get('button[aria-label="选择支付宝支付渠道"]').trigger('click');
+    await wrapper.get('button[aria-label="为订单 ORDER-20260607-PORTAL 发起支付"]').trigger('click');
+    await flushPromises();
+
+    const paymentCall = vi.mocked(fetch).mock.calls.find(([input]) => String(input).endsWith('/orders/payments'));
+    expect(paymentCall).toBeTruthy();
+    expect(JSON.parse(String(paymentCall?.[1]?.body))).toMatchObject({
+      orderNo: 'ORDER-20260607-PORTAL',
+      channel: 'alipay',
+      welfareCardPayableAmount: 1000,
+      cashPayableAmount: 5990,
+      welfareCardAccountId: 'wca-001'
+    });
+  });
+
+  it('binds an entity welfare card from the product detail panel and refreshes buyer accounts', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/product-pools/items/pool-item-local-review')) {
+          return {
+            ok: true,
+            json: async () => detailResponse
+          };
+        }
+
+        if (url.endsWith('/franchises/franchise-local-review/welfare-cards/bind')) {
+          return {
+            ok: true,
+            json: async () => bindWelfareCardResponse
+          };
+        }
+
+        if (url.endsWith('/franchises/franchise-local-review/welfare-card-accounts/me')) {
+          return {
+            ok: true,
+            json: async () => welfareCardAccountsResponse
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => catalogResponse
+        };
+      })
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="查看 本地审核五常大米福利装 详情"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('input[aria-label="福利卡卡号"]').setValue('WFC-batch-request-001-0001');
+    await wrapper.get('input[aria-label="福利卡绑定码"]').setValue('BIND-batch-request-001-0001');
+    await wrapper.get('button[aria-label="绑定福利卡"]').trigger('click');
+    await flushPromises();
+
+    const bindCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).endsWith('/franchises/franchise-local-review/welfare-cards/bind'));
+    expect(bindCall).toBeTruthy();
+    expect(JSON.parse(String(bindCall?.[1]?.body))).toMatchObject({
+      cardNo: 'WFC-batch-request-001-0001',
+      bindCode: 'BIND-batch-request-001-0001'
+    });
+    expect(JSON.parse(String(bindCall?.[1]?.body))).not.toHaveProperty('buyerUserId');
+    expect(wrapper.text()).toContain('福利卡绑定成功');
+    expect(wrapper.text()).toContain('余额 ¥50.00');
   });
 
   it('cancels a pending buyer order from the order detail panel', async () => {

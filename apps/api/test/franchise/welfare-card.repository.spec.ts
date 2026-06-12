@@ -1,4 +1,5 @@
 import {
+  WelfareCardAccountStatuses,
   WelfareCardBatchStatuses,
   WelfareCardLedgerEntryTypes,
   WelfareCardStatuses
@@ -129,6 +130,9 @@ function createPrismaMock() {
 
   return {
     $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)),
+    welfareCardAccount: {
+      findMany: jest.fn().mockResolvedValue([creditedAccountRecord])
+    },
     tx
   };
 }
@@ -336,5 +340,26 @@ describe('WelfareCardRepository', () => {
       account: expect.objectContaining({ balanceAmount: 5000, issuedAmount: 5000 }),
       ledgerEntry: bindLedgerRecord
     });
+  });
+
+  it('lists active buyer welfare-card accounts under one sales franchise', async () => {
+    const prisma = createPrismaMock();
+    const repository = new WelfareCardRepository(prisma as never);
+
+    const result = await repository.listBuyerWelfareCardAccounts({
+      franchiseId: 'franchise-local-review',
+      buyerUserId: 'buyer-local'
+    });
+
+    expect(prisma.welfareCardAccount.findMany).toHaveBeenCalledWith({
+      where: {
+        franchiseId: 'franchise-local-review',
+        buyerUserId: 'buyer-local',
+        status: WelfareCardAccountStatuses.Active
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: expect.any(Object)
+    });
+    expect(result).toEqual({ accounts: [creditedAccountRecord] });
   });
 });
