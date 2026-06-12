@@ -139,11 +139,11 @@ GREEN 证据：
 - [x] 运行用户小程序 lint/typecheck 如项目提供。
 - [x] 运行业务边界 guard。
 - [x] 运行完整 `pnpm run verify`。
-- [ ] 提交 feature 分支。
-- [ ] 推送并创建 PR。
-- [ ] 等待 GitHub checks。
-- [ ] checks 通过后合并回 `main`。
-- [ ] 合并后创建中文 docs-only 完成分支并标记本计划完成。
+- [x] 提交 feature 分支。
+- [x] 推送并创建 PR。
+- [x] 等待 GitHub checks。
+- [x] checks 通过后合并回 `main`。
+- [x] 合并后创建中文 docs-only 完成分支并标记本计划完成。
 
 验证证据：
 - `pnpm --filter @welfare-mall/user-miniprogram run test --run` 通过，10 个 test files、52 个测试通过。
@@ -152,3 +152,18 @@ GREEN 证据：
 - `git diff --check` 通过；仅输出 Windows 工作区 LF/CRLF 提示。
 - 文档占位词检查无匹配。
 - `pnpm run verify` 通过，包含前端技术栈边界、业务边界、Prisma generate、lint、typecheck、API Jest 67/67 suites 306/306 tests、Admin 26 tests、Franchise 3 tests、Merchant 20 tests、Portal 32 tests、用户小程序 10 files 52 tests。
+
+完成记录：
+- feature 分支：`codex/user-miniprogram-welfare-card-account-selection`
+- feature 提交：`431e9c3 feat: add miniprogram welfare card account selection`
+- feature PR：`#295 feat: add miniprogram welfare card account selection`
+- GitHub checks：`docs-check` 通过，`project-foundation-check` 通过。
+- feature 合并提交：`fe608db feat: add miniprogram welfare card account selection (#295)`
+- docs-only 分支：`codex/docs-user-miniprogram-welfare-card-account-selection-complete`
+
+剩余工作：
+- 多张福利卡叠加支付仍需独立切片。
+- 原路退款仍需按 `OrderPaymentComponent` 做逐组件退款状态机。
+- 卡号/绑定码后续需要切到安全生成、脱敏展示和必要的加密存储策略。
+- 正式组织、部门、岗位、角色、加盟商账号、商户账号和用户账号体系仍需继续替换本地过渡身份。
+- 用户小程序仍需在微信开发者工具和真机环境做正式验收；本切片已完成本地代码和自动化测试闭环。
